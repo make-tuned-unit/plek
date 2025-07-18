@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: drivemyway_postgres
+    environment:
+      POSTGRES_DB: drivemyway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - drivemyway_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: drivemyway_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - drivemyway_network
+
+  prisma-studio:
+    image: node:18-alpine
+    container_name: drivemyway_prisma_studio
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5555:5555"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/drivemyway
+    command: >
+      sh -c "npm install && npx prisma studio --hostname 0.0.0.0 --port 5555"
+    depends_on:
+      - postgres
+    networks:
+      - drivemyway_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  drivemyway_network:
+    driver: bridge 

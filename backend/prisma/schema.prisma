@@ -1,0 +1,355 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for both hosts and renters
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  avatar        String?
+  isVerified    Boolean   @default(false)
+  isHost        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Profile information
+  bio           String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  country       String?   @default("US")
+  
+  // Host-specific fields
+  hostProfile   HostProfile?
+  
+  // Relationships
+  properties    Property[]
+  bookingsAsRenter Booking[] @relation("RenterBookings")
+  bookingsAsHost Booking[] @relation("HostBookings")
+  messagesSent  Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
+  reviewsGiven  Review[] @relation("Reviewer")
+  reviewsReceived Review[] @relation("ReviewedUser")
+  payments      Payment[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// Host profile for additional host-specific information
+model HostProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName      String?
+  taxId             String?
+  bankAccountInfo   Json?    // Encrypted bank account information
+  payoutSchedule    String   @default("weekly") // weekly, monthly
+  autoAcceptBookings Boolean @default(false)
+  responseTime      Int?     // Average response time in hours
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("host_profiles")
+}
+
+// Property model - extensible for different types (driveway, storage, event space)
+model Property {
+  id              String   @id @default(cuid())
+  hostId          String
+  host            User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  
+  // Basic information
+  title           String
+  description     String
+  propertyType    PropertyType @default(DRIVEWAY)
+  address         String
+  city            String
+  state           String
+  zipCode         String
+  country         String   @default("US")
+  latitude        Float?
+  longitude       Float?
+  
+  // Property details
+  size            Float    // in square feet
+  maxVehicles     Int      @default(1)
+  height          Float?   // in feet, for storage spaces
+  width           Float?   // in feet
+  length          Float?   // in feet
+  
+  // Amenities and features
+  amenities       String[] // Array of amenities
+  restrictions    String[] // Array of restrictions
+  accessType      AccessType @default(REMOTE)
+  accessInstructions String?
+  
+  // Pricing
+  hourlyRate      Float?
+  dailyRate       Float?
+  weeklyRate      Float?
+  monthlyRate     Float?
+  securityDeposit Float?   @default(0)
+  
+  // Availability
+  isAvailable     Boolean  @default(true)
+  instantBooking  Boolean  @default(false)
+  minBookingHours Int      @default(1)
+  maxBookingDays  Int      @default(30)
+  
+  // Status
+  status          PropertyStatus @default(ACTIVE)
+  isVerified      Boolean  @default(false)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  photos          PropertyPhoto[]
+  bookings        Booking[]
+  reviews         Review[]
+  availability    Availability[]
+  
+  // Future extensibility fields
+  storageFeatures Json?    // For storage spaces
+  eventFeatures   Json?    // For event spaces
+
+  @@map("properties")
+}
+
+// Property photos
+model PropertyPhoto {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url         String
+  caption     String?
+  isPrimary   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("property_photos")
+}
+
+// Availability calendar
+model Availability {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  isAvailable Boolean  @default(true)
+  price       Float?   // Override price for specific date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([propertyId, date])
+  @@map("availability")
+}
+
+// Booking model
+model Booking {
+  id              String        @id @default(cuid())
+  propertyId      String
+  property        Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  renterId        String
+  renter          User          @relation("RenterBookings", fields: [renterId], references: [id], onDelete: Cascade)
+  hostId          String
+  host            User          @relation("HostBookings", fields: [hostId], references: [id], onDelete: Cascade)
+  
+  // Booking details
+  startTime       DateTime
+  endTime         DateTime
+  totalHours      Float
+  totalAmount     Float
+  securityDeposit Float         @default(0)
+  serviceFee      Float         @default(0)
+  
+  // Status
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  // Special requests
+  specialRequests String?
+  vehicleInfo     Json?         // Vehicle details
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relationships
+  payments        Payment[]
+  messages        Message[]
+  review          Review?
+
+  @@map("bookings")
+}
+
+// Payment model
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Payment details
+  amount          Float
+  currency        String        @default("USD")
+  paymentMethod   String        // Stripe payment method ID
+  stripePaymentId String        @unique
+  stripeRefundId  String?
+  
+  // Status
+  status          PaymentStatus
+  type            PaymentType
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+// Message model for communication
+model Message {
+  id              String   @id @default(cuid())
+  bookingId       String
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId      String
+  receiver        User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  // Message content
+  content         String
+  messageType     MessageType @default(TEXT)
+  isRead          Boolean  @default(false)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("messages")
+}
+
+// Review model
+model Review {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewerId      String
+  reviewer        User     @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewedUserId  String
+  reviewedUser    User     @relation("ReviewedUser", fields: [reviewedUserId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  // Review content
+  rating          Int      // 1-5 stars
+  comment         String?
+  cleanliness     Int?     // 1-5
+  communication   Int?     // 1-5
+  checkIn         Int?     // 1-5
+  accuracy        Int?     // 1-5
+  value           Int?     // 1-5
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+// Notification model
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Notification details
+  type            NotificationType
+  title           String
+  message         String
+  data            Json?            // Additional data
+  isRead          Boolean          @default(false)
+  
+  // Timestamps
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("notifications")
+}
+
+// Enums
+enum PropertyType {
+  DRIVEWAY
+  STORAGE
+  EVENT_SPACE
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum AccessType {
+  REMOTE
+  KEY_PICKUP
+  CODE
+  IN_PERSON
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentType {
+  BOOKING
+  SECURITY_DEPOSIT
+  SERVICE_FEE
+  REFUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  PAYMENT_RECEIVED
+  MESSAGE_RECEIVED
+  REVIEW_RECEIVED
+  SYSTEM_UPDATE
+} 
