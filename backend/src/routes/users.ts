@@ -1,19 +1,18 @@
 import { Router } from 'express';
-import { protect } from '../middleware/auth';
+import { protect, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// TODO: Implement user controllers
-const getUsers = (req: any, res: any) => {
-  res.json({ message: 'Get users' });
+const getUsers = (_req: any, res: any) => {
+  res.json({ message: 'Get all users' });
 };
 
-const getUser = (req: any, res: any) => {
-  res.json({ message: 'Get user' });
+const getUser = (_req: any, res: any) => {
+  res.json({ message: 'Get user by ID' });
 };
 
 // Routes
-router.get('/', protect, getUsers);
+router.route('/').get(protect, requireAdmin, getUsers);
 router.get('/:id', protect, getUser);
 
 export { router as userRoutes }; 

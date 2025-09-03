@@ -2,14 +2,14 @@ import Link from 'next/link'
 import { SearchBar } from '@/components/SearchBar'
 import { FeatureCard } from '@/components/FeatureCard'
 import { TestimonialCard } from '@/components/TestimonialCard'
+import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
 import { 
   Car, 
-  MapPin, 
-  Clock, 
   Shield, 
-  Star, 
-  Users,
-  Home,
+  DollarSign, 
+  Clock, 
+  MapPin, 
+  Star,
   Calendar
 } from 'lucide-react'
 
@@ -60,7 +60,7 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Why Choose DriveMyWay?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600">
               The smartest way to find parking and earn from your driveway
             </p>
           </div>
@@ -68,33 +68,33 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
               icon={<Car className="w-8 h-8" />}
-              title="Instant Access"
-              description="Book and access parking spaces instantly with secure digital keys and codes."
-            />
-            <FeatureCard
-              icon={<MapPin className="w-8 h-8" />}
-              title="Local Convenience"
-              description="Find parking spaces right in your neighborhood, saving time and hassle."
+              title="Secure Parking"
+              description="All spaces are verified and secure with 24/7 monitoring and insurance coverage."
             />
             <FeatureCard
               icon={<Clock className="w-8 h-8" />}
               title="Flexible Hours"
-              description="Rent by the hour, day, or longer periods. Perfect for any parking need."
+              description="Rent by the hour, day, or week. Set your own schedule and availability."
+            />
+            <FeatureCard
+              icon={<DollarSign className="w-8 h-8" />}
+              title="Great Value"
+              description="Save up to 70% compared to traditional parking options and earn money from your space."
             />
             <FeatureCard
               icon={<Shield className="w-8 h-8" />}
-              title="Secure & Safe"
-              description="All spaces are verified and insured. Your vehicle and property are protected."
-            />
-            <FeatureCard
-              icon={<Star className="w-8 h-8" />}
               title="Trusted Community"
               description="Join thousands of verified hosts and renters in our trusted community."
             />
             <FeatureCard
-              icon={<Users className="w-8 h-8" />}
+              icon={<Star className="w-8 h-8" />}
               title="24/7 Support"
               description="Our support team is always here to help with any questions or issues."
+            />
+            <FeatureCard
+              icon={<MapPin className="w-8 h-8" />}
+              title="Convenient Locations"
+              description="Find parking near your destination or list your space in high-demand areas."
             />
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Home className="w-8 h-8 text-primary-600" />
+                <MapPin className="w-8 h-8 text-primary-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 List Your Space

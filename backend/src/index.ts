@@ -16,18 +16,21 @@ import { messageRoutes } from './routes/messages';
 import { paymentRoutes } from './routes/payments';
 import { userRoutes } from './routes/users';
 import { notificationRoutes } from './routes/notifications';
-import { setupSocketIO } from './services/socketService';
+import { initializeSupabase } from './services/supabaseService';
 
 // Load environment variables
 dotenv.config();
 
+// Initialize Supabase
+initializeSupabase();
+
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env['PORT'] || 8001;
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [process.env['FRONTEND_URL'] || 'http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
 }));
 
@@ -47,18 +50,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Logging middleware
-if (process.env.NODE_ENV === 'development') {
+if (process.env['NODE_ENV'] === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+    environment: process.env['NODE_ENV'],
   });
 });
 
@@ -76,13 +79,10 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📊 Environment: ${process.env['NODE_ENV']}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
-
-// Setup Socket.IO for real-time features
-setupSocketIO(server);
 
 export default app; 

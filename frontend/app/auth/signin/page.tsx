@@ -53,13 +53,6 @@ export default function SignInPage() {
           <p className="mt-2 text-gray-600">
             Sign in to your DriveMyWay account
           </p>
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium">Demo Credentials:</p>
-            <p className="text-xs text-blue-700 mt-1">Email: demo@example.com</p>
-            <p className="text-xs text-blue-700">Password: password123</p>
-            <p className="text-xs text-blue-700 mt-1">Email: test@example.com</p>
-            <p className="text-xs text-blue-700">Password: test123</p>
-          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">

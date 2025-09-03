@@ -28,7 +28,8 @@ type SignUpForm = z.infer<typeof signUpSchema>
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { signup, isLoading } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { signup } = useAuth()
   const router = useRouter()
 
   const {
@@ -40,17 +41,23 @@ export default function SignUpPage() {
   })
 
   const onSubmit = async (data: SignUpForm) => {
+    if (isSubmitting) return // Prevent double submission
+    
+    setIsSubmitting(true)
+    
     try {
-      const success = await signup(data.email, data.password, `${data.firstName} ${data.lastName}`)
+      const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone)
       if (success) {
         toast.success('Account created successfully!')
         router.push('/profile')
       } else {
-        toast.error('Email already exists')
+        toast.error('Failed to create account. Please try again.')
       }
     } catch (error) {
       console.error('Sign up error:', error)
       toast.error('An error occurred during sign up')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -62,11 +69,7 @@ export default function SignUpPage() {
           <p className="mt-2 text-gray-600">
             Join DriveMyWay and start earning from your driveway
           </p>
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium">Demo Mode:</p>
-            <p className="text-xs text-blue-700 mt-1">This is a demo signup. Use any email that's not already registered.</p>
-            <p className="text-xs text-blue-700">Existing users: demo@example.com, test@example.com</p>
-          </div>
+
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -229,10 +232,10 @@ export default function SignUpPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 

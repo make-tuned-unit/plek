@@ -1,43 +1,33 @@
-import { Server } from 'socket.io';
-import { Server as HttpServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import { Server as HTTPServer } from 'http';
 
-export const setupSocketIO = (server: HttpServer) => {
-  const io = new Server(server, {
-    cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-      methods: ['GET', 'POST'],
-    },
-  });
+export class SocketService {
+  private io: SocketIOServer;
 
-  io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
-    // Join user to their personal room
-    socket.on('join', (userId: string) => {
-      socket.join(`user_${userId}`);
-      console.log(`User ${userId} joined their room`);
+  constructor(server: HTTPServer) {
+    this.io = new SocketIOServer(server, {
+      cors: {
+        origin: process.env['FRONTEND_URL'] || 'http://localhost:3000',
+        methods: ['GET', 'POST']
+      }
     });
 
-    // Handle messaging
-    socket.on('send_message', (data) => {
-      // Broadcast to recipient
-      socket.to(`user_${data.receiverId}`).emit('new_message', data);
-    });
+    this.setupEventHandlers();
+  }
 
-    // Handle typing indicators
-    socket.on('typing', (data) => {
-      socket.to(`user_${data.receiverId}`).emit('user_typing', data);
-    });
+  private setupEventHandlers() {
+    this.io.on('connection', (socket) => {
+      console.log('User connected:', socket.id);
 
-    // Handle booking updates
-    socket.on('booking_update', (data) => {
-      socket.to(`user_${data.userId}`).emit('booking_updated', data);
-    });
+      socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+      });
 
-    socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
+      // Add more event handlers as needed
     });
-  });
+  }
 
-  return io;
-}; 
+  public getIO() {
+    return this.io;
+  }
+} 

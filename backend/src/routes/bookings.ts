@@ -3,32 +3,28 @@ import { protect } from '../middleware/auth';
 
 const router = Router();
 
-// TODO: Implement booking controllers
-const getBookings = (req: any, res: any) => {
-  res.json({ message: 'Get bookings' });
+const getBookings = (_req: any, res: any) => {
+  res.json({ message: 'Get all bookings' });
 };
 
-const getBooking = (req: any, res: any) => {
-  res.json({ message: 'Get booking' });
+const getBooking = (_req: any, res: any) => {
+  res.json({ message: 'Get single booking' });
 };
 
-const createBooking = (req: any, res: any) => {
+const createBooking = (_req: any, res: any) => {
   res.json({ message: 'Create booking' });
 };
 
-const updateBooking = (req: any, res: any) => {
+const updateBooking = (_req: any, res: any) => {
   res.json({ message: 'Update booking' });
 };
 
-const cancelBooking = (req: any, res: any) => {
+const cancelBooking = (_req: any, res: any) => {
   res.json({ message: 'Cancel booking' });
 };
 
 // Routes
-router.get('/', protect, getBookings);
-router.get('/:id', protect, getBooking);
-router.post('/', protect, createBooking);
-router.put('/:id', protect, updateBooking);
-router.delete('/:id', protect, cancelBooking);
+router.route('/').get(protect, getBookings).post(protect, createBooking);
+router.route('/:id').get(protect, getBooking).put(protect, updateBooking).delete(protect, cancelBooking);
 
 export { router as bookingRoutes }; 

@@ -20,9 +20,12 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  Camera
+  Camera,
+  Plus,
+  Trash2
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
+import { apiService } from '../../services/api'
 import toast from 'react-hot-toast'
 
 const profileSchema = z.object({
@@ -38,24 +41,7 @@ const profileSchema = z.object({
 
 type ProfileForm = z.infer<typeof profileSchema>
 
-// Mock data
-const mockUser = {
-  id: 1,
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john.doe@example.com',
-  phone: '+1 (555) 123-4567',
-  address: '123 Main St',
-  city: 'New York',
-  state: 'NY',
-  zipCode: '10001',
-  avatar: '/api/placeholder/150/150',
-  memberSince: '2024-01-15',
-  totalBookings: 12,
-  totalEarnings: 450.00,
-  rating: 4.8,
-  reviews: 8,
-}
+
 
 const mockBookings = [
   {
@@ -134,14 +120,14 @@ export default function ProfilePage() {
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: mockUser.firstName,
-      lastName: mockUser.lastName,
-      email: mockUser.email,
-      phone: mockUser.phone,
-      address: mockUser.address,
-      city: mockUser.city,
-      state: mockUser.state,
-      zipCode: mockUser.zipCode,
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      address: user?.address || '',
+      city: user?.city || '',
+      state: user?.state || '',
+      zipCode: user?.zip_code || '',
     },
   })
 
@@ -151,6 +137,22 @@ export default function ProfilePage() {
       router.push('/auth/signin')
     }
   }, [user, authLoading, router])
+
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      reset({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        zipCode: user.zip_code || '',
+      })
+    }
+  }, [user, reset])
 
   // Handle tab from URL parameter
   useEffect(() => {
@@ -176,7 +178,18 @@ export default function ProfilePage() {
   }
 
   const handleCancelEdit = () => {
-    reset()
+    if (user) {
+      reset({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        zipCode: user.zip_code || '',
+      })
+    }
     setIsEditing(false)
   }
 
@@ -211,6 +224,69 @@ export default function ProfilePage() {
     return null
   }
 
+  // Add Listing functionality
+  const [showAddListingModal, setShowAddListingModal] = useState(false);
+  const [listings, setListings] = useState<any[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(false);
+  const [isSubmittingListing, setIsSubmittingListing] = useState(false);
+
+  // Fetch user's properties on component mount
+  useEffect(() => {
+    if (user) {
+      fetchUserProperties();
+    }
+  }, [user]);
+
+  const fetchUserProperties = async () => {
+    try {
+      setIsLoadingListings(true);
+      const response = await apiService.getUserProperties();
+      if (response.success && response.data) {
+        setListings(response.data.properties || []);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      toast.error('Failed to load your listings');
+    } finally {
+      setIsLoadingListings(false);
+    }
+  };
+
+  const handleSubmitListing = async (listingData: any) => {
+    try {
+      setIsSubmittingListing(true);
+      
+      // Prepare data for backend
+      const propertyData = {
+        title: listingData.title,
+        description: listingData.description || '',
+        address: listingData.address,
+        city: '', // Will be extracted from address or user input
+        state: '', // Will be extracted from address or user input
+        zip_code: '', // Will be extracted from address or user input
+        price: parseFloat(listingData.price),
+        property_type: 'driveway',
+        max_vehicles: 1
+      };
+
+      const response = await apiService.createProperty(propertyData);
+      
+      if (response.success) {
+        toast.success('Listing created successfully!');
+        setShowAddListingModal(false);
+        // Refresh the listings
+        fetchUserProperties();
+      } else {
+        throw new Error(response.error || 'Failed to create listing');
+      }
+    } catch (error: any) {
+      console.error('Error adding listing:', error);
+      toast.error(error.message || 'Failed to add listing');
+    } finally {
+      setIsSubmittingListing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -227,36 +303,46 @@ export default function ProfilePage() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               {/* User Info */}
               <div className="text-center mb-6">
-                <div className="relative inline-block">
-                  <img
-                    src={user.avatar || mockUser.avatar}
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover mx-auto mb-4"
-                  />
-                  <button className="absolute bottom-4 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700">
-                    <Camera className="h-4 w-4" />
-                  </button>
-                </div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {user.name}
-                </h2>
-                <p className="text-gray-600">Member since {new Date(mockUser.memberSince).toLocaleDateString()}</p>
-                <div className="flex items-center justify-center mt-2">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="ml-1 text-sm text-gray-600">{mockUser.rating}</span>
-                  <span className="ml-1 text-sm text-gray-500">({mockUser.reviews} reviews)</span>
-                </div>
+                {!user ? (
+                  <div className="animate-pulse">
+                    <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24 mx-auto"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative inline-block">
+                      <img
+                        src={user?.avatar || '/api/placeholder/150/150'}
+                        alt="Profile"
+                        className="w-24 h-24 rounded-full object-cover mx-auto mb-4"
+                      />
+                      <button className="absolute bottom-4 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700">
+                        <Camera className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {user?.firstName} {user?.lastName}
+                    </h2>
+                    <p className="text-gray-600">Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Recently'}</p>
+                    <div className="flex items-center justify-center mt-2">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
+                      <span className="ml-1 text-sm text-gray-500">({user?.review_count || 0} reviews)</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Stats */}
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Bookings</span>
-                  <span className="font-medium">{mockUser.totalBookings}</span>
+                  <span className="font-medium">{user?.total_bookings || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Earnings</span>
-                  <span className="font-medium">${mockUser.totalEarnings}</span>
+                  <span className="font-medium">${user?.total_earnings || 0}</span>
                 </div>
               </div>
 
@@ -495,41 +581,62 @@ export default function ProfilePage() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">My Listings</h2>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Add New Listing
+                  <button
+                    onClick={() => setShowAddListingModal(true)}
+                    disabled={isLoadingListings}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoadingListings ? 'Loading...' : 'Add New Listing'}
                   </button>
                 </div>
-                <div className="space-y-4">
-                  {mockListings.map((listing) => (
+                {isLoadingListings ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Loading your listings...</p>
+                  </div>
+                ) : listings.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">You haven't created any listings yet.</p>
+                    <p className="text-sm text-gray-400 mt-1">Click "Add New Listing" to get started!</p>
+                  </div>
+                ) : (
+                  listings.map((listing) => (
                     <div key={listing.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">{listing.title}</h3>
                           <p className="text-gray-600 text-sm mt-1">{listing.address}</p>
+                          {listing.description && (
+                            <p className="text-gray-600 text-sm mt-2">{listing.description}</p>
+                          )}
                           <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                            <span>${listing.price}/hr</span>
-                            <span>{listing.bookings} bookings</span>
-                            <span>${listing.earnings} earned</span>
+                            <span>${listing.hourly_rate || listing.price}/hr</span>
+                            <span>{listing.total_bookings || 0} bookings</span>
+                            <span>${listing.total_earnings || 0} earned</span>
+                          </div>
+                          <div className="flex items-center mt-2">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              listing.status === 'active' ? 'bg-green-100 text-green-800' :
+                              listing.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {listing.status === 'pending_review' ? 'Pending Review' :
+                               listing.status === 'active' ? 'Active' : listing.status}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                            listing.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {listing.status}
-                          </span>
-                          <div className="flex items-center mt-1">
-                            <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                            <span className="text-xs text-gray-600 ml-1">{listing.rating}</span>
-                            <span className="text-xs text-gray-500 ml-1">({listing.reviews})</span>
-                          </div>
+                        <div className="flex space-x-2">
+                          <button className="p-2 text-gray-400 hover:text-blue-600">
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button className="p-2 text-gray-400 hover:text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
             )}
 
@@ -596,6 +703,146 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Add Listing Modal with loading state */}
+      {showAddListingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Listing</h3>
+              <button
+                onClick={() => setShowAddListingModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const listingData = {
+                title: formData.get('title') as string,
+                address: formData.get('address') as string,
+                price: formData.get('price') as string,
+                description: formData.get('description') as string,
+                photos: formData.get('photos') as File | null,
+              };
+              handleSubmitListing(listingData);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Listing Title *
+                  </label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Downtown Parking Spot"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Address *
+                  </label>
+                  <input
+                    name="address"
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Start typing your address..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    💡 Tip: Start typing and we'll suggest addresses for you
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    🔧 Address autocomplete coming soon with Google Places API
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Describe your driveway, parking space, or any special features..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Photos
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      name="photos"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <label htmlFor="photo-upload" className="cursor-pointer">
+                      <div className="space-y-2">
+                        <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Camera className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium text-blue-600 hover:text-blue-500">
+                              Click to upload
+                            </span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price per Hour ($) *
+                  </label>
+                  <input
+                    name="price"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="15.00"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAddListingModal(false)}
+                  disabled={isSubmittingListing}
+                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingListing}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingListing ? 'Creating...' : 'Add Listing'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

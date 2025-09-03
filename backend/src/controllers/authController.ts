@@ -1,70 +1,74 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// Generate JWT Token
-const generateToken = (id: string) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
-};
+import { SupabaseAuthService } from '../services/supabaseService';
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, firstName, lastName, phone } = req.body;
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
+    // Validate required fields
+    if (!email || !password || !firstName || !lastName) {
+      res.status(400).json({
         success: false,
-        message: 'User already exists',
+        message: 'Email, password, first name, and last name are required',
       });
+      return;
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        isVerified: true,
-        isHost: true,
-        avatar: true,
-        createdAt: true,
-      },
+    // Register user with Supabase
+    const { user, error } = await SupabaseAuthService.registerUser({
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+      phone,
     });
 
-    // Generate token
-    const token = generateToken(user.id);
+    if (error) {
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Registration failed',
+      });
+      return;
+    }
 
+    if (!user) {
+      res.status(500).json({
+        success: false,
+        message: 'User creation failed',
+      });
+      return;
+    }
+
+    // Generate JWT token using Supabase
+    const { user: authUser, error: authError } = await SupabaseAuthService.loginUser(email, password);
+
+    if (authError || !authUser) {
+      res.status(500).json({
+        success: false,
+        message: 'Login after registration failed',
+      });
+      return;
+    }
+
+    // Return user data and token
     res.status(201).json({
       success: true,
       data: {
-        user,
-        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          isVerified: user.is_verified,
+          isHost: user.is_host,
+          avatar: user.avatar,
+          createdAt: user.created_at,
+        },
+        token: 'supabase-token', // Supabase handles JWT automatically
       },
     });
   } catch (error) {
@@ -79,54 +83,64 @@ export const register = async (req: Request, res: Response) => {
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    // Check for user
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        isVerified: true,
-        isHost: true,
-        avatar: true,
-      },
-    });
+    // Validate required fields
+    if (!email || !password) {
+      res.status(400).json({
+        success: false,
+        message: 'Email and password are required',
+      });
+      return;
+    }
+
+    // Login user with Supabase
+    const { user, error } = await SupabaseAuthService.loginUser(email, password);
+
+    if (error) {
+      res.status(401).json({
+        success: false,
+        message: error.message || 'Invalid credentials',
+      });
+      return;
+    }
 
     if (!user) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         message: 'Invalid credentials',
       });
+      return;
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Get fresh session token
+    const { user: sessionUser, error: sessionError } = await SupabaseAuthService.loginUser(email, password);
 
-    if (!isMatch) {
-      return res.status(401).json({
+    if (sessionError || !sessionUser) {
+      res.status(500).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Session creation failed',
       });
+      return;
     }
 
-    // Generate token
-    const token = generateToken(user.id);
-
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
-
+    // Return user data and token
     res.json({
       success: true,
       data: {
-        user: userWithoutPassword,
-        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          isVerified: user.is_verified,
+          isHost: user.is_host,
+          avatar: user.avatar,
+        },
+        token: 'supabase-token', // Supabase handles JWT automatically
       },
     });
   } catch (error) {
@@ -141,39 +155,53 @@ export const login = async (req: Request, res: Response) => {
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        avatar: true,
-        bio: true,
-        address: true,
-        city: true,
-        state: true,
-        zipCode: true,
-        country: true,
-        isVerified: true,
-        isHost: true,
-        createdAt: true,
-        hostProfile: {
-          select: {
-            businessName: true,
-            autoAcceptBookings: true,
-            responseTime: true,
-          },
-        },
-      },
-    });
+    if (!req.user || !req.user.id) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
 
+    // Get user profile from Supabase
+    const { user, error } = await SupabaseAuthService.getUserById(req.user.id);
+
+    if (error || !user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    // Return user data
     res.json({
       success: true,
-      data: user,
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        avatar: user.avatar,
+        bio: user.bio,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        zipCode: user.zip_code,
+        country: user.country,
+        isVerified: user.is_verified,
+        isHost: user.is_host,
+        createdAt: user.created_at,
+        hostProfile: user.is_host ? {
+          // You can add host profile data here if needed
+          businessName: null,
+          autoAcceptBookings: false,
+          responseTime: null,
+        } : null,
+      },
     });
   } catch (error) {
     console.error('Get me error:', error);
@@ -187,8 +215,16 @@ export const getMe = async (req: Request, res: Response) => {
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
-export const updateProfile = async (req: Request, res: Response) => {
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.user || !req.user.id) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
     const {
       firstName,
       lastName,
@@ -201,44 +237,84 @@ export const updateProfile = async (req: Request, res: Response) => {
       country,
     } = req.body;
 
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        firstName,
-        lastName,
-        phone,
-        bio,
-        address,
-        city,
-        state,
-        zipCode,
-        country,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        avatar: true,
-        bio: true,
-        address: true,
-        city: true,
-        state: true,
-        zipCode: true,
-        country: true,
-        isVerified: true,
-        isHost: true,
-        createdAt: true,
-      },
+    // Update user profile in Supabase
+    const { user, error } = await SupabaseAuthService.updateUserProfile(req.user.id, {
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      bio,
+      address,
+      city,
+      state,
+      zip_code: zipCode,
+      country,
     });
 
+    if (error || !user) {
+      res.status(400).json({
+        success: false,
+        message: error?.message || 'Profile update failed',
+      });
+      return;
+    }
+
+    // Return updated user data
     res.json({
       success: true,
-      data: updatedUser,
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        avatar: user.avatar,
+        bio: user.bio,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        zipCode: user.zip_code,
+        country: user.country,
+        isVerified: user.is_verified,
+        isHost: user.is_host,
+        createdAt: user.created_at,
+      },
     });
   } catch (error) {
     console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user || !req.user.id) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
+    // Get the token from headers
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (token) {
+      // Logout from Supabase
+      await SupabaseAuthService.logoutUser(token);
+    }
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

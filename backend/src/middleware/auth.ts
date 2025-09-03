@@ -1,22 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { SupabaseAuthService } from '../services/supabaseService';
 
-const prisma = new PrismaClient();
-
+// Extend Express Request interface to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        isVerified: boolean;
+        isHost: boolean;
+        avatar: string | undefined;
+        role: string;
+      };
     }
   }
 }
 
+// Middleware to protect routes - requires valid JWT token
 export const protect = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   let token;
 
   if (
@@ -27,60 +35,99 @@ export const protect = async (
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      // Verify token with Supabase
+      if (!token) {
+        res.status(401).json({ message: 'Invalid token' });
+        return;
+      }
+      
+      const { user, error } = await SupabaseAuthService.verifyToken(token);
 
-      // Get user from the token
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          isVerified: true,
-          isHost: true,
-          avatar: true,
-        },
-      });
-
-      if (!user) {
-        return res.status(401).json({ message: 'User not found' });
+      if (error || !user) {
+        res.status(401).json({ message: 'Invalid token' });
+        return;
       }
 
-      req.user = user;
+      // Set user info in request
+      req.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        isVerified: user.is_verified,
+        isHost: user.is_host,
+        avatar: user.avatar || undefined,
+        role: user.role,
+      };
+
       next();
+      return;
     } catch (error) {
       console.error('Auth error:', error);
-      return res.status(401).json({ message: 'Not authorized' });
+      res.status(401).json({ message: 'Not authorized' });
+      return;
     }
   }
 
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    res.status(401).json({ message: 'Not authorized, no token' });
+    return;
   }
 };
 
-export const requireHost = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (req.user && req.user.isHost) {
-    next();
-  } else {
-    return res.status(403).json({ message: 'Host access required' });
-  }
-};
-
+// Middleware to require verified account
 export const requireVerified = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  if (req.user && req.user.isVerified) {
-    next();
-  } else {
-    return res.status(403).json({ message: 'Verified account required' });
+): void => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Not authorized' });
+    return;
   }
+
+  if (!req.user.isVerified) {
+    res.status(403).json({ message: 'Verified account required' });
+    return;
+  }
+
+  next();
+};
+
+// Middleware to require host role
+export const requireHost = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Not authorized' });
+    return;
+  }
+
+  if (!req.user.isHost) {
+    res.status(403).json({ message: 'Host account required' });
+    return;
+  }
+
+  next();
+};
+
+// Middleware to require admin role
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Not authorized' });
+    return;
+  }
+
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    res.status(403).json({ message: 'Admin access required' });
+    return;
+  }
+
+  next();
 }; 
