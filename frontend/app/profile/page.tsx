@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,6 +27,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
 import toast from 'react-hot-toast'
+import { MapboxAutocomplete } from '../../components/MapboxAutocomplete'
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -108,15 +109,49 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('profile')
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { user, logout, isLoading: authLoading } = useAuth()
+  const { user, logout, isLoading: authLoading, updateProfile } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Add Listing functionality - moved to top to avoid hooks after early returns
+  const [showAddListingModal, setShowAddListingModal] = useState(false);
+  const [listings, setListings] = useState<any[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(false);
+  const [isSubmittingListing, setIsSubmittingListing] = useState(false);
+  const [editingListing, setEditingListing] = useState<any | null>(null);
+  const [deletingListingId, setDeletingListingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
+  const [listingFormData, setListingFormData] = useState({
+    title: '',
+    address: '',
+    price: '',
+    description: '',
+    coordinates: null as [number, number] | null,
+    city: '',
+    state: '',
+    zipCode: '',
+    features: [] as string[],
+    availability: {
+      monday: { start: '09:00', end: '17:00', available: true },
+      tuesday: { start: '09:00', end: '17:00', available: true },
+      wednesday: { start: '09:00', end: '17:00', available: true },
+      thursday: { start: '09:00', end: '17:00', available: true },
+      friday: { start: '09:00', end: '17:00', available: true },
+      saturday: { start: '09:00', end: '17:00', available: true },
+      sunday: { start: '09:00', end: '17:00', available: true }
+    }
+  });
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -161,6 +196,56 @@ export default function ProfilePage() {
       setActiveTab(tabParam)
     }
   }, [searchParams])
+
+  // Fetch user's properties function - memoized with useCallback
+  const fetchUserProperties = useCallback(async () => {
+    try {
+      // Check if token exists before making API call
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        console.log('No auth token found, skipping API call');
+        return;
+      }
+      
+      setIsLoadingListings(true);
+      const response = await apiService.getUserProperties();
+      if (response.success && response.data) {
+        setListings(response.data.properties || []);
+      } else {
+        // Handle empty listings gracefully
+        setListings([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching properties:', error);
+      
+      // Show different messages based on error type
+      if (error.message?.includes('Invalid token')) {
+        toast.error('Authentication expired. Please sign in again.');
+      } else if (error.message?.includes('401')) {
+        toast.error('Authentication failed. Please sign in again.');
+      } else {
+        toast.error('Failed to load your listings');
+      }
+    } finally {
+      setIsLoadingListings(false);
+    }
+  }, []);
+
+  // Fetch user's properties on component mount
+  useEffect(() => {
+    if (user) {
+      // Check if we have a valid token before trying to fetch
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        // Add a small delay to ensure token is fully available
+        const timer = setTimeout(() => {
+          fetchUserProperties();
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, fetchUserProperties]);
 
   const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true)
@@ -219,37 +304,130 @@ export default function ProfilePage() {
     )
   }
 
-  // Redirect if not authenticated
-  if (!user) {
-    return null
-  }
 
-  // Add Listing functionality
-  const [showAddListingModal, setShowAddListingModal] = useState(false);
-  const [listings, setListings] = useState<any[]>([]);
-  const [isLoadingListings, setIsLoadingListings] = useState(false);
-  const [isSubmittingListing, setIsSubmittingListing] = useState(false);
-
-  // Fetch user's properties on component mount
-  useEffect(() => {
-    if (user) {
-      fetchUserProperties();
-    }
-  }, [user]);
-
-  const fetchUserProperties = async () => {
-    try {
-      setIsLoadingListings(true);
-      const response = await apiService.getUserProperties();
-      if (response.success && response.data) {
-        setListings(response.data.properties || []);
+  const handleEditListing = (listing: any) => {
+    // Set the listing to edit and populate the form
+    setEditingListing(listing);
+    setExistingPhotos(listing.photos || []);
+    setSelectedPhotos([]);
+    setPhotoPreviews([]);
+    setListingFormData({
+      title: listing.title || '',
+      address: listing.address || '',
+      price: listing.hourly_rate?.toString() || listing.price?.toString() || '',
+      description: listing.description || '',
+      coordinates: listing.latitude && listing.longitude ? [listing.latitude, listing.longitude] : null,
+      city: listing.city || '',
+      state: listing.state || '',
+      zipCode: listing.zip_code || '',
+      features: listing.features || [],
+      availability: {
+        monday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.monday_available !== false 
+        },
+        tuesday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.tuesday_available !== false 
+        },
+        wednesday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.wednesday_available !== false 
+        },
+        thursday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.thursday_available !== false 
+        },
+        friday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.friday_available !== false 
+        },
+        saturday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.saturday_available !== false 
+        },
+        sunday: { 
+          start: listing.start_time || '09:00', 
+          end: listing.end_time || '17:00', 
+          available: listing.sunday_available !== false 
+        }
       }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      toast.error('Failed to load your listings');
-    } finally {
-      setIsLoadingListings(false);
+    });
+    setShowAddListingModal(true);
+  };
+
+  const handleDeleteClick = (listingId: string) => {
+    setDeletingListingId(listingId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteListing = async () => {
+    if (!deletingListingId) return;
+
+    try {
+      const response = await apiService.deleteProperty(deletingListingId);
+      if (response.success) {
+        toast.success('Listing deleted successfully');
+        // Remove from list
+        setListings(prev => prev.filter(l => l.id !== deletingListingId));
+        setShowDeleteConfirm(false);
+        setDeletingListingId(null);
+      } else {
+        throw new Error(response.error || 'Failed to delete listing');
+      }
+    } catch (error: any) {
+      console.error('Error deleting listing:', error);
+      toast.error(error.message || 'Failed to delete listing');
     }
+  };
+
+  const uploadPhotos = async (propertyId: string, files: File[]): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('propertyId', propertyId);
+        
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/properties/${propertyId}/photos`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          let errorMessage = 'Failed to upload photo';
+          try {
+            const error = await response.json();
+            errorMessage = error.message || error.error || errorMessage;
+          } catch (e) {
+            // If response is not JSON, use status text
+            errorMessage = response.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        if (data.success && data.data?.url) {
+          uploadedUrls.push(data.data.url);
+        }
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    
+    return uploadedUrls;
   };
 
   const handleSubmitListing = async (listingData: any) => {
@@ -261,27 +439,90 @@ export default function ProfilePage() {
         title: listingData.title,
         description: listingData.description || '',
         address: listingData.address,
-        city: '', // Will be extracted from address or user input
-        state: '', // Will be extracted from address or user input
-        zip_code: '', // Will be extracted from address or user input
-        price: parseFloat(listingData.price),
+        city: listingData.city || '',
+        state: listingData.state || '',
+        zip_code: listingData.zip_code || '',
+        price: listingData.price, // Backend expects 'price' not 'hourly_rate'
         property_type: 'driveway',
-        max_vehicles: 1
+        max_vehicles: 1,
+        coordinates: listingData.coordinates // Include coordinates from the form
       };
 
-      const response = await apiService.createProperty(propertyData);
+      let response;
+      let propertyId: string;
       
-      if (response.success) {
-        toast.success('Listing created successfully!');
-        setShowAddListingModal(false);
-        // Refresh the listings
-        fetchUserProperties();
+      if (editingListing) {
+        // Update existing listing
+        propertyId = editingListing.id;
+        response = await apiService.updateProperty(propertyId, propertyData);
+        if (response.success) {
+          toast.success('Listing updated successfully!');
+        }
       } else {
-        throw new Error(response.error || 'Failed to create listing');
+        // Create new listing
+        response = await apiService.createProperty(propertyData);
+        if (response.success) {
+          propertyId = response.data?.property?.id;
+          toast.success('Listing created successfully!');
+          
+          // Refresh user data to get updated is_host status
+          setTimeout(async () => {
+            try {
+              const userResponse = await apiService.getMe();
+              if (userResponse.data?.user) {
+                updateProfile(userResponse.data.user);
+              }
+            } catch (error) {
+              console.error('Failed to refresh user data:', error);
+            }
+          }, 500);
+        }
+      }
+      
+      if (response.success && propertyId) {
+        // Upload photos if any were selected
+        if (selectedPhotos.length > 0) {
+          toast.loading('Uploading photos...', { id: 'photo-upload' });
+          await uploadPhotos(propertyId, selectedPhotos);
+          toast.success('Photos uploaded successfully!', { id: 'photo-upload' });
+        }
+        
+        setShowAddListingModal(false);
+        setEditingListing(null);
+        setSelectedPhotos([]);
+        setPhotoPreviews([]);
+        setExistingPhotos([]);
+        
+        // Reset form data
+        setListingFormData({
+          title: '',
+          address: '',
+          price: '',
+          description: '',
+          coordinates: null,
+          city: '',
+          state: '',
+          zipCode: '',
+          features: [],
+          availability: {
+            monday: { start: '09:00', end: '17:00', available: true },
+            tuesday: { start: '09:00', end: '17:00', available: true },
+            wednesday: { start: '09:00', end: '17:00', available: true },
+            thursday: { start: '09:00', end: '17:00', available: true },
+            friday: { start: '09:00', end: '17:00', available: true },
+            saturday: { start: '09:00', end: '17:00', available: true },
+            sunday: { start: '09:00', end: '17:00', available: true }
+          }
+        });
+        
+        // Refresh the listings
+        await fetchUserProperties();
+      } else {
+        throw new Error(response.error || `Failed to ${editingListing ? 'update' : 'create'} listing`);
       }
     } catch (error: any) {
-      console.error('Error adding listing:', error);
-      toast.error(error.message || 'Failed to add listing');
+      console.error(`Error ${editingListing ? 'updating' : 'adding'} listing:`, error);
+      toast.error(error.message || `Failed to ${editingListing ? 'update' : 'add'} listing`);
     } finally {
       setIsSubmittingListing(false);
     }
@@ -482,12 +723,31 @@ export default function ProfilePage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Address
                       </label>
-                      <input
-                        {...register('address')}
-                        type="text"
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-                      />
+                      {isEditing ? (
+                        <MapboxAutocomplete
+                          value={watch('address') || ''}
+                          onChange={(value) => setValue('address', value)}
+                          onSelect={(place) => {
+                            setValue('address', place.place_name);
+                            // Extract city, state, zip from place context
+                            const city = place.context?.find(ctx => ctx.id.includes('place'))?.text || '';
+                            const state = place.context?.find(ctx => ctx.id.includes('region'))?.text || '';
+                            const zipCode = place.context?.find(ctx => ctx.id.includes('postcode'))?.text || '';
+                            setValue('city', city);
+                            setValue('state', state);
+                            setValue('zipCode', zipCode);
+                          }}
+                          placeholder="Enter your address"
+                          className="w-full"
+                        />
+                      ) : (
+                        <input
+                          {...register('address')}
+                          type="text"
+                          disabled
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      )}
                     </div>
 
                     <div>
@@ -601,37 +861,88 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   listings.map((listing) => (
-                    <div key={listing.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{listing.title}</h3>
-                          <p className="text-gray-600 text-sm mt-1">{listing.address}</p>
-                          {listing.description && (
-                            <p className="text-gray-600 text-sm mt-2">{listing.description}</p>
+                    <div key={listing.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Photo Section */}
+                      {listing.photos && listing.photos.length > 0 ? (
+                        <div className="relative h-48 bg-gray-200">
+                          <img
+                            src={listing.photos[0].url}
+                            alt={listing.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div class="w-full h-full flex items-center justify-center bg-gray-200">
+                                    <div class="text-center text-gray-400">
+                                      <svg class="h-12 w-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      <p class="text-sm">Photo unavailable</p>
+                                    </div>
+                                  </div>
+                                `;
+                              }
+                            }}
+                          />
+                          {listing.photos.length > 1 && (
+                            <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                              +{listing.photos.length - 1} more
+                            </div>
                           )}
-                          <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                            <span>${listing.hourly_rate || listing.price}/hr</span>
-                            <span>{listing.total_bookings || 0} bookings</span>
-                            <span>${listing.total_earnings || 0} earned</span>
-                          </div>
-                          <div className="flex items-center mt-2">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              listing.status === 'active' ? 'bg-green-100 text-green-800' :
-                              listing.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {listing.status === 'pending_review' ? 'Pending Review' :
-                               listing.status === 'active' ? 'Active' : listing.status}
-                            </span>
+                        </div>
+                      ) : (
+                        <div className="h-48 bg-gray-200 flex items-center justify-center">
+                          <div className="text-center text-gray-400">
+                            <Car className="h-12 w-12 mx-auto mb-2" />
+                            <p className="text-sm">No photos</p>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <button className="p-2 text-gray-400 hover:text-blue-600">
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                      )}
+                      
+                      {/* Listing Details */}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900">{listing.title}</h3>
+                            <p className="text-gray-600 text-sm mt-1">{listing.address}</p>
+                            {listing.description && (
+                              <p className="text-gray-600 text-sm mt-2 line-clamp-2">{listing.description}</p>
+                            )}
+                            <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
+                              <span>${listing.hourly_rate || listing.price}/hr</span>
+                              <span>{listing.total_bookings || 0} bookings</span>
+                              <span>${listing.total_earnings || 0} earned</span>
+                            </div>
+                            <div className="flex items-center mt-2">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                listing.status === 'active' ? 'bg-green-100 text-green-800' :
+                                listing.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {listing.status === 'pending_review' ? 'Pending Review' :
+                                 listing.status === 'active' ? 'Active' : listing.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => handleEditListing(listing)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Edit listing"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(listing.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete listing"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -706,27 +1017,64 @@ export default function ProfilePage() {
 
       {/* Add Listing Modal with loading state */}
       {showAddListingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Add New Listing</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col mx-4 shadow-xl">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {editingListing ? 'Edit Listing' : 'Add New Listing'}
+              </h3>
               <button
-                onClick={() => setShowAddListingModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => {
+                  setShowAddListingModal(false);
+                  setEditingListing(null);
+                  setSelectedPhotos([]);
+                  setPhotoPreviews([]);
+                  setExistingPhotos([]);
+                  // Reset form data
+                  setListingFormData({
+                    title: '',
+                    address: '',
+                    price: '',
+                    description: '',
+                    coordinates: null,
+                    city: '',
+                    state: '',
+                    zipCode: '',
+                    features: [],
+                    availability: {
+                      monday: { start: '09:00', end: '17:00', available: true },
+                      tuesday: { start: '09:00', end: '17:00', available: true },
+                      wednesday: { start: '09:00', end: '17:00', available: true },
+                      thursday: { start: '09:00', end: '17:00', available: true },
+                      friday: { start: '09:00', end: '17:00', available: true },
+                      saturday: { start: '09:00', end: '17:00', available: true },
+                      sunday: { start: '09:00', end: '17:00', available: true }
+                    }
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
 
+            {/* Modal Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
             <form onSubmit={(e) => {
               e.preventDefault();
-              const formData = new FormData(e.currentTarget);
               const listingData = {
-                title: formData.get('title') as string,
-                address: formData.get('address') as string,
-                price: formData.get('price') as string,
-                description: formData.get('description') as string,
-                photos: formData.get('photos') as File | null,
+                title: listingFormData.title,
+                address: listingFormData.address,
+                price: listingFormData.price,
+                description: listingFormData.description,
+                city: listingFormData.city,
+                state: listingFormData.state,
+                zip_code: listingFormData.zipCode,
+                coordinates: listingFormData.coordinates,
+                features: listingFormData.features,
+                availability: listingFormData.availability,
+                photos: (document.getElementById('photo-upload') as HTMLInputElement)?.files || null,
               };
               handleSubmitListing(listingData);
             }}>
@@ -736,9 +1084,10 @@ export default function ProfilePage() {
                     Listing Title *
                   </label>
                   <input
-                    name="title"
                     type="text"
                     required
+                    value={listingFormData.title}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., Downtown Parking Spot"
                   />
@@ -748,18 +1097,25 @@ export default function ProfilePage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Address *
                   </label>
-                  <input
-                    name="address"
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  <MapboxAutocomplete
+                    value={listingFormData.address || ''}
+                    onChange={(value) => setListingFormData(prev => ({ ...prev, address: value }))}
+                    onSelect={(place) => {
+                      setListingFormData(prev => ({ ...prev, address: place.place_name }));
+                      // Store coordinates for future use
+                      setListingFormData(prev => ({ 
+                        ...prev, 
+                        coordinates: place.center,
+                        city: place.context?.find(ctx => ctx.id.includes('place'))?.text || '',
+                        state: place.context?.find(ctx => ctx.id.includes('region'))?.text || '',
+                        zipCode: place.context?.find(ctx => ctx.id.includes('postcode'))?.text || ''
+                      }));
+                    }}
                     placeholder="Start typing your address..."
+                    className="w-full"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    💡 Tip: Start typing and we'll suggest addresses for you
-                  </p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    🔧 Address autocomplete coming soon with Google Places API
+                    💡 Start typing and we'll suggest addresses for you
                   </p>
                 </div>
 
@@ -768,54 +1124,273 @@ export default function ProfilePage() {
                     Description
                   </label>
                   <textarea
-                    name="description"
                     rows={3}
+                    value={listingFormData.description}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, description: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Describe your driveway, parking space, or any special features..."
                   />
                 </div>
 
+                {/* Features/Tags Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Photos
+                    Features & Amenities
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      name="photos"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label htmlFor="photo-upload" className="cursor-pointer">
-                      <div className="space-y-2">
-                        <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                          <Camera className="h-6 w-6 text-gray-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">
-                            <span className="font-medium text-blue-600 hover:text-blue-500">
-                              Click to upload
-                            </span> or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
-                        </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      'Covered',
+                      '24/7 Access',
+                      'Security Camera',
+                      'Well Lit',
+                      'Easy Access',
+                      'EV Charging',
+                      'Security Guard',
+                      'Free WiFi',
+                      'Gated',
+                      'Paved',
+                      'Grass',
+                      'Street View'
+                    ].map((feature) => (
+                      <label key={feature} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={listingFormData.features.includes(feature)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setListingFormData(prev => ({
+                                ...prev,
+                                features: [...prev.features, feature]
+                              }));
+                            } else {
+                              setListingFormData(prev => ({
+                                ...prev,
+                                features: prev.features.filter(f => f !== feature)
+                              }));
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    💡 Select all features that apply to your parking space
+                  </p>
+                </div>
+
+                {/* Availability Hours */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Daily Availability
+                  </label>
+                  
+                  {/* Quick Set All Days Button */}
+                  <div className="mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const startTime = listingFormData.availability.monday.start;
+                        const endTime = listingFormData.availability.monday.end;
+                        setListingFormData(prev => ({
+                          ...prev,
+                          availability: {
+                            monday: { start: startTime, end: endTime, available: true },
+                            tuesday: { start: startTime, end: endTime, available: true },
+                            wednesday: { start: startTime, end: endTime, available: true },
+                            thursday: { start: startTime, end: endTime, available: true },
+                            friday: { start: startTime, end: endTime, available: true },
+                            saturday: { start: startTime, end: endTime, available: true },
+                            sunday: { start: startTime, end: endTime, available: true }
+                          }
+                        }));
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    >
+                      🕐 Set All Days to Same Time
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {Object.entries(listingFormData.availability).map(([day, schedule]) => (
+                      <div key={day} className="flex items-center space-x-3">
+                        <label className="flex items-center space-x-2 min-w-[80px]">
+                          <input
+                            type="checkbox"
+                            checked={schedule.available}
+                            onChange={(e) => {
+                              setListingFormData(prev => ({
+                                ...prev,
+                                availability: {
+                                  ...prev.availability,
+                                  [day]: {
+                                    ...prev.availability[day as keyof typeof prev.availability],
+                                    available: e.target.checked
+                                  }
+                                }
+                              }));
+                            }}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700 capitalize">{day}</span>
+                        </label>
+                        
+                        {schedule.available && (
+                          <>
+                            <input
+                              type="time"
+                              value={schedule.start}
+                              onChange={(e) => {
+                                setListingFormData(prev => ({
+                                  ...prev,
+                                  availability: {
+                                    ...prev.availability,
+                                    [day]: {
+                                      ...prev.availability[day as keyof typeof prev.availability],
+                                      start: e.target.value
+                                    }
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <span className="text-sm text-gray-500">to</span>
+                            <input
+                              type="time"
+                              value={schedule.end}
+                              onChange={(e) => {
+                                setListingFormData(prev => ({
+                                  ...prev,
+                                  availability: {
+                                    ...prev.availability,
+                                    [day]: {
+                                      ...prev.availability[day as keyof typeof prev.availability],
+                                      end: e.target.value
+                                    }
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </>
+                        )}
                       </div>
-                    </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    💡 Set when your parking space is available each day
+                  </p>
+                </div>
+
+                          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Photos
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+              <input
+                name="photos"
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                id="photo-upload"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    const fileArray = Array.from(files);
+                    setSelectedPhotos(prev => [...prev, ...fileArray]);
+                    
+                    // Create previews
+                    fileArray.forEach((file) => {
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        setPhotoPreviews(prev => [...prev, e.target?.result as string]);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  }
+                }}
+              />
+              <label htmlFor="photo-upload" className="cursor-pointer">
+                <div className="space-y-2">
+                  <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Camera className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-blue-600 hover:text-blue-500">
+                        Click to upload
+                      </span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
                   </div>
                 </div>
+              </label>
+            </div>
+            
+            {/* Existing Photos (when editing) */}
+            {editingListing && existingPhotos.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600 mb-2">Current Photos:</p>
+                <div className="flex flex-wrap gap-2">
+                  {existingPhotos.map((photo, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={photo.url}
+                        alt={`Photo ${index + 1}`}
+                        className="w-20 h-20 object-cover rounded-lg border"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Photo Preview */}
+            {photoPreviews.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600 mb-2">New Photos to Upload:</p>
+                <div className="flex flex-wrap gap-2">
+                  {photoPreviews.map((preview, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-20 h-20 object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+                          setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <p className="mt-2 text-xs text-gray-500">
+              💡 Tip: Upload multiple photos to showcase your parking space from different angles
+            </p>
+          </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Price per Hour ($) *
                   </label>
                   <input
-                    name="price"
                     type="number"
                     min="1"
                     step="0.01"
                     required
+                    value={listingFormData.price}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, price: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="15.00"
                   />
@@ -825,7 +1400,34 @@ export default function ProfilePage() {
               <div className="flex space-x-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddListingModal(false)}
+                  onClick={() => {
+                    setShowAddListingModal(false);
+                    setEditingListing(null);
+                    setSelectedPhotos([]);
+                    setPhotoPreviews([]);
+                    setExistingPhotos([]);
+                    // Reset form data
+                    setListingFormData({
+                      title: '',
+                      address: '',
+                      price: '',
+                      description: '',
+                      coordinates: null,
+                      city: '',
+                      state: '',
+                      zipCode: '',
+                      features: [],
+                      availability: {
+                        monday: { start: '09:00', end: '17:00', available: true },
+                        tuesday: { start: '09:00', end: '17:00', available: true },
+                        wednesday: { start: '09:00', end: '17:00', available: true },
+                        thursday: { start: '09:00', end: '17:00', available: true },
+                        friday: { start: '09:00', end: '17:00', available: true },
+                        saturday: { start: '09:00', end: '17:00', available: true },
+                        sunday: { start: '09:00', end: '17:00', available: true }
+                      }
+                    });
+                  }}
                   disabled={isSubmittingListing}
                   className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -836,10 +1438,49 @@ export default function ProfilePage() {
                   disabled={isSubmittingListing}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmittingListing ? 'Creating...' : 'Add Listing'}
+                  {isSubmittingListing 
+                    ? (editingListing ? 'Updating...' : 'Creating...') 
+                    : (editingListing ? 'Update Listing' : 'Add Listing')}
                 </button>
               </div>
             </form>
+            </div>
+            
+            {/* Modal Footer - Fixed */}
+            <div className="p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+              <p className="text-xs text-gray-500 text-center">
+                💡 Your listing will be reviewed before going live
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deletingListingId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-xl">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Delete Listing</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this listing? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingListingId(null);
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteListing}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

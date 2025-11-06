@@ -34,6 +34,7 @@ export interface CreateUserData {
   first_name: string;
   last_name: string;
   phone?: string;
+  isHost?: boolean;
 }
 
 export interface UpdateUserData {
@@ -110,7 +111,7 @@ export class SupabaseAuthService {
           phone: userData.phone,
           role: 'user',
           is_verified: true, // Auto-verify for now
-          is_host: false,
+          is_host: userData.isHost || false,
           total_bookings: 0,
           total_earnings: 0,
           rating: 0,
@@ -141,7 +142,7 @@ export class SupabaseAuthService {
   /**
    * Login user
    */
-  static async loginUser(email: string, password: string): Promise<{ user: DatabaseUser | null; error: AuthError | null }> {
+  static async loginUser(email: string, password: string): Promise<{ user: DatabaseUser | null; token: string | null; error: AuthError | null }> {
     try {
       const client = getSupabaseClient();
       
@@ -152,11 +153,11 @@ export class SupabaseAuthService {
       });
 
       if (authError) {
-        return { user: null, error: authError };
+        return { user: null, token: null, error: authError };
       }
 
       if (!authData.user) {
-        return { user: null, error: { message: 'Login failed', name: 'LoginError', status: 500 } as AuthError };
+        return { user: null, token: null, error: { message: 'Login failed', name: 'LoginError', status: 500 } as AuthError };
       }
 
       // Get user profile from our users table
@@ -167,13 +168,14 @@ export class SupabaseAuthService {
         .single();
 
       if (profileError) {
-        return { user: null, error: { message: profileError.message, name: 'ProfileError', status: 500 } as AuthError };
+        return { user: null, token: null, error: { message: profileError.message, name: 'ProfileError', status: 500 } as AuthError };
       }
 
-      return { user: profileData, error: null };
+      return { user: profileData, token: authData.session?.access_token || null, error: null };
     } catch (error) {
       return { 
         user: null, 
+        token: null, 
         error: { message: 'Internal server error', name: 'InternalError', status: 500 } as AuthError 
       };
     }

@@ -8,30 +8,78 @@ export interface UploadedPhoto {
 }
 
 export class PhotoService {
-  private supabase = getSupabaseClient();
-  private bucketName = 'property-photos';
+  // Load bucket name dynamically to ensure env vars are loaded
+  private getBucketName(): string {
+    return process.env['SUPABASE_STORAGE_BUCKET'] || 'property-photos';
+  }
+  
+  private getSupabase() {
+    return getSupabaseClient();
+  }
+
+  // Check if bucket exists (optional verification)
+  private async verifyBucketExists(): Promise<void> {
+    try {
+      const supabase = this.getSupabase();
+      const { data: buckets, error } = await supabase.storage.listBuckets();
+      
+      if (error) {
+        // If we can't list buckets (permission issue), skip verification
+        // The upload will fail with a clearer error if bucket doesn't exist
+        console.warn('Could not list buckets (may be a permission issue):', error.message);
+        return;
+      }
+      
+      if (buckets && buckets.length > 0) {
+        const bucketName = this.getBucketName();
+        const bucketExists = buckets.some((bucket: { name: string }) => bucket.name === bucketName);
+        if (!bucketExists) {
+          const availableBuckets = buckets.map((b: { name: string }) => b.name).join(', ');
+          throw new Error(
+            `Storage bucket "${bucketName}" not found. ` +
+            `Available buckets: ${availableBuckets}. ` +
+            `Please check your SUPABASE_STORAGE_BUCKET environment variable.`
+          );
+        }
+      }
+    } catch (error: any) {
+      // If verification fails, log but don't throw - let the upload attempt fail naturally
+      console.warn('Bucket verification skipped:', error.message);
+    }
+  }
 
   // Upload a single photo to Supabase Storage
   async uploadPhoto(file: Express.Multer.File, propertyId: string, caption?: string): Promise<UploadedPhoto> {
+    // Generate unique filename
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    
     try {
-      // Generate unique filename
-      const fileExt = file.originalname.split('.').pop();
-      const fileName = `${propertyId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const supabase = this.getSupabase();
+      
+      // Verify bucket exists before attempting upload
+      await this.verifyBucketExists();
+      
+      const bucketName = this.getBucketName();
+      console.log(`[PhotoService] Attempting to upload to bucket: "${bucketName}", file: ${fileName}`);
       
       // Upload to Supabase Storage
-      const { data, error } = await this.supabase.storage
-        .from(this.bucketName)
+      const { error } = await supabase.storage
+        .from(bucketName)
         .upload(fileName, file.buffer, {
           contentType: file.mimetype,
           cacheControl: '3600',
           upsert: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`[PhotoService] Upload error for bucket "${bucketName}":`, error);
+        throw error;
+      }
 
       // Get public URL
-      const { data: { publicUrl } } = this.supabase.storage
-        .from(this.bucketName)
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
         .getPublicUrl(fileName);
 
       return {
@@ -40,9 +88,18 @@ export class PhotoService {
         is_primary: false,
         order_index: 0
       };
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      throw new Error('Failed to upload photo');
+    } catch (error: any) {
+      console.error('Error uploading photo to Supabase Storage:', {
+        error,
+        message: error?.message,
+        statusCode: error?.statusCode,
+        errorCode: error?.error,
+        bucketName: this.getBucketName(),
+        fileName,
+        fileSize: file.size,
+        hasBuffer: !!file.buffer
+      });
+      throw new Error(`Failed to upload photo: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -57,7 +114,9 @@ export class PhotoService {
       
       // Set the first photo as primary
       if (uploadedPhotos.length > 0) {
-        uploadedPhotos[0].is_primary = true;
+        if (uploadedPhotos[0]) {
+          uploadedPhotos[0].is_primary = true;
+        }
         uploadedPhotos.forEach((photo, index) => {
           photo.order_index = index;
         });
@@ -73,8 +132,10 @@ export class PhotoService {
   // Delete a photo from storage and database
   async deletePhoto(photoId: string, propertyId: string): Promise<boolean> {
     try {
+      const supabase = this.getSupabase();
+      
       // Get photo info from database first
-      const { data: photo, error: fetchError } = await this.supabase
+      const { data: photo, error: fetchError } = await supabase
         .from('property_photos')
         .select('url')
         .eq('id', photoId)
@@ -91,8 +152,8 @@ export class PhotoService {
       const fullPath = `${propertyId}/${fileName}`;
 
       // Delete from storage
-      const { error: storageError } = await this.supabase.storage
-        .from(this.bucketName)
+      const { error: storageError } = await supabase.storage
+        .from(this.getBucketName())
         .remove([fullPath]);
 
       if (storageError) {
@@ -101,7 +162,7 @@ export class PhotoService {
       }
 
       // Delete from database
-      const { error: dbError } = await this.supabase
+      const { error: dbError } = await supabase
         .from('property_photos')
         .delete()
         .eq('id', photoId);
@@ -118,7 +179,8 @@ export class PhotoService {
   // Get all photos for a property
   async getPropertyPhotos(propertyId: string): Promise<UploadedPhoto[]> {
     try {
-      const { data: photos, error } = await this.supabase
+      const supabase = this.getSupabase();
+      const { data: photos, error } = await supabase
         .from('property_photos')
         .select('url, caption, is_primary, order_index')
         .eq('property_id', propertyId)
@@ -136,15 +198,17 @@ export class PhotoService {
   // Update photo order and primary status
   async updatePhotoOrder(propertyId: string, photoUpdates: { id: string; order_index: number; is_primary: boolean }[]): Promise<boolean> {
     try {
+      const supabase = this.getSupabase();
+      
       // Reset all photos to not primary first
-      await this.supabase
+      await supabase
         .from('property_photos')
         .update({ is_primary: false })
         .eq('property_id', propertyId);
 
       // Update each photo
       for (const update of photoUpdates) {
-        const { error } = await this.supabase
+        const { error } = await supabase
           .from('property_photos')
           .update({
             order_index: update.order_index,

@@ -15,6 +15,7 @@ const signUpSchema = z.object({
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
+  isHost: z.boolean().default(false),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   acceptTerms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
@@ -46,7 +47,7 @@ export default function SignUpPage() {
     setIsSubmitting(true)
     
     try {
-      const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone)
+      const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
       if (success) {
         toast.success('Account created successfully!')
         router.push('/profile')
@@ -150,6 +151,25 @@ export default function SignUpPage() {
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
               )}
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  {...register('isHost')}
+                  id="isHost"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="isHost" className="text-gray-700">
+                  I want to list my driveway and become a host
+                </label>
+                <p className="text-gray-500 mt-1">
+                  Check this if you want to rent out your driveway to other drivers
+                </p>
+              </div>
             </div>
 
             <div>

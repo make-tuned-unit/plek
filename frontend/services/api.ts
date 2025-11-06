@@ -39,15 +39,39 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      
+      // Handle non-JSON responses (like 404)
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // If response is not JSON, create a generic error
+        const text = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${text || response.statusText}`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        // Handle 401/403 specifically for auth errors
+        if (response.status === 401 || response.status === 403) {
+          // Clear token on auth errors
+          localStorage.removeItem('auth_token');
+          throw new Error(data.message || 'Authentication failed. Please sign in again.');
+        }
+        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
       }
 
       return data;
-    } catch (error) {
-      console.error('API request failed:', error);
+    } catch (error: any) {
+      // Don't log connection refused errors in production - they're expected if backend is down
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_CONNECTION_REFUSED')) {
+        // Silently handle connection errors - backend might not be running
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Backend server appears to be offline. Make sure it\'s running on port 8000.');
+        }
+      } else {
+        console.error('API request failed:', error);
+      }
       throw error;
     }
   }
@@ -59,6 +83,7 @@ class ApiService {
     firstName: string;
     lastName: string;
     phone: string;
+    isHost: boolean;
   }): Promise<ApiResponse<{ user: any; token: string }>> {
     return this.request('/auth/register', {
       method: 'POST',
@@ -68,6 +93,7 @@ class ApiService {
         firstName: userData.firstName,
         lastName: userData.lastName,
         phone: userData.phone,
+        isHost: userData.isHost,
       }),
     });
   }
@@ -107,6 +133,16 @@ class ApiService {
     return this.request(`/properties${queryParams}`);
   }
 
+  async getPropertiesNearLocation(lat: number, lng: number, radius?: number, filters?: any): Promise<ApiResponse<{ properties: any[] }>> {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      ...(radius && { radius: radius.toString() }),
+      ...filters
+    });
+    return this.request(`/properties?${params.toString()}`);
+  }
+
   async getUserProperties(): Promise<ApiResponse<{ properties: any[] }>> {
     return this.request('/properties/user/my-properties');
   }
@@ -120,6 +156,19 @@ class ApiService {
 
   async getProperty(id: string): Promise<ApiResponse<{ property: any }>> {
     return this.request(`/properties/${id}`);
+  }
+
+  async updateProperty(id: string, propertyData: any): Promise<ApiResponse<{ property: any }>> {
+    return this.request(`/properties/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(propertyData),
+    });
+  }
+
+  async deleteProperty(id: string): Promise<ApiResponse> {
+    return this.request(`/properties/${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // Booking endpoints
@@ -154,6 +203,30 @@ class ApiService {
   async markNotificationAsRead(id: string): Promise<ApiResponse> {
     return this.request(`/notifications/${id}/read`, {
       method: 'PATCH',
+    });
+  }
+
+  // Admin endpoints
+  async getPendingProperties(): Promise<ApiResponse<{ properties: any[] }>> {
+    return this.request('/properties/admin/pending');
+  }
+
+  async approveProperty(propertyId: string): Promise<ApiResponse<{ property: any }>> {
+    return this.request(`/properties/${propertyId}/approve`, {
+      method: 'PUT',
+    });
+  }
+
+  async rejectProperty(propertyId: string, reason?: string): Promise<ApiResponse<{ property: any }>> {
+    return this.request(`/properties/${propertyId}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async adminDeleteProperty(propertyId: string): Promise<ApiResponse> {
+    return this.request(`/properties/${propertyId}/admin`, {
+      method: 'DELETE',
     });
   }
 }

@@ -6,7 +6,7 @@ import { SupabaseAuthService } from '../services/supabaseService';
 // @access  Public
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, phone } = req.body;
+    const { email, password, firstName, lastName, phone, isHost } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
@@ -24,6 +24,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       first_name: firstName,
       last_name: lastName,
       phone,
+      isHost: isHost || false,
     });
 
     if (error) {
@@ -43,9 +44,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate JWT token using Supabase
-    const { user: authUser, error: authError } = await SupabaseAuthService.loginUser(email, password);
+    const { user: authUser, token: authToken, error: authError } = await SupabaseAuthService.loginUser(email, password);
 
-    if (authError || !authUser) {
+    if (authError || !authUser || !authToken) {
       res.status(500).json({
         success: false,
         message: 'Login after registration failed',
@@ -68,7 +69,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           avatar: user.avatar,
           createdAt: user.created_at,
         },
-        token: 'supabase-token', // Supabase handles JWT automatically
+        token: authToken, // Use the actual JWT token from Supabase
       },
     });
   } catch (error) {
@@ -97,7 +98,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Login user with Supabase
-    const { user, error } = await SupabaseAuthService.loginUser(email, password);
+    const { user, token, error } = await SupabaseAuthService.loginUser(email, password);
 
     if (error) {
       res.status(401).json({
@@ -107,21 +108,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!user) {
+    if (!user || !token) {
       res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
-      });
-      return;
-    }
-
-    // Get fresh session token
-    const { user: sessionUser, error: sessionError } = await SupabaseAuthService.loginUser(email, password);
-
-    if (sessionError || !sessionUser) {
-      res.status(500).json({
-        success: false,
-        message: 'Session creation failed',
+        message: 'Invalid credentials or token generation failed',
       });
       return;
     }
@@ -140,7 +130,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           isHost: user.is_host,
           avatar: user.avatar,
         },
-        token: 'supabase-token', // Supabase handles JWT automatically
+        token: token, // Use the actual JWT token from Supabase
       },
     });
   } catch (error) {
@@ -180,27 +170,31 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     res.json({
       success: true,
       data: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone: user.phone,
-        avatar: user.avatar,
-        bio: user.bio,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        zipCode: user.zip_code,
-        country: user.country,
-        isVerified: user.is_verified,
-        isHost: user.is_host,
-        createdAt: user.created_at,
-        hostProfile: user.is_host ? {
-          // You can add host profile data here if needed
-          businessName: null,
-          autoAcceptBookings: false,
-          responseTime: null,
-        } : null,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          phone: user.phone,
+          avatar: user.avatar,
+          bio: user.bio,
+          address: user.address,
+          city: user.city,
+          state: user.state,
+          zipCode: user.zip_code,
+          country: user.country,
+          isVerified: user.is_verified,
+          isHost: user.is_host,
+          role: user.role,
+          createdAt: user.created_at,
+          hostProfile: user.is_host ? {
+            // You can add host profile data here if needed
+            businessName: null,
+            autoAcceptBookings: false,
+            responseTime: null,
+          } : null,
+        },
       },
     });
   } catch (error) {

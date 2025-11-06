@@ -36,11 +36,32 @@ export function MapboxAutocomplete({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
+  const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
+  const previousValueRef = useRef<string>(value)
+  const isUserTypingRef = useRef<boolean>(false)
 
   const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+  // Reset interaction state when value changes externally (not from user typing)
+  useEffect(() => {
+    // Only reset if the value changed externally (not from user typing)
+    // This prevents auto-showing suggestions when modal opens with pre-filled data
+    if (!isUserTypingRef.current && value !== previousValueRef.current) {
+      setHasUserInteracted(false)
+      setShowSuggestions(false)
+      setSuggestions([])
+    }
+    previousValueRef.current = value
+    // Reset the typing flag after a short delay
+    if (isUserTypingRef.current) {
+      setTimeout(() => {
+        isUserTypingRef.current = false
+      }, 100)
+    }
+  }, [value])
 
   // Get user's location on component mount
   useEffect(() => {
@@ -50,7 +71,10 @@ export function MapboxAutocomplete({
           setUserLocation([position.coords.longitude, position.coords.latitude])
         },
         (error) => {
-          console.log('Geolocation not available:', error.message)
+          // Only log if it's not a user denial (code 1)
+          if (error.code !== 1) {
+            console.log('Geolocation not available:', error.message)
+          }
         },
         {
           enableHighAccuracy: false,
@@ -62,6 +86,11 @@ export function MapboxAutocomplete({
   }, [])
 
   useEffect(() => {
+    // Only fetch suggestions if user has interacted with the field
+    if (!hasUserInteracted) {
+      return
+    }
+
     if (!value.trim()) {
       setSuggestions([])
       setShowSuggestions(false)
@@ -102,7 +131,10 @@ export function MapboxAutocomplete({
         if (response.ok) {
           const data = await response.json()
           setSuggestions(data.features || [])
-          setShowSuggestions(true)
+          // Only show suggestions if user is actively interacting
+          if (hasUserInteracted && document.activeElement === inputRef.current) {
+            setShowSuggestions(true)
+          }
           setSelectedIndex(-1)
         }
       } catch (error) {
@@ -118,7 +150,7 @@ export function MapboxAutocomplete({
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [value, MAPBOX_TOKEN, userLocation])
+  }, [value, MAPBOX_TOKEN, userLocation, hasUserInteracted])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -196,9 +228,18 @@ export function MapboxAutocomplete({
           ref={inputRef}
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            isUserTypingRef.current = true
+            setHasUserInteracted(true)
+            onChange(e.target.value)
+          }}
           onKeyDown={handleKeyDown}
-          onFocus={() => value.trim() && suggestions.length > 0 && setShowSuggestions(true)}
+          onFocus={() => {
+            setHasUserInteracted(true)
+            if (value.trim() && suggestions.length > 0) {
+              setShowSuggestions(true)
+            }
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}

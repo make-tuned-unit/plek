@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
-import { Menu, X, User, Car, MapPin, LogOut, ChevronDown, Settings, CreditCard, Calendar } from 'lucide-react'
+import { Menu, X, User, Car, MapPin, LogOut, ChevronDown, Settings, CreditCard, Calendar, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -129,6 +129,19 @@ export function Navigation() {
                       <Settings className="h-4 w-4 mr-3" />
                       Settings
                     </Link>
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      <>
+                        <div className="border-t border-gray-100 my-1"></div>
+                        <Link
+                          href="/admin"
+                          onClick={handleProfileClick}
+                          className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-medium"
+                        >
+                          <Shield className="h-4 w-4 mr-3" />
+                          Admin Dashboard
+                        </Link>
+                      </>
+                    )}
                     <div className="border-t border-gray-100 my-1"></div>
                     <button
                       onClick={handleLogout}
@@ -241,6 +254,16 @@ export function Navigation() {
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
                     </Link>
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      <Link
+                        href="/admin"
+                        className="block text-blue-600 hover:text-blue-700 flex items-center mb-2 font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left text-red-600 hover:text-red-700 flex items-center"

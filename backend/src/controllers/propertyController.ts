@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { getSupabaseClient } from '../services/supabaseService';
+import { photoService } from '../services/photoService';
+import { calculateDistance } from '../utils/distance';
 
 // Types for property data
 interface PropertyData {
@@ -10,14 +12,15 @@ interface PropertyData {
   state: string;
   zip_code: string;
   hourly_rate: number;
-  property_type?: string;
-  max_vehicles?: number;
+  property_type: string;
+  max_vehicles: number;
   features?: string[];
   restrictions?: string[];
   access_instructions?: string;
 }
 
 interface PropertyPhoto {
+  property_id: string;
   url: string;
   caption?: string;
   is_primary: boolean;
@@ -30,7 +33,7 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
     const supabase = getSupabaseClient();
     
     // Get query parameters for filtering
-    const { city, state, min_price, max_price, property_type } = req.query;
+    const { city, state, min_price, max_price, property_type, lat, lng, radius } = req.query;
     
     let query = supabase
       .from('properties')
@@ -40,7 +43,9 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
         photos:property_photos(url, caption, is_primary, order_index)
       `)
       .eq('status', 'active')
-      .eq('is_available', true);
+      .neq('status', 'inactive')
+      .neq('status', 'deleted')
+      .neq('status', 'suspended');
     
     // Apply filters
     if (city) query = query.eq('city', city as string);
@@ -53,10 +58,57 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
     
     if (error) throw error;
     
+    // Sort photos for each property (primary first, then by order_index)
+    const propertiesWithSortedPhotos = properties?.map((property: any) => {
+      if (property.photos && Array.isArray(property.photos)) {
+        property.photos.sort((a: any, b: any) => {
+          // Primary photos first
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          // Then by order_index
+          return (a.order_index || 0) - (b.order_index || 0);
+        });
+      }
+      return property;
+    }) || [];
+    
+    // Calculate distances if coordinates are provided
+    let propertiesWithDistance = propertiesWithSortedPhotos;
+    if (lat && lng) {
+      const userLat = parseFloat(lat as string);
+      const userLng = parseFloat(lng as string);
+      
+      propertiesWithDistance = propertiesWithSortedPhotos.map((property: any) => {
+        if (property.latitude && property.longitude) {
+          const distance = calculateDistance(
+            userLat, 
+            userLng, 
+            property.latitude, 
+            property.longitude
+          );
+          return { ...property, distance };
+        }
+        return property;
+      });
+      
+      // Sort by distance if radius is specified
+      if (radius) {
+        const radiusKm = parseFloat(radius as string);
+        propertiesWithDistance = propertiesWithDistance.filter((property: any) => 
+          property.distance <= radiusKm
+        );
+      }
+      
+      // Sort by distance (closest first)
+      propertiesWithDistance.sort((a: any, b: any) => (a.distance || 999) - (b.distance || 999));
+    }
+    
     res.json({
       success: true,
-      data: properties,
-      count: properties?.length || 0
+      data: {
+        properties: propertiesWithDistance,
+        count: propertiesWithDistance?.length || 0
+      }
     });
   } catch (error: any) {
     console.error('Error fetching properties:', error);
@@ -78,30 +130,26 @@ export const getProperty = async (req: Request, res: Response): Promise<void> =>
       .from('properties')
       .select(`
         *,
-        host:users!properties_host_id_fkey(
-          id, first_name, last_name, phone, rating, review_count, 
-          total_bookings, total_earnings, created_at
-        ),
-        photos:property_photos(url, caption, is_primary, order_index),
-        availability:availability(date, is_available, price_override)
+        host:users!properties_host_id_fkey(id, first_name, last_name, email, phone, rating, review_count),
+        photos:property_photos(url, caption, is_primary, order_index)
       `)
       .eq('id', id)
-      .eq('status', 'active')
       .single();
     
     if (error) throw error;
     
-    if (!property) {
-      res.status(404).json({
-        success: false,
-        error: 'Property not found'
+    // Sort photos (primary first, then by order_index)
+    if (property.photos && Array.isArray(property.photos)) {
+      property.photos.sort((a: any, b: any) => {
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        return (a.order_index || 0) - (b.order_index || 0);
       });
-      return;
     }
     
     res.json({
       success: true,
-      data: property
+      data: { property }
     });
   } catch (error: any) {
     console.error('Error fetching property:', error);
@@ -135,13 +183,26 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       access_instructions: req.body.access_instructions || ''
     };
     
+    // Extract coordinates if provided (Mapbox returns [longitude, latitude])
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {
+      longitude = req.body.coordinates[0]; // Mapbox format: [longitude, latitude]
+      latitude = req.body.coordinates[1];
+      console.log('[createProperty] Saving coordinates:', { latitude, longitude, coordinates: req.body.coordinates });
+    } else {
+      console.log('[createProperty] No coordinates provided:', { coordinates: req.body.coordinates });
+    }
+    
     // Create the property
     const { data: property, error: propertyError } = await supabase
       .from('properties')
       .insert({
         ...propertyData,
         host_id: hostId,
-        status: 'pending_review'
+        status: 'pending_review',
+        latitude: latitude,
+        longitude: longitude
       } as any)
       .select()
       .single();
@@ -176,7 +237,7 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
     
     res.status(201).json({
       success: true,
-      data: property,
+      data: { property },
       message: 'Property created successfully'
     });
   } catch (error: any) {
@@ -220,7 +281,7 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     }
     
     // Update property data
-    const updateData: Partial<PropertyData> = {};
+    const updateData: Partial<PropertyData & { latitude?: number; longitude?: number }> = {};
     if (req.body.title) updateData.title = req.body.title;
     if (req.body.description) updateData.description = req.body.description;
     if (req.body.address) updateData.address = req.body.address;
@@ -233,6 +294,15 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     if (req.body.features) updateData.features = req.body.features;
     if (req.body.restrictions) updateData.restrictions = req.body.restrictions;
     if (req.body.access_instructions) updateData.access_instructions = req.body.access_instructions;
+    
+    // Extract coordinates if provided (Mapbox returns [longitude, latitude])
+    if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {
+      updateData.longitude = req.body.coordinates[0]; // Mapbox format: [longitude, latitude]
+      updateData.latitude = req.body.coordinates[1];
+      console.log('[updateProperty] Saving coordinates:', { latitude: updateData.latitude, longitude: updateData.longitude, coordinates: req.body.coordinates });
+    } else {
+      console.log('[updateProperty] No coordinates provided:', { coordinates: req.body.coordinates });
+    }
     
     const { data: updatedProperty, error: updateError } = await supabase
       .from('properties')
@@ -329,16 +399,361 @@ export const getUserProperties = async (req: Request, res: Response): Promise<vo
     
     if (error) throw error;
     
+    // Sort photos for each property
+    const propertiesWithSortedPhotos = properties?.map((property: any) => {
+      if (property.photos && Array.isArray(property.photos)) {
+        property.photos.sort((a: any, b: any) => {
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          return (a.order_index || 0) - (b.order_index || 0);
+        });
+      }
+      return property;
+    }) || [];
+    
     res.json({
       success: true,
-      data: properties,
-      count: properties?.length || 0
+      data: {
+        properties: propertiesWithSortedPhotos || [],
+        count: propertiesWithSortedPhotos?.length || 0
+      }
     });
   } catch (error: any) {
     console.error('Error fetching user properties:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user properties',
+      message: error.message
+    });
+  }
+};
+
+// @desc    Get pending properties (Admin only)
+// @route   GET /api/properties/admin/pending
+// @access  Private (Admin)
+export const getPendingProperties = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select(`
+        *,
+        host:users!properties_host_id_fkey(id, first_name, last_name, email, phone),
+        photos:property_photos(url, caption, is_primary, order_index)
+      `)
+      .eq('status', 'pending_review')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    res.json({
+      success: true,
+      data: {
+        properties: properties || [],
+        count: properties?.length || 0
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching pending properties:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch pending properties',
+      message: error.message
+    });
+  }
+};
+
+// @desc    Approve property (Admin only)
+// @route   PUT /api/properties/:id/approve
+// @access  Private (Admin)
+export const approveProperty = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const supabase = getSupabaseClient();
+    
+    // Get property
+    const { data: property, error: fetchError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !property) {
+      res.status(404).json({
+        success: false,
+        error: 'Property not found',
+      });
+      return;
+    }
+    
+    // Update property status to active
+    const { data: updatedProperty, error: updateError } = await supabase
+      .from('properties')
+      .update({ 
+        status: 'active',
+        is_verified: true 
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    // Create notification for host
+    await supabase.from('notifications').insert({
+      user_id: property.host_id,
+      type: 'property_approved',
+      title: 'Property Approved',
+      message: `Your property "${property.title}" has been approved and is now live!`,
+      data: { property_id: id },
+      is_read: false,
+    } as any);
+    
+    res.json({
+      success: true,
+      data: updatedProperty,
+      message: 'Property approved successfully',
+    });
+  } catch (error: any) {
+    console.error('Error approving property:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve property',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Delete property (Admin only)
+// @route   DELETE /api/properties/:id/admin
+// @access  Private (Admin)
+export const adminDeleteProperty = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const supabase = getSupabaseClient();
+    
+    // Get property to verify it exists
+    const { data: existingProperty, error: fetchError } = await supabase
+      .from('properties')
+      .select('id, title, host_id')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !existingProperty) {
+      res.status(404).json({
+        success: false,
+        error: 'Property not found'
+      });
+      return;
+    }
+    
+    // Soft delete by updating status (admin can delete any property)
+    const { error: deleteError } = await supabase
+      .from('properties')
+      .update({ status: 'deleted' })
+      .eq('id', id);
+    
+    if (deleteError) throw deleteError;
+    
+    res.json({
+      success: true,
+      message: 'Property deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error deleting property (admin):', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete property',
+      message: error.message
+    });
+  }
+};
+
+// @desc    Reject property (Admin only)
+// @route   PUT /api/properties/:id/reject
+// @access  Private (Admin)
+export const rejectProperty = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const supabase = getSupabaseClient();
+    
+    // Get property
+    const { data: property, error: fetchError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !property) {
+      res.status(404).json({
+        success: false,
+        error: 'Property not found',
+      });
+      return;
+    }
+    
+    // Update property status to inactive
+    const { data: updatedProperty, error: updateError } = await supabase
+      .from('properties')
+      .update({ 
+        status: 'inactive',
+        admin_notes: reason || 'Property rejected by admin'
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    // Create notification for host
+    await supabase.from('notifications').insert({
+      user_id: property.host_id,
+      type: 'property_rejected',
+      title: 'Property Rejected',
+      message: `Your property "${property.title}" was not approved. ${reason ? `Reason: ${reason}` : ''}`,
+      data: { property_id: id, reason: reason || '' },
+      is_read: false,
+    } as any);
+    
+    res.json({
+      success: true,
+      data: updatedProperty,
+      message: 'Property rejected successfully',
+    });
+  } catch (error: any) {
+    console.error('Error rejecting property:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reject property',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Upload photo for property
+// @route   POST /api/properties/:id/photos
+// @access  Private (Host)
+export const uploadPropertyPhoto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const hostId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    
+    // Verify ownership
+    const { data: property, error: fetchError } = await supabase
+      .from('properties')
+      .select('host_id')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !property) {
+      res.status(404).json({
+        success: false,
+        error: 'Property not found'
+      });
+      return;
+    }
+    
+    if (property.host_id !== hostId) {
+      res.status(403).json({
+        success: false,
+        error: 'Not authorized to upload photos for this property'
+      });
+      return;
+    }
+    
+    // Check if file was uploaded
+    if (!req.file) {
+      console.error('No file in request. Request body:', req.body);
+      console.error('Request files:', req.files);
+      res.status(400).json({
+        success: false,
+        error: 'No photo file provided'
+      });
+      return;
+    }
+    
+    console.log('File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      bufferLength: req.file.buffer?.length
+    });
+    
+    // Upload photo to Supabase Storage
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        error: 'Property ID is required'
+      });
+      return;
+    }
+    
+    let uploadedPhoto;
+    try {
+      uploadedPhoto = await photoService.uploadPhoto(req.file, id);
+      console.log('Photo uploaded successfully:', uploadedPhoto.url);
+    } catch (uploadError: any) {
+      console.error('Photo upload error details:', {
+        error: uploadError,
+        message: uploadError?.message,
+        stack: uploadError?.stack
+      });
+      throw uploadError;
+    }
+    
+    // Get existing photos count to determine order_index
+    const { data: existingPhotos } = await supabase
+      .from('property_photos')
+      .select('id')
+      .eq('property_id', id);
+    
+    const orderIndex = existingPhotos?.length || 0;
+    const isPrimary = orderIndex === 0; // First photo is primary
+    
+    // Save photo to database
+    const { data: savedPhoto, error: saveError } = await supabase
+      .from('property_photos')
+      .insert({
+        property_id: id,
+        url: uploadedPhoto.url,
+        caption: uploadedPhoto.caption || '',
+        is_primary: isPrimary,
+        order_index: orderIndex
+      } as any)
+      .select()
+      .single();
+    
+    if (saveError) throw saveError;
+    
+    // If this is the first photo, make sure it's marked as primary
+    if (isPrimary && existingPhotos && existingPhotos.length > 0 && savedPhoto?.id) {
+      // Update other photos to not be primary
+      await supabase
+        .from('property_photos')
+        .update({ is_primary: false })
+        .eq('property_id', id)
+        .neq('id', savedPhoto.id);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id: savedPhoto.id,
+        url: savedPhoto.url,
+        caption: savedPhoto.caption,
+        is_primary: savedPhoto.is_primary,
+        order_index: savedPhoto.order_index
+      },
+      message: 'Photo uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Error uploading photo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload photo',
       message: error.message
     });
   }

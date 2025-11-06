@@ -54,10 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             // Invalid token, remove it
             localStorage.removeItem('auth_token')
+            setUser(null)
           }
         } catch (error) {
           console.error('Auth check failed:', error)
-          localStorage.removeItem('auth_token')
+          // Only remove token if it's an auth error, not network errors
+          if (error instanceof Error && error.message.includes('Invalid token')) {
+            localStorage.removeItem('auth_token')
+            setUser(null)
+          }
         }
       }
       setIsLoading(false)
@@ -92,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signup = async (email: string, password: string, firstName: string, lastName: string, phone: string): Promise<boolean> => {
+  const signup = async (email: string, password: string, firstName: string, lastName: string, phone: string, isHost: boolean = false): Promise<boolean> => {
     setIsLoading(true)
     
     try {
@@ -102,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firstName,
         lastName,
         phone,
+        isHost,
       })
       
       if (response.data?.user && response.data?.token) {

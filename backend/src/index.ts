@@ -25,7 +25,7 @@ dotenv.config();
 initializeSupabase();
 
 const app = express();
-const PORT = process.env['PORT'] || 8001;
+const PORT = process.env['PORT'] || 8000;
 
 // Security middleware
 app.use(helmet());
@@ -43,6 +43,8 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing middleware
+// Note: Don't use body parser for multipart/form-data (file uploads)
+// Multer handles that separately
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

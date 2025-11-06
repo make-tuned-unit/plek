@@ -1,0 +1,742 @@
+/**
+ * Booking Controller
+ * 
+ * Handles all booking-related operations:
+ * - Create bookings with availability checking
+ * - Get user bookings (as renter or host)
+ * - Get single booking details
+ * - Update booking status (confirm/cancel)
+ * - Cancel bookings
+ * - Check property availability
+ * 
+ * Features:
+ * - Automatic conflict detection
+ * - Pricing calculation (hourly/daily/weekly/monthly rates)
+ * - Service fee calculation
+ * - Status validation and transitions
+ * - Notification creation
+ * - Authorization checks
+ */
+
+import { Request, Response } from 'express';
+import { getSupabaseClient } from '../services/supabaseService';
+
+// Types for booking data
+interface CreateBookingData {
+  propertyId: string;
+  startTime: string; // ISO string
+  endTime: string; // ISO string
+  specialRequests?: string;
+  vehicleInfo?: {
+    make?: string;
+    model?: string;
+    color?: string;
+    licensePlate?: string;
+  };
+}
+
+interface BookingConflict {
+  hasConflict: boolean;
+  conflictingBookings: any[];
+}
+
+/**
+ * Calculate total hours between two dates
+ */
+function calculateTotalHours(startTime: Date, endTime: Date): number {
+  const diffMs = endTime.getTime() - startTime.getTime();
+  return diffMs / (1000 * 60 * 60); // Convert to hours
+}
+
+/**
+ * Calculate booking price based on property rates
+ */
+function calculateBookingPrice(
+  property: any,
+  startTime: Date,
+  endTime: Date
+): { totalAmount: number; serviceFee: number; securityDeposit: number } {
+  const totalHours = calculateTotalHours(startTime, endTime);
+  const totalDays = Math.ceil(totalHours / 24);
+  
+  let baseAmount = 0;
+  
+  // Calculate base amount based on rates
+  if (property.hourly_rate && totalHours < 24) {
+    // Use hourly rate for bookings less than 24 hours
+    baseAmount = property.hourly_rate * totalHours;
+  } else if (property.daily_rate && totalDays >= 1) {
+    // Use daily rate for bookings 24+ hours
+    baseAmount = property.daily_rate * totalDays;
+  } else if (property.weekly_rate && totalDays >= 7) {
+    // Use weekly rate for bookings 7+ days
+    const weeks = Math.ceil(totalDays / 7);
+    baseAmount = property.weekly_rate * weeks;
+  } else if (property.monthly_rate && totalDays >= 30) {
+    // Use monthly rate for bookings 30+ days
+    const months = Math.ceil(totalDays / 30);
+    baseAmount = property.monthly_rate * months;
+  } else if (property.hourly_rate) {
+    // Fallback to hourly rate
+    baseAmount = property.hourly_rate * totalHours;
+  } else {
+    throw new Error('Property has no pricing configured');
+  }
+  
+  // Calculate service fee (default 10% or from property)
+  const serviceFeePercentage = property.service_fee_percentage || 10;
+  const serviceFee = (baseAmount * serviceFeePercentage) / 100;
+  
+  // Get security deposit
+  const securityDeposit = property.security_deposit || 0;
+  
+  const totalAmount = baseAmount + serviceFee;
+  
+  return {
+    totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
+    serviceFee: Math.round(serviceFee * 100) / 100,
+    securityDeposit: Math.round(securityDeposit * 100) / 100,
+  };
+}
+
+/**
+ * Check if booking times conflict with existing bookings
+ */
+async function checkBookingConflicts(
+  propertyId: string,
+  startTime: Date,
+  endTime: Date,
+  excludeBookingId?: string
+): Promise<BookingConflict> {
+  const supabase = getSupabaseClient();
+  
+  // Get all confirmed or pending bookings for this property
+  let query = supabase
+    .from('bookings')
+    .select('*')
+    .eq('property_id', propertyId)
+    .in('status', ['pending', 'confirmed']);
+  
+  if (excludeBookingId) {
+    query = query.neq('id', excludeBookingId);
+  }
+  
+  const { data: allBookings, error } = await query;
+  
+  if (error) {
+    throw error;
+  }
+  
+  // Filter for bookings that actually overlap with the requested time range
+  const conflictingBookings = (allBookings || []).filter((booking: any) => {
+    const bookingStart = new Date(booking.start_time);
+    const bookingEnd = new Date(booking.end_time);
+    
+    // Check if time ranges overlap
+    return (
+      (startTime >= bookingStart && startTime < bookingEnd) ||
+      (endTime > bookingStart && endTime <= bookingEnd) ||
+      (startTime <= bookingStart && endTime >= bookingEnd)
+    );
+  });
+  
+  return {
+    hasConflict: conflictingBookings.length > 0,
+    conflictingBookings: conflictingBookings,
+  };
+}
+
+/**
+ * Validate booking request
+ */
+async function validateBookingRequest(
+  propertyId: string,
+  startTime: Date,
+  endTime: Date,
+  renterId: string
+): Promise<{ isValid: boolean; error?: string; property?: any }> {
+  const supabase = getSupabaseClient();
+  
+  // Get property
+  const { data: property, error: propertyError } = await supabase
+    .from('properties')
+    .select('*')
+    .eq('id', propertyId)
+    .eq('status', 'active')
+    .single();
+  
+  if (propertyError || !property) {
+    return { isValid: false, error: 'Property not found or not available' };
+  }
+  
+  // Check if property is available
+  if (!property.is_available) {
+    return { isValid: false, error: 'Property is not available for booking' };
+  }
+  
+  // Check if user is trying to book their own property
+  if (property.host_id === renterId) {
+    return { isValid: false, error: 'You cannot book your own property' };
+  }
+  
+  // Validate dates
+  const now = new Date();
+  if (startTime < now) {
+    return { isValid: false, error: 'Start time cannot be in the past' };
+  }
+  
+  if (endTime <= startTime) {
+    return { isValid: false, error: 'End time must be after start time' };
+  }
+  
+  // Check minimum booking hours
+  const totalHours = calculateTotalHours(startTime, endTime);
+  if (totalHours < (property.min_booking_hours || 1)) {
+    return {
+      isValid: false,
+      error: `Minimum booking duration is ${property.min_booking_hours || 1} hours`,
+    };
+  }
+  
+  // Check maximum booking days
+  const totalDays = totalHours / 24;
+  if (totalDays > (property.max_booking_days || 30)) {
+    return {
+      isValid: false,
+      error: `Maximum booking duration is ${property.max_booking_days || 30} days`,
+    };
+  }
+  
+  // Check for conflicts
+  const conflictCheck = await checkBookingConflicts(propertyId, startTime, endTime);
+  if (conflictCheck.hasConflict) {
+    return {
+      isValid: false,
+      error: 'Property is not available for the selected dates',
+    };
+  }
+  
+  return { isValid: true, property };
+}
+
+// @desc    Create a new booking
+// @route   POST /api/bookings
+// @access  Private
+export const createBooking = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const renterId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    
+    const { propertyId, startTime, endTime, specialRequests, vehicleInfo }: CreateBookingData = req.body;
+    
+    // Validate required fields
+    if (!propertyId || !startTime || !endTime) {
+      res.status(400).json({
+        success: false,
+        error: 'Property ID, start time, and end time are required',
+      });
+      return;
+    }
+    
+    // Parse dates
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+    
+    // Validate booking request
+    const validation = await validateBookingRequest(propertyId, startDate, endDate, renterId);
+    if (!validation.isValid) {
+      res.status(400).json({
+        success: false,
+        error: validation.error,
+      });
+      return;
+    }
+    
+    const property = validation.property!;
+    
+    // Calculate pricing
+    const { totalAmount, serviceFee, securityDeposit } = calculateBookingPrice(
+      property,
+      startDate,
+      endDate
+    );
+    
+    // Calculate total hours
+    const totalHours = calculateTotalHours(startDate, endDate);
+    
+    // Determine initial status based on property settings
+    const initialStatus = property.instant_booking ? 'confirmed' : 'pending';
+    
+    // Create booking
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert({
+        property_id: propertyId,
+        renter_id: renterId,
+        host_id: property.host_id,
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        total_hours: totalHours,
+        total_amount: totalAmount,
+        service_fee: serviceFee,
+        security_deposit: securityDeposit,
+        status: initialStatus,
+        payment_status: 'pending',
+        special_requests: specialRequests || null,
+        vehicle_info: vehicleInfo || null,
+      } as any)
+      .select(`
+        *,
+        property:properties(*),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email, phone),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email, phone)
+      `)
+      .single();
+    
+    if (bookingError) {
+      throw bookingError;
+    }
+    
+    // Create notification for host
+    await supabase.from('notifications').insert({
+      user_id: property.host_id,
+      type: 'booking_request',
+      title: 'New Booking Request',
+      message: `You have a new booking request for ${property.title}`,
+      data: { booking_id: booking.id, property_id: propertyId },
+      is_read: false,
+    } as any);
+    
+    res.status(201).json({
+      success: true,
+      data: booking,
+      message: initialStatus === 'confirmed' 
+        ? 'Booking confirmed successfully' 
+        : 'Booking request created. Waiting for host approval.',
+    });
+  } catch (error: any) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create booking',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Get all bookings for the current user
+// @route   GET /api/bookings
+// @access  Private
+export const getBookings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    const { role, status } = req.query;
+    
+    // Determine which bookings to fetch (as renter or host)
+    const column = role === 'host' ? 'host_id' : 'renter_id';
+    
+    let query = supabase
+      .from('bookings')
+      .select(`
+        *,
+        property:properties(
+          id,
+          title,
+          address,
+          city,
+          state,
+          zip_code,
+          photos:property_photos(url, is_primary)
+        ),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email, phone, avatar),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email, phone, avatar)
+      `)
+      .eq(column, userId)
+      .order('created_at', { ascending: false });
+    
+    // Filter by status if provided
+    if (status) {
+      query = query.eq('status', status as string);
+    }
+    
+    const { data: bookings, error } = await query;
+    
+    if (error) throw error;
+    
+    res.json({
+      success: true,
+      data: {
+        bookings: bookings || [],
+        count: bookings?.length || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch bookings',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Get single booking by ID
+// @route   GET /api/bookings/:id
+// @access  Private
+export const getBooking = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    
+    // Get booking
+    const { data: booking, error } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        property:properties(
+          *,
+          photos:property_photos(*),
+          host:users!properties_host_id_fkey(id, first_name, last_name, email, phone, avatar)
+        ),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email, phone, avatar),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email, phone, avatar),
+        payments:payments(*)
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (error || !booking) {
+      res.status(404).json({
+        success: false,
+        error: 'Booking not found',
+      });
+      return;
+    }
+    
+    // Check if user has access to this booking
+    if (booking.renter_id !== userId && booking.host_id !== userId) {
+      res.status(403).json({
+        success: false,
+        error: 'Not authorized to view this booking',
+      });
+      return;
+    }
+    
+    res.json({
+      success: true,
+      data: booking,
+    });
+  } catch (error: any) {
+    console.error('Error fetching booking:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch booking',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update booking status
+// @route   PUT /api/bookings/:id
+// @access  Private
+export const updateBooking = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    const { status, paymentStatus } = req.body;
+    
+    // Get existing booking
+    const { data: existingBooking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*, property:properties(*)')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !existingBooking) {
+      res.status(404).json({
+        success: false,
+        error: 'Booking not found',
+      });
+      return;
+    }
+    
+    // Check authorization (only host can confirm/cancel, renter can cancel)
+    const isHost = existingBooking.host_id === userId;
+    const isRenter = existingBooking.renter_id === userId;
+    
+    if (!isHost && !isRenter) {
+      res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this booking',
+      });
+      return;
+    }
+    
+    // Validate status transitions
+    if (status) {
+      const currentStatus = existingBooking.status;
+      
+      // Host can confirm or cancel
+      if (isHost) {
+        if (status === 'confirmed' && currentStatus !== 'pending') {
+          res.status(400).json({
+            success: false,
+            error: 'Can only confirm pending bookings',
+          });
+          return;
+        }
+        if (status === 'cancelled' && currentStatus === 'completed') {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot cancel completed bookings',
+          });
+          return;
+        }
+      }
+      
+      // Renter can only cancel
+      if (isRenter && status === 'cancelled') {
+        if (currentStatus === 'completed') {
+          res.status(400).json({
+            success: false,
+            error: 'Cannot cancel completed bookings',
+          });
+          return;
+        }
+      } else if (isRenter && status !== 'cancelled') {
+        res.status(403).json({
+          success: false,
+          error: 'Renters can only cancel bookings',
+        });
+        return;
+      }
+    }
+    
+    // Build update object
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (paymentStatus) updateData.payment_status = paymentStatus;
+    
+    // Update booking
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        property:properties(*),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email)
+      `)
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    // Create notifications
+    if (status === 'confirmed') {
+      // Notify renter
+      await supabase.from('notifications').insert({
+        user_id: existingBooking.renter_id,
+        type: 'booking_confirmed',
+        title: 'Booking Confirmed',
+        message: `Your booking for ${existingBooking.property?.title || 'property'} has been confirmed`,
+        data: { booking_id: id, property_id: existingBooking.property_id },
+        is_read: false,
+      } as any);
+    } else if (status === 'cancelled') {
+      // Notify the other party
+      const notifyUserId = isHost ? existingBooking.renter_id : existingBooking.host_id;
+      await supabase.from('notifications').insert({
+        user_id: notifyUserId,
+        type: 'booking_cancelled',
+        title: 'Booking Cancelled',
+        message: `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
+        data: { booking_id: id, property_id: existingBooking.property_id },
+        is_read: false,
+      } as any);
+    }
+    
+    res.json({
+      success: true,
+      data: updatedBooking,
+      message: 'Booking updated successfully',
+    });
+  } catch (error: any) {
+    console.error('Error updating booking:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update booking',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Cancel booking
+// @route   DELETE /api/bookings/:id
+// @access  Private
+export const cancelBooking = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    
+    // Get existing booking
+    const { data: existingBooking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*, property:properties(*)')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !existingBooking) {
+      res.status(404).json({
+        success: false,
+        error: 'Booking not found',
+      });
+      return;
+    }
+    
+    // Check authorization
+    const isHost = existingBooking.host_id === userId;
+    const isRenter = existingBooking.renter_id === userId;
+    
+    if (!isHost && !isRenter) {
+      res.status(403).json({
+        success: false,
+        error: 'Not authorized to cancel this booking',
+      });
+      return;
+    }
+    
+    // Check if booking can be cancelled
+    if (existingBooking.status === 'completed') {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot cancel completed bookings',
+      });
+      return;
+    }
+    
+    if (existingBooking.status === 'cancelled') {
+      res.status(400).json({
+        success: false,
+        error: 'Booking is already cancelled',
+      });
+      return;
+    }
+    
+    // Update booking status
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .select(`
+        *,
+        property:properties(*),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email)
+      `)
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    // Create notification for the other party
+    const notifyUserId = isHost ? existingBooking.renter_id : existingBooking.host_id;
+    await supabase.from('notifications').insert({
+      user_id: notifyUserId,
+      type: 'booking_cancelled',
+      title: 'Booking Cancelled',
+      message: `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
+      data: { booking_id: id, property_id: existingBooking.property_id },
+      is_read: false,
+    } as any);
+    
+    res.json({
+      success: true,
+      data: updatedBooking,
+      message: 'Booking cancelled successfully',
+    });
+  } catch (error: any) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cancel booking',
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Check availability for a property
+// @route   GET /api/bookings/availability/:propertyId
+// @access  Public
+export const checkAvailability = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { propertyId } = req.params;
+    const { startTime, endTime } = req.query;
+    const supabase = getSupabaseClient();
+    
+    if (!propertyId) {
+      res.status(400).json({
+        success: false,
+        error: 'Property ID is required',
+      });
+      return;
+    }
+    
+    if (!startTime || !endTime) {
+      res.status(400).json({
+        success: false,
+        error: 'Start time and end time are required',
+      });
+      return;
+    }
+    
+    const startDate = new Date(startTime as string);
+    const endDate = new Date(endTime as string);
+    
+    // Get property
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', propertyId)
+      .single();
+    
+    if (propertyError || !property) {
+      res.status(404).json({
+        success: false,
+        error: 'Property not found',
+      });
+      return;
+    }
+    
+    // Check for conflicts
+    const conflictCheck = await checkBookingConflicts(propertyId, startDate, endDate);
+    
+    const isAvailable = !conflictCheck.hasConflict && property.is_available;
+    
+    res.json({
+      success: true,
+      data: {
+        isAvailable,
+        hasConflict: conflictCheck.hasConflict,
+        conflictingBookings: conflictCheck.conflictingBookings,
+        property: {
+          id: property.id,
+          title: property.title,
+          isAvailable: property.is_available,
+          instantBooking: property.instant_booking,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Error checking availability:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check availability',
+      message: error.message,
+    });
+  }
+};
+
