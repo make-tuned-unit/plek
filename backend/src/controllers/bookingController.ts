@@ -55,7 +55,12 @@ function calculateBookingPrice(
   property: any,
   startTime: Date,
   endTime: Date
-): { totalAmount: number; serviceFee: number; securityDeposit: number } {
+): {
+  baseAmount: number
+  totalAmount: number
+  bookerServiceFee: number
+  hostServiceFee: number
+} {
   const totalHours = calculateTotalHours(startTime, endTime);
   const totalDays = Math.ceil(totalHours / 24);
   
@@ -83,19 +88,21 @@ function calculateBookingPrice(
     throw new Error('Property has no pricing configured');
   }
   
-  // Calculate service fee (default 10% or from property)
-  const serviceFeePercentage = property.service_fee_percentage || 10;
-  const serviceFee = (baseAmount * serviceFeePercentage) / 100;
+  // Calculate total service fee (default 10% split evenly between booker and host, or from property settings)
+  const totalFeePercentage = property.service_fee_percentage || 10;
+  const hostFeePercentage = totalFeePercentage / 2;
+  const bookerFeePercentage = totalFeePercentage / 2;
+
+  const hostServiceFee = (baseAmount * hostFeePercentage) / 100;
+  const bookerServiceFee = (baseAmount * bookerFeePercentage) / 100;
   
-  // Get security deposit
-  const securityDeposit = property.security_deposit || 0;
-  
-  const totalAmount = baseAmount + serviceFee;
+  const totalAmount = baseAmount + bookerServiceFee;
   
   return {
-    totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
-    serviceFee: Math.round(serviceFee * 100) / 100,
-    securityDeposit: Math.round(securityDeposit * 100) / 100,
+    baseAmount: Math.round(baseAmount * 100) / 100,
+    totalAmount: Math.round(totalAmount * 100) / 100, // Amount charged to booker
+    bookerServiceFee: Math.round(bookerServiceFee * 100) / 100,
+    hostServiceFee: Math.round(hostServiceFee * 100) / 100,
   };
 }
 
@@ -255,7 +262,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const property = validation.property!;
     
     // Calculate pricing
-    const { totalAmount, serviceFee, securityDeposit } = calculateBookingPrice(
+    const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } = calculateBookingPrice(
       property,
       startDate,
       endDate
@@ -278,8 +285,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         end_time: endDate.toISOString(),
         total_hours: totalHours,
         total_amount: totalAmount,
-        service_fee: serviceFee,
-        security_deposit: securityDeposit,
+        service_fee: bookerServiceFee,
         status: initialStatus,
         payment_status: 'pending',
         special_requests: specialRequests || null,
@@ -306,6 +312,62 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       data: { booking_id: booking.id, property_id: propertyId },
       is_read: false,
     } as any);
+    
+    // Send emails (don't wait - fire and forget)
+    const { sendBookingConfirmationEmail, sendBookingNotificationEmail } = await import('../services/emailService');
+    
+    // Format vehicle info as string
+    const vehicleInfoString = vehicleInfo 
+      ? `${vehicleInfo.make || ''} ${vehicleInfo.model || ''} ${vehicleInfo.color || ''} ${vehicleInfo.licensePlate || ''}`.trim()
+      : undefined;
+    
+    // Prepare email data
+    const emailDataBase = {
+      bookingId: booking.id,
+      renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+      renterEmail: booking.renter.email,
+      hostName: booking.host ? `${booking.host.first_name} ${booking.host.last_name}` : 'Host',
+      hostEmail: booking.host?.email || '',
+      propertyTitle: property.title,
+      propertyAddress: property.address,
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+      totalHours: totalHours,
+      baseAmount,
+      totalAmount,
+      serviceFee: bookerServiceFee,
+      bookerServiceFee,
+      hostServiceFee,
+      securityDeposit: booking.security_deposit || 0,
+      ...(vehicleInfoString && { vehicleInfo: vehicleInfoString }),
+      ...(specialRequests && { specialRequests }),
+    };
+    
+    // Send confirmation email to renter
+    if (booking.renter && booking.renter.email) {
+      sendBookingConfirmationEmail({
+        ...emailDataBase,
+        renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        renterEmail: booking.renter.email,
+        hostName: booking.host ? `${booking.host.first_name} ${booking.host.last_name}` : 'Host',
+        hostEmail: booking.host?.email || '',
+      } as any).catch((error) => {
+        console.error('Failed to send booking confirmation email:', error);
+      });
+    }
+    
+    // Send notification email to host
+    if (booking.host && booking.host.email) {
+      sendBookingNotificationEmail({
+        ...emailDataBase,
+        renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        renterEmail: booking.renter.email,
+        hostName: `${booking.host.first_name} ${booking.host.last_name}`,
+        hostEmail: booking.host.email,
+      } as any).catch((error) => {
+        console.error('Failed to send booking notification email:', error);
+      });
+    }
     
     res.status(201).json({
       success: true,

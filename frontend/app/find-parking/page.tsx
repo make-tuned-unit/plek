@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map, Navigation } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
@@ -9,6 +9,29 @@ import { PropertiesMap } from '@/components/PropertiesMap'
 import { BookingModal } from '@/components/BookingModal'
 import { apiService } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { listingFeatures } from '@/data/listingFeatures'
+
+const formatTimeLabel = (hours: number, minutes: number) => {
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  return new Intl.DateTimeFormat('en-CA', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
+}
+
+const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
+  const hours = Math.floor(index / 4)
+  const minutes = (index % 4) * 15
+  const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  return {
+    value,
+    label: formatTimeLabel(hours, minutes),
+  }
+})
+
+const DEFAULT_RADIUS_KM = 25
 
 // Mock data for demonstration
 const mockProperties = [
@@ -81,12 +104,76 @@ export default function FindParkingPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const lastLocationQueryRef = useRef<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLocation, setSelectedLocation] = useState<Place | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
+  const dateInputRef = useRef<HTMLInputElement | null>(null)
+  const timeInputRef = useRef<HTMLInputElement | null>(null)
+  const timeFieldRef = useRef<HTMLDivElement | null>(null)
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false)
+  const openDatePicker = () => {
+    const input = dateInputRef.current
+    if (!input) return
+    input.focus()
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker()
+      } catch (error) {
+        // Ignore browsers that block programmatic picker opening
+      }
+    }
+  }
+
+  const openTimePicker = () => {
+    const input = timeInputRef.current
+    if (!input) return
+    input.focus()
+    setIsTimePickerOpen((prev) => !prev)
+  }
+
+  const handleTimeSelect = (value: string) => {
+    setSelectedTime(value)
+    setIsTimePickerOpen(false)
+    timeInputRef.current?.blur()
+  }
+
+  useEffect(() => {
+    if (!isTimePickerOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (timeFieldRef.current && !timeFieldRef.current.contains(event.target as Node)) {
+        setIsTimePickerOpen(false)
+      }
+    }
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsTimePickerOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEsc)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [isTimePickerOpen])
+
+  const getTimeDisplay = (value: string) => {
+    if (!value) return ''
+    const [hours, minutes] = value.split(':').map(Number)
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return value
+    return formatTimeLabel(hours, minutes)
+  }
   const [priceRange, setPriceRange] = useState([0, 50])
   const [propertyType, setPropertyType] = useState('all')
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
+  const [isFeatureFilterOpen, setIsFeatureFilterOpen] = useState(false)
   const [properties, setProperties] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -96,11 +183,24 @@ export default function FindParkingPage() {
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
 
-  const handleLocationSelect = (place: Place) => {
+  const handleOpenBooking = useCallback((property: any) => {
+    if (!property) return
+
+    if (!user) {
+      const redirectTarget = `/find-parking?property=${property.id}&book=true`
+      router.push(`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`)
+      return
+    }
+
+    setSelectedProperty(property)
+    setShowBookingModal(true)
+  }, [user, router])
+
+  const handleLocationSelect = async (place: Place) => {
     setSelectedLocation(place)
-    console.log('Selected location:', place)
-    // Here you could trigger a search for parking spots near this location
-    // For now, we'll just log the coordinates: place.center
+    setSearchQuery(place.place_name)
+    setUserLocation({ lat: place.center[1], lng: place.center[0] })
+    await fetchPropertiesNearLocation(place.center[1], place.center[0], DEFAULT_RADIUS_KM)
   }
 
   const getUserLocation = () => {
@@ -115,7 +215,7 @@ export default function FindParkingPage() {
         setUserLocation({ lat: latitude, lng: longitude })
         setLocationPermission('granted')
         // Fetch properties near user location
-        fetchPropertiesNearLocation(latitude, longitude)
+        fetchPropertiesNearLocation(latitude, longitude, DEFAULT_RADIUS_KM)
       },
       (error) => {
         // Only log error if it's not a user denial (which is expected)
@@ -138,10 +238,11 @@ export default function FindParkingPage() {
     )
   }
 
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
+      setProperties([])
       const response = await apiService.getProperties()
       if (response.success && response.data) {
         setProperties(response.data.properties || [])
@@ -154,13 +255,14 @@ export default function FindParkingPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const fetchPropertiesNearLocation = async (lat: number, lng: number) => {
+  const fetchPropertiesNearLocation = useCallback(async (lat: number, lng: number, radius: number = DEFAULT_RADIUS_KM) => {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await apiService.getPropertiesNearLocation(lat, lng, 50) // 50km radius
+      setProperties([])
+      const response = await apiService.getPropertiesNearLocation(lat, lng, radius)
       if (response.success && response.data) {
         setProperties(response.data.properties || [])
       } else {
@@ -176,42 +278,116 @@ export default function FindParkingPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchProperties])
 
   useEffect(() => {
     // Try to get user location first, then fetch properties
     getUserLocation()
   }, [])
 
+  useEffect(() => {
+    const locationParam = searchParams.get('location')
+
+    if (locationParam && locationParam !== lastLocationQueryRef.current) {
+      lastLocationQueryRef.current = locationParam
+      if (!mapboxToken) {
+        console.warn('[FindParking] Missing Mapbox token, falling back to all properties')
+        void fetchProperties()
+        return
+      }
+
+      const geocodeAndFetch = async () => {
+        try {
+          setIsLoading(true)
+          setError(null)
+          const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(locationParam)}.json?access_token=${mapboxToken}&limit=1&types=place,locality,region,address`
+          )
+          const data = await response.json()
+
+          if (data?.features?.length) {
+            const feature = data.features[0]
+            const place: Place = {
+              id: feature.id,
+              place_name: feature.place_name,
+              text: feature.text,
+              center: feature.center,
+              context: feature.context?.map((ctx: any) => ({ id: ctx.id, text: ctx.text })) || []
+            }
+
+            setSelectedLocation(place)
+            setSearchQuery(feature.place_name)
+            setUserLocation({ lat: feature.center[1], lng: feature.center[0] })
+            await fetchPropertiesNearLocation(feature.center[1], feature.center[0], DEFAULT_RADIUS_KM)
+          } else {
+            setError('Could not find that location. Showing all listings.')
+            await fetchProperties()
+          }
+        } catch (error) {
+          console.error('Error geocoding location:', error)
+          setError('Could not determine that location. Showing all listings.')
+          await fetchProperties()
+        } finally {
+          setIsLoading(false)
+        }
+      }
+
+      geocodeAndFetch()
+    }
+  }, [searchParams, mapboxToken, fetchProperties, fetchPropertiesNearLocation])
+
   // Check for booking parameters in URL
   useEffect(() => {
     const propertyId = searchParams.get('property')
     const shouldBook = searchParams.get('book') === 'true'
 
+    if (propertyId && shouldBook && !user) {
+      const redirectTarget = `/find-parking?property=${propertyId}&book=true`
+      router.replace(`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`, { scroll: false })
+      return
+    }
+
     if (propertyId && shouldBook && properties.length > 0) {
       const property = properties.find(p => p.id === propertyId)
       if (property) {
-        setSelectedProperty(property)
-        setShowBookingModal(true)
+        handleOpenBooking(property)
         // Clean up URL parameters
         router.replace('/find-parking', { scroll: false })
       }
     }
-  }, [searchParams, properties, router])
+  }, [searchParams, properties, router, handleOpenBooking, user])
 
-  const filteredProperties = properties.filter(property => {
-    // Only show active properties (backend should filter, but this is a safety check)
-    if (property.status !== 'active') {
-      return false
-    }
-    
-    const matchesSearch = property.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         property.address?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = propertyType === 'all' || property.property_type === propertyType
-    const matchesPrice = (property.hourly_rate || 0) >= priceRange[0] && (property.hourly_rate || 0) <= priceRange[1]
-    
-    return matchesSearch && matchesType && matchesPrice
-  })
+  const filteredProperties = properties
+    .filter(property => {
+      // Only show active properties (backend should filter, but this is a safety check)
+      if (property.status !== 'active') {
+        return false
+      }
+
+      const normalizedQuery = searchQuery.trim().toLowerCase()
+      const useTextSearch = !selectedLocation && normalizedQuery.length > 0
+      const matchesSearch = !useTextSearch ||
+        property.title?.toLowerCase().includes(normalizedQuery) ||
+        property.address?.toLowerCase().includes(normalizedQuery) ||
+        property.city?.toLowerCase().includes(normalizedQuery) ||
+        property.state?.toLowerCase().includes(normalizedQuery)
+      const matchesType = propertyType === 'all' || property.property_type === propertyType
+      const matchesPrice = (property.hourly_rate || 0) >= priceRange[0] && (property.hourly_rate || 0) <= priceRange[1]
+
+      const matchesFeatures =
+        selectedFeatures.length === 0 ||
+        selectedFeatures.every((feature) => property.features?.includes(feature))
+
+      return matchesSearch && matchesType && matchesPrice && matchesFeatures
+    })
+    .sort((a, b) => {
+      const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+      const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+      if (distanceA === distanceB) {
+        return 0
+      }
+      return distanceA - distanceB
+    })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -293,28 +469,74 @@ export default function FindParkingPage() {
                     Date
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <button
+                      type="button"
+                      onClick={openDatePicker}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                      aria-label="Open date picker"
+                    >
+                      <Calendar className="h-5 w-5" />
+                    </button>
                     <input
+                      ref={dateInputRef}
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onClick={openDatePicker}
+                      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                     />
                   </div>
                 </div>
                 
-                <div>
+                <div ref={timeFieldRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Time
                   </label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <button
+                      type="button"
+                      onClick={openTimePicker}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                      aria-label="Open time picker"
+                    >
+                      <Clock className="h-5 w-5" />
+                    </button>
                     <input
-                      type="time"
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      ref={timeInputRef}
+                      type="text"
+                      value={getTimeDisplay(selectedTime)}
+                      readOnly
+                      onClick={openTimePicker}
+                      onKeyDown={(event) => {
+                        if (event.key === ' ' || event.key === 'Enter') {
+                          event.preventDefault()
+                          openTimePicker()
+                        }
+                      }}
+                      placeholder="Select time"
+                      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                     />
+                    {isTimePickerOpen && (
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
+                        {TIME_OPTIONS.map((option) => {
+                          const isSelected = option.value === selectedTime
+                          return (
+                            <button
+                              type="button"
+                              key={option.value}
+                              onClick={() => handleTimeSelect(option.value)}
+                              className={`w-full text-left px-4 py-2 text-sm ${
+                                isSelected
+                                  ? 'bg-blue-50 text-blue-700 font-medium'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -334,6 +556,62 @@ export default function FindParkingPage() {
                   <option value="garage">Garage</option>
                   <option value="street">Street Parking</option>
                 </select>
+              </div>
+
+              {/* Feature Filters */}
+              <div className="mb-6 border border-gray-200 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setIsFeatureFilterOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  <span>Listing Features</span>
+                  <span className="text-xs text-gray-500">
+                    {isFeatureFilterOpen ? 'Hide' : 'Show'}
+                  </span>
+                </button>
+                {isFeatureFilterOpen && (
+                  <div className="px-4 pb-4">
+                    <p className="text-xs text-gray-500 mb-3">
+                      Filter results by amenities hosts can add to their listings.
+                    </p>
+                    <div className="flex flex-col space-y-2">
+                      {listingFeatures.map((feature) => {
+                        const isSelected = selectedFeatures.includes(feature.id)
+                        return (
+                          <button
+                            key={feature.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedFeatures((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== feature.id)
+                                  : [...prev, feature.id]
+                              )
+                            }}
+                            className={`flex items-center space-x-3 px-3 py-3 rounded-lg border text-sm transition ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                          >
+                            <span>{feature.icon}</span>
+                            <span>{feature.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {selectedFeatures.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFeatures([])}
+                        className="mt-4 text-xs text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Clear selected features
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Price Range */}
@@ -364,6 +642,8 @@ export default function FindParkingPage() {
                   setSelectedLocation(null)
                   setSelectedDate('')
                   setSelectedTime('')
+                  setSelectedFeatures([])
+                  setIsFeatureFilterOpen(false)
                   setPriceRange([0, 50])
                   setPropertyType('all')
                 }}
@@ -382,10 +662,7 @@ export default function FindParkingPage() {
                 <PropertiesMap
                   properties={filteredProperties}
                   userLocation={userLocation}
-                  onPropertyClick={(property) => {
-                    setSelectedProperty(property)
-                    setShowBookingModal(true)
-                  }}
+                  onPropertyClick={handleOpenBooking}
                   className="h-[calc(100vh-250px)] min-h-[600px]"
                 />
               </div>
@@ -538,10 +815,7 @@ export default function FindParkingPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => {
-                            setSelectedProperty(property)
-                            setShowBookingModal(true)
-                          }}
+                          onClick={() => handleOpenBooking(property)}
                           disabled={property.status !== 'active'}
                           className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
