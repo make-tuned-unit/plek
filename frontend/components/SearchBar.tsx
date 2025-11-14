@@ -1,17 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, MapPin, Calendar } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { MapboxAutocomplete } from './MapboxAutocomplete'
+import { useRouter } from 'next/navigation'
 
 export function SearchBar() {
   const [location, setLocation] = useState('')
-  const [dates, setDates] = useState('')
+  const router = useRouter()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement search functionality
-    console.log('Searching for:', { location, dates })
+    // Navigate to find-parking page with location query
+    if (location.trim()) {
+      router.push(`/find-parking?location=${encodeURIComponent(location)}`)
+    } else {
+      router.push('/find-parking')
+    }
   }
 
   return (
@@ -28,17 +33,6 @@ export function SearchBar() {
             }}
             placeholder="Where do you need parking?"
             className="w-full"
-          />
-        </div>
-        
-        <div className="flex-1 relative">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="When do you need it?"
-            value={dates}
-            onChange={(e) => setDates(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
         

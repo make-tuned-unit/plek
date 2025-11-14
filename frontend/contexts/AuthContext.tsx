@@ -14,26 +14,28 @@ interface User {
   address?: string
   city?: string
   state?: string
-  zip_code?: string
+  zipCode?: string
   country?: string
-  is_verified?: boolean
-  is_host?: boolean
+  isVerified?: boolean
+  isHost?: boolean
   role?: string
-  total_bookings?: number
-  total_earnings?: number
-  rating?: number
-  review_count?: number
-  created_at?: string
-  updated_at?: string
+  createdAt?: string
 }
 
 interface AuthContextType {
   user: User | null
+  isLoading: boolean
   login: (email: string, password: string) => Promise<boolean>
-  signup: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<boolean>
+  signup: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    phone: string,
+    isHost?: boolean
+  ) => Promise<boolean>
   logout: () => Promise<void>
   updateProfile: (profileData: Partial<User>) => Promise<boolean>
-  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -43,26 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for stored auth token and validate it
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token')
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
       if (token) {
         try {
           const response = await apiService.getMe()
           if (response.data?.user) {
             setUser(response.data.user)
           } else {
-            // Invalid token, remove it
             localStorage.removeItem('auth_token')
             setUser(null)
           }
         } catch (error) {
           console.error('Auth check failed:', error)
-          // Only remove token if it's an auth error, not network errors
-          if (error instanceof Error && error.message.includes('Invalid token')) {
-            localStorage.removeItem('auth_token')
-            setUser(null)
-          }
+          localStorage.removeItem('auth_token')
+          setUser(null)
         }
       }
       setIsLoading(false)
@@ -73,33 +70,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
-    
     try {
       const response = await apiService.login({ email, password })
-      
       if (response.data?.user && response.data?.token) {
-        const userData = response.data.user
-        const token = response.data.token
-        
-        // Store token and user data
-        localStorage.setItem('auth_token', token)
-        setUser(userData)
+        localStorage.setItem('auth_token', response.data.token)
+        setUser(response.data.user)
         setIsLoading(false)
         return true
       }
-      
       setIsLoading(false)
       return false
     } catch (error) {
       console.error('Login failed:', error)
+      localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
     }
   }
 
-  const signup = async (email: string, password: string, firstName: string, lastName: string, phone: string, isHost: boolean = false): Promise<boolean> => {
+  const signup = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    phone: string,
+    isHost: boolean = false
+  ): Promise<boolean> => {
     setIsLoading(true)
-    
     try {
       const response = await apiService.register({
         email,
@@ -109,22 +106,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone,
         isHost,
       })
-      
+
       if (response.data?.user && response.data?.token) {
-        const userData = response.data.user
-        const token = response.data.token
-        
-        // Store token and user data
-        localStorage.setItem('auth_token', token)
-        setUser(userData)
+        localStorage.setItem('auth_token', response.data.token)
+        setUser(response.data.user)
         setIsLoading(false)
         return true
       }
-      
       setIsLoading(false)
       return false
     } catch (error) {
       console.error('Signup failed:', error)
+      localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
     }
@@ -134,23 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiService.logout()
     } catch (error) {
-      console.error('Logout API call failed:', error)
+      console.error('Logout failed:', error)
     } finally {
-      // Always clear local data
-      setUser(null)
       localStorage.removeItem('auth_token')
+      setUser(null)
     }
   }
 
   const updateProfile = async (profileData: Partial<User>): Promise<boolean> => {
     try {
       const response = await apiService.updateProfile(profileData)
-      
       if (response.data?.user) {
         setUser(response.data.user)
         return true
       }
-      
       return false
     } catch (error) {
       console.error('Profile update failed:', error)
@@ -159,16 +149,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateProfile, isLoading }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
-} 
+}

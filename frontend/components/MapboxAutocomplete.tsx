@@ -242,7 +242,7 @@ export function MapboxAutocomplete({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+      className={`w-full pl-10 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent ${className}`}
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 animate-spin" />
@@ -260,7 +260,7 @@ export function MapboxAutocomplete({
               key={suggestion.id}
               onClick={() => handleSelect(suggestion)}
               className={`w-full text-left px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
-                index === selectedIndex ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                index === selectedIndex ? 'bg-accent-50 border-l-4 border-accent-400' : ''
               }`}
             >
               <div className="flex items-center">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,6 +16,8 @@ import {
   Upload,
   X
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 const propertySchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -65,9 +67,18 @@ const features = [
 ]
 
 export default function ListYourDrivewayPage() {
+  const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      const redirectTarget = encodeURIComponent('/list-your-driveway')
+      router.replace(`/auth/signup?redirect=${redirectTarget}&host=true`)
+    }
+  }, [authLoading, user, router])
 
   const {
     register,
@@ -121,7 +132,7 @@ export default function ListYourDrivewayPage() {
   }
 
   const onSubmit = async (data: PropertyForm) => {
-    setIsLoading(true)
+    setIsSubmitting(true)
     try {
       // TODO: Implement property listing logic
       console.log('Property data:', data)
@@ -129,7 +140,7 @@ export default function ListYourDrivewayPage() {
     } catch (error) {
       console.error('Error creating listing:', error)
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -143,6 +154,14 @@ export default function ListYourDrivewayPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
+  }
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    )
   }
 
   return (
@@ -165,7 +184,7 @@ export default function ListYourDrivewayPage() {
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
                   currentStep >= step.id 
-                    ? 'bg-blue-600 border-blue-600 text-white' 
+                    ? 'bg-accent-500 border-accent-500 text-white' 
                     : 'border-gray-300 text-gray-500'
                 }`}>
                   {currentStep > step.id ? (
@@ -184,7 +203,7 @@ export default function ListYourDrivewayPage() {
                 </div>
                 {index < steps.length - 1 && (
                   <div className={`w-16 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-blue-600' : 'bg-gray-300'
+                    currentStep > step.id ? 'bg-accent-500' : 'bg-gray-300'
                   }`} />
                 )}
               </div>
@@ -205,7 +224,7 @@ export default function ListYourDrivewayPage() {
                 <input
                   {...register('title')}
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="e.g., Downtown Parking Spot - Safe & Convenient"
                 />
                 {errors.title && (
@@ -220,7 +239,7 @@ export default function ListYourDrivewayPage() {
                 <textarea
                   {...register('description')}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="Describe your parking space, access instructions, and any special features..."
                 />
                 {errors.description && (
@@ -236,7 +255,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('address')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="123 Main Street"
                   />
                   {errors.address && (
@@ -251,7 +270,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('city')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="New York"
                   />
                   {errors.city && (
@@ -266,7 +285,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('state')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="NY"
                   />
                   {errors.state && (
@@ -281,7 +300,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('zipCode')}
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="10001"
                   />
                   {errors.zipCode && (
@@ -297,7 +316,7 @@ export default function ListYourDrivewayPage() {
                   </label>
                   <select
                     {...register('propertyType')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   >
                     <option value="driveway">Driveway</option>
                     <option value="garage">Garage</option>
@@ -311,7 +330,7 @@ export default function ListYourDrivewayPage() {
                   </label>
                   <select
                     {...register('maxVehicleSize')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   >
                     <option value="compact">Compact</option>
                     <option value="sedan">Sedan</option>
@@ -339,7 +358,7 @@ export default function ListYourDrivewayPage() {
                     type="number"
                     min="1"
                     step="0.50"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="15.00"
                   />
                   {errors.hourlyRate && (
@@ -356,7 +375,7 @@ export default function ListYourDrivewayPage() {
                     type="number"
                     min="1"
                     step="0.50"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="50.00"
                   />
                   {errors.dailyRate && (
@@ -382,7 +401,7 @@ export default function ListYourDrivewayPage() {
                              [day]: e.target.checked
                            })
                          }}
-                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                         className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                        />
                        <span className="ml-2 text-sm text-gray-700 capitalize">{day}</span>
                      </label>
@@ -398,7 +417,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('startTime')}
                     type="time"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   />
                 </div>
 
@@ -409,7 +428,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('endTime')}
                     type="time"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -419,7 +438,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('instantBooking')}
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">
                     Allow instant booking (no approval required)
@@ -430,7 +449,7 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('requireApproval')}
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">
                     Require approval for all bookings
@@ -510,9 +529,9 @@ export default function ListYourDrivewayPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-medium text-blue-900 mb-2">Ready to publish?</h3>
-                <p className="text-sm text-blue-700">
+              <div className="bg-accent-50 rounded-lg p-4">
+                <h3 className="font-medium text-primary-800 mb-2">Ready to publish?</h3>
+                <p className="text-sm text-accent-700">
                   Your listing will be reviewed and published within 24 hours. You can edit it anytime from your dashboard.
                 </p>
               </div>
@@ -525,7 +544,7 @@ export default function ListYourDrivewayPage() {
               type="button"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 text-gray-600 border border-mist-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
@@ -535,7 +554,7 @@ export default function ListYourDrivewayPage() {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600"
               >
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -543,10 +562,10 @@ export default function ListYourDrivewayPage() {
             ) : (
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Publishing...' : 'Publish Listing'}
+                {isSubmitting ? 'Publishing...' : 'Publish Listing'}
               </button>
             )}
           </div>

@@ -1,8 +1,8 @@
-# DriveMyWay Architecture Documentation
+# plekk Architecture Documentation
 
 ## System Overview
 
-DriveMyWay is a modern, scalable platform for driveway rentals with a modular architecture designed to support future expansion to storage spaces and event venues. The system prioritizes automation, clean code, and extensibility.
+plekk is a modern, scalable platform for driveway rentals with a modular architecture designed to support future expansion to storage spaces and event venues. The system prioritizes automation, clean code, and extensibility.
 
 ## 🏗️ System Architecture
 
@@ -352,7 +352,7 @@ GET  /api/events/timeline       - Event timeline management
 ```bash
 # Clone repository
 git clone <repository-url>
-cd DriveMyWay
+cd plekk
 
 # Install dependencies
 npm run install:all
@@ -464,4 +464,4 @@ npm run build:backend
 - Multi-region deployment
 - Disaster recovery plans
 
-This architecture provides a solid foundation for the DriveMyWay MVP while ensuring the system can evolve to support storage spaces and event venues in future phases. 
+This architecture provides a solid foundation for the plekk MVP while ensuring the system can evolve to support storage spaces and event venues in future phases. 

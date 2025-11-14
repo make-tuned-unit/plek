@@ -1,4 +1,4 @@
-# DriveMyWay - Driveway Rental Platform
+# plekk - Driveway Rental Platform
 
 A modern platform where homeowners can list their driveways for rent by hour, day, or longer periods. Built with scalability in mind to support future expansion to storage and event spaces.
 
@@ -55,7 +55,7 @@ A modern platform where homeowners can list their driveways for rent by hour, da
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd DriveMyWay
+   cd plekk
    ```
 
 2. **Set up environment variables**
@@ -87,7 +87,7 @@ A modern platform where homeowners can list their driveways for rent by hour, da
 ## 📁 Project Structure
 
 ```
-DriveMyWay/
+plekk/
 ├── frontend/                 # Next.js frontend application
 │   ├── app/                 # App Router pages
 │   ├── components/          # Reusable React components

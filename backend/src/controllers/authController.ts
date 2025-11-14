@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SupabaseAuthService } from '../services/supabaseService';
+import { sendWelcomeEmail } from '../services/emailService';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -54,6 +55,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Send welcome email (don't wait for it - fire and forget)
+    sendWelcomeEmail(user.email, user.first_name).catch((error) => {
+      console.error('Failed to send welcome email:', error);
+    });
+
     // Return user data and token
     res.status(201).json({
       success: true,
@@ -63,10 +69,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
           phone: user.phone,
           isVerified: user.is_verified,
           isHost: user.is_host,
           avatar: user.avatar,
+          role: user.role,
           createdAt: user.created_at,
         },
         token: authToken, // Use the actual JWT token from Supabase
@@ -125,10 +133,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
           phone: user.phone,
           isVerified: user.is_verified,
           isHost: user.is_host,
           avatar: user.avatar,
+          role: user.role,
         },
         token: token, // Use the actual JWT token from Supabase
       },

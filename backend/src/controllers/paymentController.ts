@@ -22,6 +22,105 @@ function getStripe(): Stripe {
   return stripeInstance;
 }
 
+function calculateTotalHours(startTime: Date, endTime: Date): number {
+  const diffMs = endTime.getTime() - startTime.getTime();
+  return diffMs / (1000 * 60 * 60);
+}
+
+function calculateBookingPriceForProperty(
+  property: any,
+  startTime: Date,
+  endTime: Date
+): {
+  baseAmount: number;
+  totalAmount: number;
+  bookerServiceFee: number;
+  hostServiceFee: number;
+} {
+  const totalHours = calculateTotalHours(startTime, endTime);
+  const totalDays = Math.ceil(totalHours / 24);
+
+  let baseAmount = 0;
+
+  if (property.hourly_rate && totalHours < 24) {
+    baseAmount = property.hourly_rate * totalHours;
+  } else if (property.daily_rate && totalDays >= 1) {
+    baseAmount = property.daily_rate * totalDays;
+  } else if (property.weekly_rate && totalDays >= 7) {
+    const weeks = Math.ceil(totalDays / 7);
+    baseAmount = property.weekly_rate * weeks;
+  } else if (property.monthly_rate && totalDays >= 30) {
+    const months = Math.ceil(totalDays / 30);
+    baseAmount = property.monthly_rate * months;
+  } else if (property.hourly_rate) {
+    baseAmount = property.hourly_rate * totalHours;
+  } else {
+    throw new Error('Property has no pricing configured');
+  }
+
+  const totalFeePercentage = property.service_fee_percentage || 10;
+  const hostFeePercentage = totalFeePercentage / 2;
+  const bookerFeePercentage = totalFeePercentage / 2;
+
+  const hostServiceFee = (baseAmount * hostFeePercentage) / 100;
+  const bookerServiceFee = (baseAmount * bookerFeePercentage) / 100;
+  const totalAmount = baseAmount + bookerServiceFee;
+
+  return {
+    baseAmount: Math.round(baseAmount * 100) / 100,
+    totalAmount: Math.round(totalAmount * 100) / 100,
+    bookerServiceFee: Math.round(bookerServiceFee * 100) / 100,
+    hostServiceFee: Math.round(hostServiceFee * 100) / 100,
+  };
+}
+
+async function checkBookingConflictsForRange(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  propertyId: string,
+  startTime: Date,
+  endTime: Date
+): Promise<boolean> {
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('id, start_time, end_time, status')
+    .eq('property_id', propertyId)
+    .in('status', ['pending', 'confirmed']);
+
+  if (error) {
+    throw error;
+  }
+
+  const hasConflict = (bookings || []).some((booking: any) => {
+    const bookingStart = new Date(booking.start_time);
+    const bookingEnd = new Date(booking.end_time);
+
+    return (
+      (startTime >= bookingStart && startTime < bookingEnd) ||
+      (endTime > bookingStart && endTime <= bookingEnd) ||
+      (startTime <= bookingStart && endTime >= bookingEnd)
+    );
+  });
+
+  return hasConflict;
+}
+
+function serializeMetadataValue(value: unknown): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 // @desc    Create Stripe Connect account for host
 // @route   POST /api/payments/connect/create
 // @access  Private
@@ -237,105 +336,196 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
 // @access  Private
 export const createPaymentIntent = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { bookingId } = req.body;
+    const {
+      propertyId,
+      startTime,
+      endTime,
+      vehicleInfo,
+      specialRequests,
+    }: {
+      propertyId?: string;
+      startTime?: string;
+      endTime?: string;
+      vehicleInfo?: any;
+      specialRequests?: string;
+    } = req.body;
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
-    
-    if (!bookingId) {
+
+    if (!propertyId || !startTime || !endTime) {
       res.status(400).json({
         success: false,
-        error: 'Booking ID is required',
+        error: 'Property ID, start time, and end time are required',
       });
       return;
     }
-    
-    // Get booking details with property and host info
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
+
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid start or end time provided',
+      });
+      return;
+    }
+
+    const now = new Date();
+    if (startDate < now) {
+      res.status(400).json({
+        success: false,
+        error: 'Start time cannot be in the past',
+      });
+      return;
+    }
+
+    if (endDate <= startDate) {
+      res.status(400).json({
+        success: false,
+        error: 'End time must be after the start time',
+      });
+      return;
+    }
+
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
       .select(`
         *,
-        property:properties(
-          *,
-          host:users!properties_host_id_fkey(
-            stripe_account_id,
-            stripe_account_status
-          )
+        host:users!properties_host_id_fkey(
+          id,
+          email,
+          first_name,
+          last_name,
+          phone,
+          stripe_account_id,
+          stripe_account_status
         )
       `)
-      .eq('id', bookingId)
-      .eq('renter_id', renterId)
+      .eq('id', propertyId)
+      .eq('status', 'active')
       .single();
-    
-    if (bookingError || !booking) {
+
+    if (propertyError || !property) {
       res.status(404).json({
         success: false,
-        error: 'Booking not found',
+        error: 'Property not found or not available',
       });
       return;
     }
-    
-    // Verify host has Stripe account
-    if (!booking.property.host.stripe_account_id) {
+
+    if (!property.is_available) {
+      res.status(400).json({
+        success: false,
+        error: 'This property is not accepting bookings right now',
+      });
+      return;
+    }
+
+    if (property.host_id === renterId) {
+      res.status(400).json({
+        success: false,
+        error: 'You cannot book your own property',
+      });
+      return;
+    }
+
+    const totalHours = calculateTotalHours(startDate, endDate);
+    if (totalHours < (property.min_booking_hours || 1)) {
+      res.status(400).json({
+        success: false,
+        error: `Minimum booking duration is ${property.min_booking_hours || 1} hour(s)`,
+      });
+      return;
+    }
+
+    const totalDays = totalHours / 24;
+    if (totalDays > (property.max_booking_days || 30)) {
+      res.status(400).json({
+        success: false,
+        error: `Maximum booking duration is ${property.max_booking_days || 30} day(s)`,
+      });
+      return;
+    }
+
+    const hasConflict = await checkBookingConflictsForRange(
+      supabase,
+      propertyId,
+      startDate,
+      endDate
+    );
+
+    if (hasConflict) {
+      res.status(400).json({
+        success: false,
+        error: 'This property is no longer available for the selected dates',
+      });
+      return;
+    }
+
+    if (!property.host?.stripe_account_id) {
       res.status(400).json({
         success: false,
         error: 'Host has not set up payment account. Please contact support.',
       });
       return;
     }
-    
-    // Check if host account is active
-    if (booking.property.host.stripe_account_status !== 'active') {
+
+    if (property.host?.stripe_account_status !== 'active') {
       res.status(400).json({
         success: false,
         error: 'Host payment account is not yet active. Please try again later.',
       });
       return;
     }
-    
-    // Verify booking hasn't already been paid
-    if (booking.payment_status === 'completed') {
-      res.status(400).json({
-        success: false,
-        error: 'Booking has already been paid',
-      });
-      return;
-    }
-    
-    const totalAmount = booking.total_amount; // in dollars (includes booker fee)
-    const bookerServiceFee = booking.service_fee; // in dollars (5% charged to booker)
-    const propertyFeePercentage = booking.property?.service_fee_percentage ?? 10;
-    const hostFeePercentage = propertyFeePercentage / 2;
-    const baseAmount = totalAmount - bookerServiceFee;
-    const hostServiceFee = Math.round(baseAmount * (hostFeePercentage / 100) * 100) / 100;
+
+    const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } =
+      calculateBookingPriceForProperty(property, startDate, endDate);
+
     const applicationFee = bookerServiceFee + hostServiceFee;
-    
-    // Create PaymentIntent with Connect (Destination Charge)
+
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: Math.round(totalAmount * 100), // Convert to cents
       currency: 'usd',
       application_fee_amount: Math.round(applicationFee * 100), // Platform share from booker + host fees
       transfer_data: {
-        destination: booking.property.host.stripe_account_id, // Host's account (auto-transfer)
+        destination: property.host.stripe_account_id,
       },
       metadata: {
-        booking_id: bookingId,
-        property_id: booking.property_id,
         renter_id: renterId,
-        host_id: booking.host_id,
-        platform: 'drivemyway',
-        base_amount: baseAmount.toString(),
-        booker_service_fee: bookerServiceFee.toString(),
-        host_service_fee: hostServiceFee.toString(),
+        property_id: propertyId,
+        host_id: property.host_id,
+        property_title: serializeMetadataValue(property.title),
+        property_address: serializeMetadataValue(property.address),
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        total_hours: serializeMetadataValue(totalHours),
+        base_amount: serializeMetadataValue(baseAmount),
+        booker_service_fee: serializeMetadataValue(bookerServiceFee),
+        host_service_fee: serializeMetadataValue(hostServiceFee),
+        total_amount: serializeMetadataValue(totalAmount),
+        vehicle_info: serializeMetadataValue(vehicleInfo),
+        special_requests: serializeMetadataValue(specialRequests),
+        instant_booking: serializeMetadataValue(property.instant_booking),
+        platform: 'plekk',
       },
       automatic_payment_methods: {
         enabled: true,
       },
     });
-    
+
     res.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
+      data: {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        pricing: {
+          totalAmount,
+          baseAmount,
+          bookerServiceFee,
+          hostServiceFee,
+        },
+      },
     });
   } catch (error: any) {
     console.error('Error creating payment intent:', error);
@@ -352,22 +542,20 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
 // @access  Private
 export const confirmPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { paymentIntentId, bookingId } = req.body;
+    const { paymentIntentId } = req.body;
     const userId = (req as any).user.id;
     const supabase = getSupabaseClient();
-    
-    if (!paymentIntentId || !bookingId) {
+
+    if (!paymentIntentId) {
       res.status(400).json({
         success: false,
-        error: 'Payment intent ID and booking ID are required',
+        error: 'Payment intent ID is required',
       });
       return;
     }
-    
-    // Retrieve payment intent to verify status
+
     const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
-    
-    // Verify this payment belongs to the user
+
     if (paymentIntent.metadata['renter_id'] !== userId) {
       res.status(403).json({
         success: false,
@@ -375,7 +563,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       });
       return;
     }
-    
+
     if (paymentIntent.status !== 'succeeded') {
       res.status(400).json({
         success: false,
@@ -384,54 +572,226 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       });
       return;
     }
-    
-    // Update booking and create payment record
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update({ 
-        payment_status: 'completed',
-        // If instant booking, confirm immediately; otherwise keep as pending for host approval
-        // Note: instant_booking check would need to come from booking data, not metadata
-      })
-      .eq('id', bookingId);
-    
-    if (updateError) throw updateError;
-    
-    // Create payment record
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .insert({
-        booking_id: bookingId,
-        user_id: userId,
-        amount: paymentIntent.amount / 100, // Convert from cents
-        currency: paymentIntent.currency,
-        payment_method: paymentIntent.payment_method as string,
-        stripe_payment_id: paymentIntentId,
-        status: 'completed',
-        type: 'booking',
+
+    const existingBookingId = paymentIntent.metadata['booking_id'];
+    if (existingBookingId) {
+      const { data: existingBooking } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          property:properties(*, host:users!properties_host_id_fkey(*)),
+          renter:users!bookings_renter_id_fkey(*),
+          host:users!bookings_host_id_fkey(*)
+        `)
+        .eq('id', existingBookingId)
+        .single();
+
+      res.json({
+        success: true,
+        data: {
+          booking: existingBooking,
+          paymentIntentId,
+        },
       });
-    
-    if (paymentError) throw paymentError;
-    
-    // Get booking and user details for email
-    const { data: bookingData } = await supabase
-      .from('bookings')
+      return;
+    }
+
+    const propertyId = paymentIntent.metadata['property_id'];
+    const startTime = paymentIntent.metadata['start_time'];
+    const endTime = paymentIntent.metadata['end_time'];
+
+    if (!propertyId || !startTime || !endTime) {
+      res.status(400).json({
+        success: false,
+        error: 'Payment metadata incomplete. Please contact support.',
+      });
+      return;
+    }
+
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
       .select(`
         *,
-        property:properties(title, address),
-        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email)
+        host:users!properties_host_id_fkey(
+          id,
+          email,
+          first_name,
+          last_name,
+          phone,
+          stripe_account_id,
+          stripe_account_status
+        )
       `)
-      .eq('id', bookingId)
+      .eq('id', propertyId)
       .single();
-    
-    // Send payment receipt email (don't wait - fire and forget)
-    if (bookingData && bookingData.renter) {
-      const { sendPaymentReceiptEmail } = await import('../services/emailService');
+
+    if (propertyError || !property) {
+      res.status(404).json({
+        success: false,
+        error: 'Property no longer available. Payment will be reviewed by support.',
+      });
+      return;
+    }
+
+    const conflictExists = await checkBookingConflictsForRange(
+      supabase,
+      propertyId,
+      startDate,
+      endDate
+    );
+
+    if (conflictExists) {
+      res.status(409).json({
+        success: false,
+        error:
+          'This time slot was just taken by another driver. Our team will reach out to complete a refund.',
+      });
+      return;
+    }
+
+    const { baseAmount, totalAmount, bookerServiceFee } = {
+      baseAmount: parseFloat(paymentIntent.metadata['base_amount'] || '0'),
+      totalAmount: parseFloat(paymentIntent.metadata['total_amount'] || '0'),
+      bookerServiceFee: parseFloat(paymentIntent.metadata['booker_service_fee'] || '0'),
+    };
+
+    const hostServiceFee = parseFloat(paymentIntent.metadata['host_service_fee'] || '0');
+    const vehicleInfoMetadata = paymentIntent.metadata['vehicle_info'];
+    const specialRequestsMetadata = paymentIntent.metadata['special_requests'];
+    const instantBooking = paymentIntent.metadata['instant_booking'] === 'true';
+
+    const totalHours = calculateTotalHours(startDate, endDate);
+
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert({
+        property_id: propertyId,
+        renter_id: userId,
+        host_id: property.host_id,
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        total_hours: totalHours,
+        total_amount: totalAmount,
+        service_fee: bookerServiceFee,
+        status: instantBooking ? 'confirmed' : 'pending',
+        payment_status: 'completed',
+        special_requests: specialRequestsMetadata || null,
+        vehicle_info: vehicleInfoMetadata ? { note: vehicleInfoMetadata } : null,
+      } as any)
+      .select(`
+        *,
+        property:properties(*),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email, phone),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email, phone)
+      `)
+      .single();
+
+    if (bookingError || !booking) {
+      console.error('[Payments] Failed to create booking after payment', bookingError);
+      res.status(500).json({
+        success: false,
+        error: 'Payment captured but booking failed to save. Support has been notified.',
+      });
+      return;
+    }
+
+    await getStripe().paymentIntents.update(paymentIntentId, {
+      metadata: {
+        ...paymentIntent.metadata,
+        booking_id: booking.id,
+      },
+    });
+
+    const { error: paymentRecordError } = await supabase.from('payments').insert({
+      booking_id: booking.id,
+      user_id: userId,
+      amount: paymentIntent.amount / 100,
+      currency: paymentIntent.currency,
+      payment_method: paymentIntent.payment_method as string,
+      stripe_payment_id: paymentIntentId,
+      status: 'completed',
+      type: 'booking',
+    });
+
+    if (paymentRecordError) {
+      console.error('[Payments] Failed to record payment', paymentRecordError);
+    }
+
+    await supabase.from('notifications').insert({
+      user_id: property.host_id,
+      type: instantBooking ? 'booking_confirmed' : 'booking_request',
+      title: instantBooking ? 'New Booking Confirmed' : 'New Booking Request',
+      message: instantBooking
+        ? `A driver just booked ${property.title}`
+        : `You have a new booking request for ${property.title}`,
+      data: { booking_id: booking.id, property_id: propertyId },
+      is_read: false,
+    } as any);
+
+    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail } =
+      await import('../services/emailService');
+
+    const vehicleInfoText = vehicleInfoMetadata || undefined;
+
+    if (booking.renter?.email) {
+      sendBookingConfirmationEmail({
+        bookingId: booking.id,
+        renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        renterEmail: booking.renter.email,
+        hostName: booking.host ? `${booking.host.first_name} ${booking.host.last_name}` : 'Host',
+        hostEmail: booking.host?.email || '',
+        propertyTitle: booking.property?.title || 'Parking Space',
+        propertyAddress: booking.property?.address || '',
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
+        totalHours,
+        baseAmount,
+        totalAmount,
+        serviceFee: bookerServiceFee,
+        bookerServiceFee,
+        hostServiceFee,
+        securityDeposit: 0,
+        vehicleInfo: vehicleInfoText,
+        specialRequests: specialRequestsMetadata || undefined,
+      }).catch((error) => {
+        console.error('Failed to send booking confirmation email:', error);
+      });
+    }
+
+    if (booking.host?.email) {
+      sendBookingNotificationEmail({
+        bookingId: booking.id,
+        renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        renterEmail: booking.renter.email,
+        hostName: `${booking.host.first_name} ${booking.host.last_name}`,
+        hostEmail: booking.host.email,
+        propertyTitle: booking.property?.title || 'Parking Space',
+        propertyAddress: booking.property?.address || '',
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
+        totalHours,
+        baseAmount,
+        totalAmount,
+        serviceFee: bookerServiceFee,
+        bookerServiceFee,
+        hostServiceFee,
+        securityDeposit: 0,
+        vehicleInfo: vehicleInfoText,
+        specialRequests: specialRequestsMetadata || undefined,
+      }).catch((error) => {
+        console.error('Failed to send booking notification email:', error);
+      });
+    }
+
+    if (booking.renter?.email) {
       sendPaymentReceiptEmail({
-        bookingId: bookingId,
-        userName: `${bookingData.renter.first_name} ${bookingData.renter.last_name}`,
-        userEmail: bookingData.renter.email,
-        propertyTitle: bookingData.property?.title || 'Parking Space',
+        bookingId: booking.id,
+        userName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        userEmail: booking.renter.email,
+        propertyTitle: booking.property?.title || 'Parking Space',
         amount: paymentIntent.amount / 100,
         paymentDate: new Date().toISOString(),
         transactionId: paymentIntent.id,
@@ -439,14 +799,12 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         console.error('Failed to send payment receipt email:', error);
       });
     }
-    
+
     res.json({
       success: true,
-      message: 'Payment confirmed successfully',
-      paymentIntent: {
-        id: paymentIntent.id,
-        status: paymentIntent.status,
-        amount: paymentIntent.amount / 100,
+      data: {
+        booking,
+        paymentIntentId,
       },
     });
   } catch (error: any) {

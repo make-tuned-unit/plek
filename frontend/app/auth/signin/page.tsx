@@ -46,12 +46,12 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
           <p className="mt-2 text-gray-600">
-            Sign in to your DriveMyWay account
+            Sign in to your plekk account
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function SignInPage() {
                   {...register('email')}
                   type="email"
                   id="email"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="Enter your email"
                 />
               </div>
@@ -86,7 +86,7 @@ export default function SignInPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="Enter your password"
                 />
                 <button
@@ -108,7 +108,7 @@ export default function SignInPage() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                   Remember me
@@ -116,7 +116,7 @@ export default function SignInPage() {
               </div>
               <Link
                 href="/auth/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-500"
+                className="text-sm text-accent-600 hover:text-accent-500"
               >
                 Forgot password?
               </Link>
@@ -125,7 +125,7 @@ export default function SignInPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-accent-500 text-white py-3 px-4 rounded-lg hover:bg-accent-600 focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -172,7 +172,7 @@ export default function SignInPage() {
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
+            <Link href="/auth/signup" className="text-accent-600 hover:text-accent-500 font-medium">
               Sign up
             </Link>
           </p>

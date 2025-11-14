@@ -17,6 +17,8 @@ interface PropertyData {
   features?: string[];
   restrictions?: string[];
   access_instructions?: string;
+  instant_booking: boolean;
+  require_approval: boolean;
 }
 
 interface PropertyPhoto {
@@ -94,9 +96,13 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
       // Sort by distance if radius is specified
       if (radius) {
         const radiusKm = parseFloat(radius as string);
-        propertiesWithDistance = propertiesWithDistance.filter((property: any) => 
-          property.distance <= radiusKm
-        );
+        propertiesWithDistance = propertiesWithDistance.filter((property: any) => {
+          if (typeof property.distance !== 'number') {
+            // Keep listings without geocoded coordinates so hosts aren't hidden
+            return true;
+          }
+          return property.distance <= radiusKm;
+        });
       }
       
       // Sort by distance (closest first)
@@ -168,6 +174,20 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
     const hostId = (req as any).user.id;
     
     // Extract property data from request
+    const instantBookingRequest =
+      typeof req.body.instant_booking === 'boolean'
+        ? req.body.instant_booking
+        : typeof req.body.instantBooking === 'boolean'
+        ? req.body.instantBooking
+        : undefined;
+
+    const requireApprovalRequest =
+      typeof req.body.require_approval === 'boolean'
+        ? req.body.require_approval
+        : typeof req.body.requireApproval === 'boolean'
+        ? req.body.requireApproval
+        : undefined;
+
     const propertyData: PropertyData = {
       title: req.body.title,
       description: req.body.description,
@@ -180,7 +200,9 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       max_vehicles: req.body.max_vehicles || 1,
       features: req.body.features || [],
       restrictions: req.body.restrictions || [],
-      access_instructions: req.body.access_instructions || ''
+      access_instructions: req.body.access_instructions || '',
+      instant_booking: instantBookingRequest !== undefined ? instantBookingRequest : true,
+      require_approval: requireApprovalRequest !== undefined ? requireApprovalRequest : false
     };
     
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
@@ -294,6 +316,18 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     if (req.body.features) updateData.features = req.body.features;
     if (req.body.restrictions) updateData.restrictions = req.body.restrictions;
     if (req.body.access_instructions) updateData.access_instructions = req.body.access_instructions;
+
+    if (typeof req.body.instant_booking === 'boolean') {
+      updateData.instant_booking = req.body.instant_booking;
+    } else if (typeof req.body.instantBooking === 'boolean') {
+      updateData.instant_booking = req.body.instantBooking;
+    }
+
+    if (typeof req.body.require_approval === 'boolean') {
+      updateData.require_approval = req.body.require_approval;
+    } else if (typeof req.body.requireApproval === 'boolean') {
+      updateData.require_approval = req.body.requireApproval;
+    }
     
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
     if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {

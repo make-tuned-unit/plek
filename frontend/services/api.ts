@@ -172,7 +172,7 @@ class ApiService {
   }
 
   // Booking endpoints
-  async createBooking(bookingData: any): Promise<ApiResponse<{ booking: any }>> {
+  async createBooking(bookingData: any): Promise<ApiResponse<any>> {
     return this.request('/bookings', {
       method: 'POST',
       body: JSON.stringify(bookingData),
@@ -181,6 +181,12 @@ class ApiService {
 
   async getUserBookings(): Promise<ApiResponse<{ bookings: any[] }>> {
     return this.request('/bookings');
+  }
+
+  async cancelBooking(bookingId: string): Promise<ApiResponse> {
+    return this.request(`/bookings/${bookingId}`, {
+      method: 'DELETE',
+    });
   }
 
   // Message endpoints
@@ -228,6 +234,62 @@ class ApiService {
     return this.request(`/properties/${propertyId}/admin`, {
       method: 'DELETE',
     });
+  }
+
+  // Stripe Connect
+  async createConnectAccount(): Promise<ApiResponse<{ url: string; accountId: string }>> {
+    return this.request('/payments/connect/create', {
+      method: 'POST',
+    });
+  }
+
+  async getConnectAccountStatus(): Promise<ApiResponse<{
+    connected: boolean;
+    status?: string;
+    payoutsEnabled?: boolean;
+    chargesEnabled?: boolean;
+    needsVerification?: boolean;
+    verificationUrl?: string;
+    requirements?: string[];
+  }>> {
+    return this.request('/payments/connect/status');
+  }
+
+  // Payments
+  async createPaymentIntent(payload: {
+    propertyId: string;
+    startTime: string;
+    endTime: string;
+    vehicleInfo?: any;
+    specialRequests?: string;
+  }): Promise<ApiResponse<{
+    clientSecret: string;
+    paymentIntentId: string;
+    pricing?: {
+      totalAmount: number;
+      baseAmount: number;
+      bookerServiceFee: number;
+      hostServiceFee: number;
+    };
+  }>> {
+    return this.request('/payments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async confirmPayment(paymentIntentId: string): Promise<ApiResponse<{
+    booking: any;
+    paymentIntentId: string;
+  }>> {
+    return this.request('/payments/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ paymentIntentId }),
+    });
+  }
+
+  async getPaymentHistory(): Promise<ApiResponse<{ payments: any[] }>> {
+    return this.request('/payments');
   }
 }
 

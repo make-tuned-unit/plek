@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -32,6 +32,21 @@ export default function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { signup } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectParam = searchParams.get('redirect')
+  const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : null
+  const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
+
+  const defaultValues = useMemo(() => ({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    isHost: hostIntent,
+    password: '',
+    confirmPassword: '',
+    acceptTerms: false,
+  }), [hostIntent])
 
   const {
     register,
@@ -39,6 +54,7 @@ export default function SignUpPage() {
     formState: { errors },
   } = useForm<SignUpForm>({
     resolver: zodResolver(signUpSchema),
+    defaultValues
   })
 
   const onSubmit = async (data: SignUpForm) => {
@@ -50,7 +66,10 @@ export default function SignUpPage() {
       const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
       if (success) {
         toast.success('Account created successfully!')
-        router.push('/profile')
+        const destination = redirectTarget && redirectTarget.startsWith('/')
+          ? redirectTarget
+          : '/profile'
+        router.push(destination)
       } else {
         toast.error('Failed to create account. Please try again.')
       }
@@ -63,12 +82,14 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
           <p className="mt-2 text-gray-600">
-            Join DriveMyWay and start earning from your driveway
+            {hostIntent
+              ? 'Create an account to start listing your driveway.'
+              : 'Join plekk and start earning from your driveway'}
           </p>
 
         </div>
@@ -86,7 +107,7 @@ export default function SignUpPage() {
                     {...register('firstName')}
                     type="text"
                     id="firstName"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="John"
                   />
                 </div>
@@ -105,7 +126,7 @@ export default function SignUpPage() {
                     {...register('lastName')}
                     type="text"
                     id="lastName"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="Doe"
                   />
                 </div>
@@ -125,7 +146,7 @@ export default function SignUpPage() {
                   {...register('email')}
                   type="email"
                   id="email"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="john@example.com"
                 />
               </div>
@@ -144,7 +165,7 @@ export default function SignUpPage() {
                   {...register('phone')}
                   type="tel"
                   id="phone"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -159,7 +180,7 @@ export default function SignUpPage() {
                   {...register('isHost')}
                   id="isHost"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                 />
               </div>
               <div className="ml-3 text-sm">
@@ -182,7 +203,7 @@ export default function SignUpPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="Create a strong password"
                 />
                 <button
@@ -208,7 +229,7 @@ export default function SignUpPage() {
                   {...register('confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                   placeholder="Confirm your password"
                 />
                 <button
@@ -230,17 +251,17 @@ export default function SignUpPage() {
                   {...register('acceptTerms')}
                   id="acceptTerms"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                 />
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="acceptTerms" className="text-gray-700">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-500">
+                  <Link href="/terms" className="text-accent-600 hover:text-accent-500">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500">
+                  <Link href="/privacy" className="text-accent-600 hover:text-accent-500">
                     Privacy Policy
                   </Link>
                 </label>
@@ -253,7 +274,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-accent-500 text-white py-3 px-4 rounded-lg hover:bg-accent-600 focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
@@ -300,7 +321,7 @@ export default function SignUpPage() {
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/auth/signin" className="text-blue-600 hover:text-blue-500 font-medium">
+            <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
               Sign in
             </Link>
           </p>

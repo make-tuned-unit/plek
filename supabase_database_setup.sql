@@ -12,45 +12,95 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- =====================================================
 
 -- Property types
-CREATE TYPE property_type AS ENUM ('driveway', 'garage', 'street', 'storage', 'event_space');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'property_type') THEN
+    CREATE TYPE property_type AS ENUM ('driveway', 'garage', 'street', 'storage', 'event_space');
+  END IF;
+END $$;
 
 -- Property status
-CREATE TYPE property_status AS ENUM ('active', 'inactive', 'suspended', 'deleted', 'pending_review');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'property_status') THEN
+    CREATE TYPE property_status AS ENUM ('active', 'inactive', 'suspended', 'deleted', 'pending_review');
+  END IF;
+END $$;
 
 -- Access types
-CREATE TYPE access_type AS ENUM ('remote', 'key_pickup', 'code', 'in_person');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'access_type') THEN
+    CREATE TYPE access_type AS ENUM ('remote', 'key_pickup', 'code', 'in_person');
+  END IF;
+END $$;
 
 -- Booking status
-CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed', 'disputed', 'expired');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'booking_status') THEN
+    CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'cancelled', 'completed', 'disputed', 'expired');
+  END IF;
+END $$;
 
 -- Payment status
-CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded', 'partially_refunded');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+    CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded', 'partially_refunded');
+  END IF;
+END $$;
 
 -- Payment types
-CREATE TYPE payment_type AS ENUM ('booking', 'security_deposit', 'service_fee', 'refund');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_type') THEN
+    CREATE TYPE payment_type AS ENUM ('booking', 'security_deposit', 'service_fee', 'refund');
+  END IF;
+END $$;
 
 -- Message types
-CREATE TYPE message_type AS ENUM ('text', 'image', 'file');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'message_type') THEN
+    CREATE TYPE message_type AS ENUM ('text', 'image', 'file');
+  END IF;
+END $$;
 
 -- Notification types
-CREATE TYPE notification_type AS ENUM (
-  'booking_request', 'booking_confirmed', 'booking_cancelled', 
-  'payment_received', 'message_received', 'review_received', 
-  'system_update', 'property_approved', 'property_rejected'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
+    CREATE TYPE notification_type AS ENUM (
+      'booking_request', 'booking_confirmed', 'booking_cancelled', 
+      'payment_received', 'message_received', 'review_received', 
+      'system_update', 'property_approved', 'property_rejected'
+    );
+  END IF;
+END $$;
 
 -- User roles
-CREATE TYPE user_role AS ENUM ('user', 'host', 'admin', 'super_admin');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM ('user', 'host', 'admin', 'super_admin');
+  END IF;
+END $$;
 
 -- Vehicle sizes
-CREATE TYPE vehicle_size AS ENUM ('compact', 'sedan', 'suv', 'truck', 'any');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vehicle_size') THEN
+    CREATE TYPE vehicle_size AS ENUM ('compact', 'sedan', 'suv', 'truck', 'any');
+  END IF;
+END $$;
 
 -- =====================================================
 -- TABLES
 -- =====================================================
 
 -- Users table (extends Supabase auth.users)
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   first_name TEXT NOT NULL,
@@ -77,7 +127,7 @@ CREATE TABLE public.users (
 );
 
 -- Host profiles for additional host-specific information
-CREATE TABLE public.host_profiles (
+CREATE TABLE IF NOT EXISTS public.host_profiles (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
   business_name TEXT,
@@ -92,7 +142,7 @@ CREATE TABLE public.host_profiles (
 );
 
 -- Properties table
-CREATE TABLE public.properties (
+CREATE TABLE IF NOT EXISTS public.properties (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   host_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   
@@ -132,8 +182,8 @@ CREATE TABLE public.properties (
   
   -- Availability
   is_available BOOLEAN DEFAULT TRUE,
-  instant_booking BOOLEAN DEFAULT FALSE,
-  require_approval BOOLEAN DEFAULT TRUE,
+  instant_booking BOOLEAN DEFAULT TRUE,
+  require_approval BOOLEAN DEFAULT FALSE,
   min_booking_hours INTEGER DEFAULT 1,
   max_booking_days INTEGER DEFAULT 30,
   
@@ -161,7 +211,7 @@ CREATE TABLE public.properties (
 );
 
 -- Property photos
-CREATE TABLE public.property_photos (
+CREATE TABLE IF NOT EXISTS public.property_photos (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   property_id UUID REFERENCES public.properties(id) ON DELETE CASCADE NOT NULL,
   url TEXT NOT NULL,
@@ -172,7 +222,7 @@ CREATE TABLE public.property_photos (
 );
 
 -- Availability calendar (for specific date overrides)
-CREATE TABLE public.availability (
+CREATE TABLE IF NOT EXISTS public.availability (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   property_id UUID REFERENCES public.properties(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -184,7 +234,7 @@ CREATE TABLE public.availability (
 );
 
 -- Bookings table
-CREATE TABLE public.bookings (
+CREATE TABLE IF NOT EXISTS public.bookings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   property_id UUID REFERENCES public.properties(id) ON DELETE CASCADE NOT NULL,
   renter_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -212,7 +262,7 @@ CREATE TABLE public.bookings (
 );
 
 -- Payments table
-CREATE TABLE public.payments (
+CREATE TABLE IF NOT EXISTS public.payments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -234,7 +284,7 @@ CREATE TABLE public.payments (
 );
 
 -- Messages table for communication
-CREATE TABLE public.messages (
+CREATE TABLE IF NOT EXISTS public.messages (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE NOT NULL,
   sender_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -251,7 +301,7 @@ CREATE TABLE public.messages (
 );
 
 -- Reviews table
-CREATE TABLE public.reviews (
+CREATE TABLE IF NOT EXISTS public.reviews (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   booking_id UUID REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
   reviewer_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -273,7 +323,7 @@ CREATE TABLE public.reviews (
 );
 
 -- Notifications table
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   
@@ -290,7 +340,7 @@ CREATE TABLE public.notifications (
 );
 
 -- Admin actions log
-CREATE TABLE public.admin_logs (
+CREATE TABLE IF NOT EXISTS public.admin_logs (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   admin_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   action TEXT NOT NULL,
@@ -304,7 +354,7 @@ CREATE TABLE public.admin_logs (
 );
 
 -- System settings
-CREATE TABLE public.system_settings (
+CREATE TABLE IF NOT EXISTS public.system_settings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   key TEXT UNIQUE NOT NULL,
   value JSONB NOT NULL,
@@ -318,46 +368,46 @@ CREATE TABLE public.system_settings (
 -- =====================================================
 
 -- Users
-CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_users_role ON public.users(role);
-CREATE INDEX idx_users_is_host ON public.users(is_host);
-CREATE INDEX idx_users_city_state ON public.users(city, state);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
+CREATE INDEX IF NOT EXISTS idx_users_is_host ON public.users(is_host);
+CREATE INDEX IF NOT EXISTS idx_users_city_state ON public.users(city, state);
 
 -- Properties
-CREATE INDEX idx_properties_host_id ON public.properties(host_id);
-CREATE INDEX idx_properties_status ON public.properties(status);
-CREATE INDEX idx_properties_location ON public.properties(city, state, zip_code);
-CREATE INDEX idx_properties_coordinates ON public.properties(latitude, longitude);
-CREATE INDEX idx_properties_type ON public.properties(property_type);
-CREATE INDEX idx_properties_available ON public.properties(is_available, status);
+CREATE INDEX IF NOT EXISTS idx_properties_host_id ON public.properties(host_id);
+CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties(status);
+CREATE INDEX IF NOT EXISTS idx_properties_location ON public.properties(city, state, zip_code);
+CREATE INDEX IF NOT EXISTS idx_properties_coordinates ON public.properties(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_properties_type ON public.properties(property_type);
+CREATE INDEX IF NOT EXISTS idx_properties_available ON public.properties(is_available, status);
 
 -- Bookings
-CREATE INDEX idx_bookings_property_id ON public.bookings(property_id);
-CREATE INDEX idx_bookings_renter_id ON public.bookings(renter_id);
-CREATE INDEX idx_bookings_host_id ON public.bookings(host_id);
-CREATE INDEX idx_bookings_status ON public.bookings(status);
-CREATE INDEX idx_bookings_dates ON public.bookings(start_time, end_time);
+CREATE INDEX IF NOT EXISTS idx_bookings_property_id ON public.bookings(property_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_renter_id ON public.bookings(renter_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_host_id ON public.bookings(host_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON public.bookings(status);
+CREATE INDEX IF NOT EXISTS idx_bookings_dates ON public.bookings(start_time, end_time);
 
 -- Payments
-CREATE INDEX idx_payments_booking_id ON public.payments(booking_id);
-CREATE INDEX idx_payments_user_id ON public.payments(user_id);
-CREATE INDEX idx_payments_status ON public.payments(status);
-CREATE INDEX idx_payments_stripe_id ON public.payments(stripe_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON public.payments(booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON public.payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_stripe_id ON public.payments(stripe_payment_id);
 
 -- Messages
-CREATE INDEX idx_messages_booking_id ON public.messages(booking_id);
-CREATE INDEX idx_messages_sender_receiver ON public.messages(sender_id, receiver_id);
-CREATE INDEX idx_messages_created_at ON public.messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_booking_id ON public.messages(booking_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver ON public.messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at);
 
 -- Reviews
-CREATE INDEX idx_reviews_property_id ON public.reviews(property_id);
-CREATE INDEX idx_reviews_reviewer_id ON public.reviews(reviewer_id);
-CREATE INDEX idx_reviews_reviewed_user_id ON public.reviews(reviewed_user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_property_id ON public.reviews(property_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_reviewer_id ON public.reviews(reviewer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_reviewed_user_id ON public.reviews(reviewed_user_id);
 
 -- Notifications
-CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX idx_notifications_type ON public.notifications(type);
-CREATE INDEX idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON public.notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -378,12 +428,15 @@ ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
 -- Users table policies
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
 CREATE POLICY "Users can view their own profile" ON public.users
   FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Admins can view all users" ON public.users;
 CREATE POLICY "Admins can view all users" ON public.users
   FOR ALL USING (
     EXISTS (
@@ -393,18 +446,23 @@ CREATE POLICY "Admins can view all users" ON public.users
   );
 
 -- Properties table policies
+DROP POLICY IF EXISTS "Anyone can view active properties" ON public.properties;
 CREATE POLICY "Anyone can view active properties" ON public.properties
   FOR SELECT USING (status = 'active' AND is_available = true);
 
+DROP POLICY IF EXISTS "Hosts can view their own properties" ON public.properties;
 CREATE POLICY "Hosts can view their own properties" ON public.properties
   FOR SELECT USING (host_id = auth.uid());
 
+DROP POLICY IF EXISTS "Hosts can insert their own properties" ON public.properties;
 CREATE POLICY "Hosts can insert their own properties" ON public.properties
   FOR INSERT WITH CHECK (host_id = auth.uid());
 
+DROP POLICY IF EXISTS "Hosts can update their own properties" ON public.properties;
 CREATE POLICY "Hosts can update their own properties" ON public.properties
   FOR UPDATE USING (host_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all properties" ON public.properties;
 CREATE POLICY "Admins can manage all properties" ON public.properties
   FOR ALL USING (
     EXISTS (
@@ -414,15 +472,19 @@ CREATE POLICY "Admins can manage all properties" ON public.properties
   );
 
 -- Bookings table policies
+DROP POLICY IF EXISTS "Users can view their own bookings" ON public.bookings;
 CREATE POLICY "Users can view their own bookings" ON public.bookings
   FOR SELECT USING (renter_id = auth.uid() OR host_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create bookings" ON public.bookings;
 CREATE POLICY "Users can create bookings" ON public.bookings
   FOR INSERT WITH CHECK (renter_id = auth.uid());
 
+DROP POLICY IF EXISTS "Hosts can update their property bookings" ON public.bookings;
 CREATE POLICY "Hosts can update their property bookings" ON public.bookings
   FOR UPDATE USING (host_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can manage all bookings" ON public.bookings;
 CREATE POLICY "Admins can manage all bookings" ON public.bookings
   FOR ALL USING (
     EXISTS (
@@ -432,6 +494,7 @@ CREATE POLICY "Admins can manage all bookings" ON public.bookings
   );
 
 -- Messages table policies
+DROP POLICY IF EXISTS "Users can view messages from their bookings" ON public.messages;
 CREATE POLICY "Users can view messages from their bookings" ON public.messages
   FOR SELECT USING (
     EXISTS (
@@ -441,6 +504,7 @@ CREATE POLICY "Users can view messages from their bookings" ON public.messages
     )
   );
 
+DROP POLICY IF EXISTS "Users can send messages to their bookings" ON public.messages;
 CREATE POLICY "Users can send messages to their bookings" ON public.messages
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -451,9 +515,11 @@ CREATE POLICY "Users can send messages to their bookings" ON public.messages
   );
 
 -- Reviews table policies
+DROP POLICY IF EXISTS "Anyone can view reviews" ON public.reviews;
 CREATE POLICY "Anyone can view reviews" ON public.reviews
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can create reviews for their completed bookings" ON public.reviews;
 CREATE POLICY "Users can create reviews for their completed bookings" ON public.reviews
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -465,13 +531,16 @@ CREATE POLICY "Users can create reviews for their completed bookings" ON public.
   );
 
 -- Notifications table policies
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
 CREATE POLICY "Users can view their own notifications" ON public.notifications
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
 CREATE POLICY "Users can update their own notifications" ON public.notifications
   FOR UPDATE USING (user_id = auth.uid());
 
 -- Admin logs table policies
+DROP POLICY IF EXISTS "Only admins can view admin logs" ON public.admin_logs;
 CREATE POLICY "Only admins can view admin logs" ON public.admin_logs
   FOR ALL USING (
     EXISTS (
@@ -481,6 +550,7 @@ CREATE POLICY "Only admins can view admin logs" ON public.admin_logs
   );
 
 -- System settings table policies
+DROP POLICY IF EXISTS "Only admins can manage system settings" ON public.system_settings;
 CREATE POLICY "Only admins can manage system settings" ON public.system_settings
   FOR ALL USING (
     EXISTS (
@@ -503,33 +573,43 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at trigger to all tables
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_host_profiles_updated_at ON public.host_profiles;
 CREATE TRIGGER update_host_profiles_updated_at BEFORE UPDATE ON public.host_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_properties_updated_at ON public.properties;
 CREATE TRIGGER update_properties_updated_at BEFORE UPDATE ON public.properties
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_availability_updated_at ON public.availability;
 CREATE TRIGGER update_availability_updated_at BEFORE UPDATE ON public.availability
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON public.bookings;
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payments_updated_at ON public.payments;
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_messages_updated_at ON public.messages;
 CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON public.messages
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON public.reviews;
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON public.reviews
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_notifications_updated_at ON public.notifications;
 CREATE TRIGGER update_notifications_updated_at BEFORE UPDATE ON public.notifications
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_system_settings_updated_at ON public.system_settings;
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON public.system_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -582,6 +662,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply booking stats trigger
+DROP TRIGGER IF EXISTS update_user_stats_after_booking_trigger ON public.bookings;
 CREATE TRIGGER update_user_stats_after_booking_trigger
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION update_user_stats_after_booking();
@@ -633,20 +714,23 @@ $$ LANGUAGE plpgsql;
 
 -- Insert default system settings
 INSERT INTO public.system_settings (key, value, description) VALUES
-('platform_fee_percentage', '10.00', 'Default platform fee percentage'),
-('min_booking_hours', '1', 'Minimum booking duration in hours'),
-('max_booking_days', '30', 'Maximum booking duration in days'),
-('auto_approval_threshold', '4.5', 'Rating threshold for auto-approval'),
-('support_email', '"support@drivemyway.com"', 'Support email address'),
-('max_property_photos', '10', 'Maximum photos per property'),
-('instant_booking_enabled', 'true', 'Whether instant booking is enabled globally');
+('platform_fee_percentage', '"10.00"', 'Default platform fee percentage'),
+('min_booking_hours', '"1"', 'Minimum booking duration in hours'),
+('max_booking_days', '"30"', 'Maximum booking duration in days'),
+('auto_approval_threshold', '"4.5"', 'Rating threshold for auto-approval'),
+('support_email', '"support@plekk.com"', 'Support contact email'),
+('max_property_photos', '"10"', 'Maximum photos per property'),
+('instant_booking_enabled', '"true"', 'Whether instant booking is enabled globally')
+ON CONFLICT (key) DO UPDATE
+SET value = EXCLUDED.value,
+    description = EXCLUDED.description;
 
 -- =====================================================
 -- VIEWS FOR COMMON QUERIES
 -- =====================================================
 
 -- View for property search results
-CREATE VIEW property_search_results AS
+CREATE OR REPLACE VIEW property_search_results AS
 SELECT 
   p.id,
   p.title,
@@ -686,7 +770,7 @@ LEFT JOIN (
 WHERE p.status = 'active' AND p.is_available = true;
 
 -- View for user dashboard stats
-CREATE VIEW user_dashboard_stats AS
+CREATE OR REPLACE VIEW user_dashboard_stats AS
 SELECT 
   u.id,
   u.first_name,
@@ -707,7 +791,7 @@ LEFT JOIN public.bookings b ON u.id = b.renter_id
 GROUP BY u.id, u.first_name, u.last_name, u.email, u.is_host, u.total_bookings, u.total_earnings, u.rating, u.review_count;
 
 -- View for admin dashboard
-CREATE VIEW admin_dashboard AS
+CREATE OR REPLACE VIEW admin_dashboard AS
 SELECT 
   COUNT(*) as total_users,
   COUNT(CASE WHEN is_host = true THEN 1 END) as total_hosts,

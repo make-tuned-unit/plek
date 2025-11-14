@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map, Navigation } from 'lucide-react'
+import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
 import { AvailabilityDisplay } from '@/components/AvailabilityDisplay'
 import { PropertiesMap } from '@/components/PropertiesMap'
@@ -32,6 +32,54 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
 })
 
 const DEFAULT_RADIUS_KM = 25
+
+const provinceAbbreviations: Record<string, string> = {
+  'alberta': 'AB',
+  'british columbia': 'BC',
+  'manitoba': 'MB',
+  'new brunswick': 'NB',
+  'newfoundland and labrador': 'NL',
+  'northwest territories': 'NT',
+  'nova scotia': 'NS',
+  'nunavut': 'NU',
+  'ontario': 'ON',
+  'prince edward island': 'PE',
+  'quebec': 'QC',
+  'saskatchewan': 'SK',
+  'yukon': 'YT'
+}
+
+const formatProvince = (province?: string | null) => {
+  if (!province) return ''
+  const normalized = province.toLowerCase().trim()
+  return provinceAbbreviations[normalized] || province
+}
+
+const normalizePropertyCoordinates = (property: any) => {
+  if (!property) return property
+  const normalized = { ...property }
+
+  if (typeof normalized.latitude === 'number' && typeof normalized.longitude === 'number') {
+    const latitude = normalized.latitude
+    const longitude = normalized.longitude
+
+    const looksSwapped =
+      latitude >= -140 && latitude <= -40 &&
+      longitude >= 40 && longitude <= 90
+
+    if (looksSwapped) {
+      normalized.latitude = longitude
+      normalized.longitude = latitude
+    }
+  }
+
+  return normalized
+}
+
+const normalizePropertiesList = (properties: any[] = []) =>
+  properties.map((property) => normalizePropertyCoordinates(property))
+
+const geocodeCache = new Map<string, { lat: number; lng: number }>()
 
 // Mock data for demonstration
 const mockProperties = [
@@ -105,6 +153,7 @@ export default function FindParkingPage() {
   const router = useRouter()
   const { user } = useAuth()
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const geocodeCacheRef = useRef(geocodeCache)
   const lastLocationQueryRef = useRef<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLocation, setSelectedLocation] = useState<Place | null>(null)
@@ -183,6 +232,84 @@ export default function FindParkingPage() {
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
 
+  const geocodeProperty = useCallback(async (property: any) => {
+    if (!mapboxToken || !property?.id) return null
+
+    const cache = geocodeCacheRef.current
+    const cacheKey = `${property.id}:${property.updated_at || ''}`
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey)!
+    }
+
+    const queryParts = [
+      property.address,
+      property.city,
+      property.state,
+      property.zip_code,
+      property.country,
+    ]
+      .filter(Boolean)
+      .map((part: string) => part.trim())
+
+    if (queryParts.length === 0) return null
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          queryParts.join(', ')
+        )}.json?access_token=${mapboxToken}&limit=1`
+      )
+      const data = await response.json()
+      if (data?.features?.length) {
+        const [lng, lat] = data.features[0].center
+        const coords = { lat, lng }
+        cache.set(cacheKey, coords)
+        return coords
+      }
+    } catch (error) {
+      console.warn('Failed to geocode property', property.id, error)
+    }
+
+    return null
+  }, [mapboxToken])
+
+  const ensureAccurateCoordinates = useCallback(async (properties: any[]) => {
+    if (!mapboxToken) return properties
+
+    const enriched = await Promise.all(
+      properties.map(async (property) => {
+        const cache = geocodeCacheRef.current
+
+        const coords = await geocodeProperty(property)
+        if (coords) {
+          return {
+            ...property,
+            latitude: coords.lat,
+            longitude: coords.lng,
+          }
+        }
+
+        const hasValidCoordinates =
+          typeof property.latitude === 'number' &&
+          typeof property.longitude === 'number' &&
+          property.latitude >= 40 &&
+          property.latitude <= 60 &&
+          property.longitude <= -40 &&
+          property.longitude >= -150
+
+        if (hasValidCoordinates && property?.id) {
+          const cacheKey = `${property.id}:${property.updated_at || ''}`
+          cache.set(cacheKey, { lat: property.latitude, lng: property.longitude })
+          return property
+        }
+
+        return property
+      })
+    )
+
+    return enriched
+  }, [mapboxToken, geocodeProperty])
+
   const handleOpenBooking = useCallback((property: any) => {
     if (!property) return
 
@@ -245,7 +372,9 @@ export default function FindParkingPage() {
       setProperties([])
       const response = await apiService.getProperties()
       if (response.success && response.data) {
-        setProperties(response.data.properties || [])
+        const normalized = normalizePropertiesList(response.data.properties || [])
+        const enriched = await ensureAccurateCoordinates(normalized)
+        setProperties(enriched)
       } else {
         setError('Failed to load properties')
       }
@@ -255,7 +384,7 @@ export default function FindParkingPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [ensureAccurateCoordinates])
 
   const fetchPropertiesNearLocation = useCallback(async (lat: number, lng: number, radius: number = DEFAULT_RADIUS_KM) => {
     try {
@@ -264,7 +393,43 @@ export default function FindParkingPage() {
       setProperties([])
       const response = await apiService.getPropertiesNearLocation(lat, lng, radius)
       if (response.success && response.data) {
-        setProperties(response.data.properties || [])
+        const nearbyNormalized = normalizePropertiesList(response.data.properties || [])
+        const nearbyProperties = await ensureAccurateCoordinates(nearbyNormalized)
+
+        // Always merge nearby results with the full property list so we never hide valid listings.
+        const allResponse = await apiService.getProperties()
+        let mergedProperties: any[] = nearbyProperties
+
+        if (allResponse.success && allResponse.data) {
+          const allNormalized = normalizePropertiesList(allResponse.data.properties || [])
+          const allProperties = await ensureAccurateCoordinates(allNormalized)
+          const mergedMap = new Map<string, any>()
+
+          for (const property of allProperties) {
+            if (property?.id) {
+              mergedMap.set(property.id, property)
+            }
+          }
+
+          for (const property of nearbyProperties) {
+            if (property?.id) {
+              const existing = mergedMap.get(property.id) || {}
+              mergedMap.set(property.id, {
+                ...existing,
+                ...property
+              })
+            }
+          }
+
+          mergedProperties = Array.from(mergedMap.values()).sort((a, b) => {
+            const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+            const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+            if (distanceA === distanceB) return 0
+            return distanceA - distanceB
+          })
+        }
+
+        setProperties(mergedProperties)
       } else {
         setError('Failed to load properties near your location')
         // Fall back to fetching all properties
@@ -278,12 +443,13 @@ export default function FindParkingPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [fetchProperties])
+  }, [fetchProperties, ensureAccurateCoordinates])
 
   useEffect(() => {
-    // Try to get user location first, then fetch properties
+    // Kick off both location-aware and general fetches so the list isn't empty while geolocation resolves
     getUserLocation()
-  }, [])
+    void fetchProperties()
+  }, [fetchProperties])
 
   useEffect(() => {
     const locationParam = searchParams.get('location')
@@ -404,11 +570,11 @@ export default function FindParkingPage() {
                 onClick={() => setShowMap(!showMap)}
                 className={`flex items-center px-4 py-2 border rounded-lg transition-colors ${
                   showMap 
-                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
-                    : 'border-gray-300 hover:bg-gray-50'
+                    ? 'bg-accent-500 text-white border-accent-500 hover:bg-accent-600' 
+                    : 'border-mist-300 hover:bg-mist-100'
                 }`}
               >
-                {showMap ? <Navigation className="h-5 w-5 mr-2" /> : <Map className="h-5 w-5 mr-2" />}
+                {showMap ? <Navigation className="h-5 w-5 mr-2" /> : <MapIcon className="h-5 w-5 mr-2" />}
                 {showMap ? 'List View' : 'Map View'}
               </button>
             </div>
@@ -444,11 +610,11 @@ export default function FindParkingPage() {
                     placeholder="Enter address or area"
                   />
                   {selectedLocation && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-blue-800">
+                    <div className="mt-2 p-2 bg-mist-200 rounded-lg">
+                      <p className="text-xs text-primary-700">
                         <strong>Selected:</strong> {selectedLocation.place_name}
                       </p>
-                      <p className="text-xs text-blue-600">
+                      <p className="text-xs text-primary-600">
                         Coordinates: {selectedLocation.center[1].toFixed(4)}, {selectedLocation.center[0].toFixed(4)}
                       </p>
                     </div>
@@ -483,7 +649,7 @@ export default function FindParkingPage() {
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       onClick={openDatePicker}
-                      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                      className="w-full pl-12 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent cursor-pointer"
                     />
                   </div>
                 </div>
@@ -514,10 +680,10 @@ export default function FindParkingPage() {
                         }
                       }}
                       placeholder="Select time"
-                      className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                      className="w-full pl-12 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent cursor-pointer"
                     />
                     {isTimePickerOpen && (
-                      <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-mist-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
                         {TIME_OPTIONS.map((option) => {
                           const isSelected = option.value === selectedTime
                           return (
@@ -527,8 +693,8 @@ export default function FindParkingPage() {
                               onClick={() => handleTimeSelect(option.value)}
                               className={`w-full text-left px-4 py-2 text-sm ${
                                 isSelected
-                                  ? 'bg-blue-50 text-blue-700 font-medium'
-                                  : 'text-gray-700 hover:bg-gray-100'
+                                  ? 'bg-accent-50 text-accent-700 font-medium'
+                                  : 'text-charcoal-600 hover:bg-mist-100'
                               }`}
                             >
                               {option.label}
@@ -549,7 +715,7 @@ export default function FindParkingPage() {
                 <select
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                 >
                   <option value="all">All Types</option>
                   <option value="driveway">Driveway</option>
@@ -559,11 +725,11 @@ export default function FindParkingPage() {
               </div>
 
               {/* Feature Filters */}
-              <div className="mb-6 border border-gray-200 rounded-lg">
+              <div className="mb-6 border border-mist-200 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setIsFeatureFilterOpen((prev) => !prev)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                  className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-charcoal-600 hover:bg-mist-100 transition"
                 >
                   <span>Listing Features</span>
                   <span className="text-xs text-gray-500">
@@ -572,7 +738,7 @@ export default function FindParkingPage() {
                 </button>
                 {isFeatureFilterOpen && (
                   <div className="px-4 pb-4">
-                    <p className="text-xs text-gray-500 mb-3">
+                    <p className="text-xs text-charcoal-500 mb-3">
                       Filter results by amenities hosts can add to their listings.
                     </p>
                     <div className="flex flex-col space-y-2">
@@ -591,8 +757,8 @@ export default function FindParkingPage() {
                             }}
                             className={`flex items-center space-x-3 px-3 py-3 rounded-lg border text-sm transition ${
                               isSelected
-                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                                ? 'border-accent-500 bg-accent-50 text-accent-700'
+                                : 'border-mist-200 hover:border-accent-300 hover:bg-accent-50'
                             }`}
                           >
                             <span>{feature.icon}</span>
@@ -605,7 +771,7 @@ export default function FindParkingPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedFeatures([])}
-                        className="mt-4 text-xs text-blue-600 hover:text-blue-700 underline"
+                        className="mt-4 text-xs text-accent-600 hover:text-accent-700 underline"
                       >
                         Clear selected features
                       </button>
@@ -674,15 +840,8 @@ export default function FindParkingPage() {
                     <p className="text-gray-600">
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
-                    <button
-                      onClick={fetchProperties}
-                      disabled={isLoading}
-                      className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                    >
-                      🔄 Refresh
-                    </button>
                   </div>
-                  <select className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <select className="px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
                     <option>Sort by: Recommended</option>
                     <option>Price: Low to High</option>
                     <option>Price: High to Low</option>
@@ -707,7 +866,7 @@ export default function FindParkingPage() {
                 {/* Loading State */}
                 {isLoading && (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading parking spots...</p>
                   </div>
                 )}
@@ -715,7 +874,14 @@ export default function FindParkingPage() {
                 {/* Properties Grid */}
                 {!isLoading && !error && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredProperties.map((property) => (
+                    {filteredProperties.map((property) => {
+                      const locationParts = [
+                        property.address?.split(',')[0]?.trim() || property.address,
+                        property.city,
+                        formatProvince(property.state)
+                      ].filter(Boolean)
+
+                      return (
                   <div key={property.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div className="relative">
                       {property.photos && property.photos.length > 0 && property.photos[0]?.url ? (
@@ -741,7 +907,7 @@ export default function FindParkingPage() {
                           {property.status === 'pending_review' ? 'Pending Review' : 'Unavailable'}
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-sm">
+                      <div className="absolute top-2 left-2 bg-accent-500 text-white px-2 py-1 rounded text-sm">
                         ${property.hourly_rate || 0}/hr
                       </div>
                     </div>
@@ -758,7 +924,7 @@ export default function FindParkingPage() {
                       
                       <p className="text-gray-600 mb-3 flex items-center">
                         <MapPin className="h-4 w-4 mr-1" />
-                        {property.address || 'Address not available'}
+                        {locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}
                       </p>
                       
                       {property.description && (
@@ -771,15 +937,15 @@ export default function FindParkingPage() {
                             {property.type}
                           </span>
                         )}
-                        {property.status && (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                            {property.status}
+                        {property.status && property.status !== 'active' && (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+                            {property.status.replace(/_/g, ' ')}
                           </span>
                         )}
                         {/* Display features */}
                         {property.features && property.features.length > 0 && 
                           property.features.slice(0, 3).map((feature: string, index: number) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                            <span key={index} className="px-2 py-1 bg-accent-50 text-accent-700 text-xs rounded">
                               {feature}
                             </span>
                           ))
@@ -817,14 +983,15 @@ export default function FindParkingPage() {
                         <button
                           onClick={() => handleOpenBooking(property)}
                           disabled={property.status !== 'active'}
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="w-full bg-accent-500 text-white py-2 px-4 rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {property.status === 'active' ? 'Book Now' : 'Currently Unavailable'}
                         </button>
                       )}
                     </div>
                   </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 

@@ -42,6 +42,10 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Stripe webhook route (must be before body parsing middleware)
+// Webhooks need raw body for signature verification
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 // Body parsing middleware
 // Note: Don't use body parser for multipart/form-data (file uploads)
 // Multer handles that separately

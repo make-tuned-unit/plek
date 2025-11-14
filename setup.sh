@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# DriveMyWay Setup Script
-# This script sets up the development environment for DriveMyWay
+# plekk Setup Script
+# This script sets up the development environment for plekk
 
 set -e
 
-echo "🚀 Setting up DriveMyWay development environment..."
+echo "🚀 Setting up plekk development environment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -142,7 +142,7 @@ build_shared() {
 
 # Main setup function
 main() {
-    print_status "Starting DriveMyWay setup..."
+    print_status "Starting plekk setup..."
     
     # Check prerequisites
     check_node
@@ -166,7 +166,7 @@ main() {
     # Build shared package
     build_shared
     
-    print_success "🎉 DriveMyWay setup completed successfully!"
+    print_success "🎉 plekk setup completed successfully!"
     echo ""
     echo "Next steps:"
     echo "1. Edit .env file with your configuration"

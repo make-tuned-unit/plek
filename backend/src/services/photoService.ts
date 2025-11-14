@@ -10,7 +10,7 @@ export interface UploadedPhoto {
 export class PhotoService {
   // Load bucket name dynamically to ensure env vars are loaded
   private getBucketName(): string {
-    return process.env['SUPABASE_STORAGE_BUCKET'] || 'property-photos';
+    return process.env['SUPABASE_STORAGE_BUCKET'] || 'property=photos';
   }
   
   private getSupabase() {

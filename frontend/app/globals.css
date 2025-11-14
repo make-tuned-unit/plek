@@ -10,7 +10,7 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-mist-100 text-charcoal-800;
   }
 }
 
@@ -20,11 +20,11 @@
   }
   
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-accent-500 text-white hover:bg-accent-600 focus:ring-2 focus:ring-offset-2 focus:ring-accent-300;
   }
   
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+    @apply btn bg-white text-primary-700 border-mist-300 hover:bg-mist-100 focus:ring-2 focus:ring-offset-2 focus:ring-accent-300;
   }
   
   .btn-danger {
@@ -32,7 +32,7 @@
   }
   
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm;
+    @apply block w-full px-3 py-2 border border-mist-300 rounded-md shadow-sm placeholder-mist-500 focus:outline-none focus:ring-accent-400 focus:border-accent-400 sm:text-sm bg-white;
   }
   
   .card {
@@ -52,7 +52,7 @@
   }
   
   .badge-success {
-    @apply badge bg-green-100 text-green-800;
+    @apply badge bg-accent-100 text-accent-700;
   }
   
   .badge-warning {
@@ -64,7 +64,7 @@
   }
   
   .badge-info {
-    @apply badge bg-blue-100 text-blue-800;
+    @apply badge bg-sky-100 text-sky-700;
   }
 }
 

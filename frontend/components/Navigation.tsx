@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, MouseEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { Menu, X, User, Car, MapPin, LogOut, ChevronDown, Settings, CreditCard, Calendar, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -11,6 +12,7 @@ export function Navigation() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const { user, logout } = useAuth()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -38,14 +40,31 @@ export function Navigation() {
     setIsMenuOpen(false)
   }
 
+  const handleListDrivewayClick = (event?: MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    event?.preventDefault()
+    setIsMenuOpen(false)
+    setIsDropdownOpen(false)
+
+    if (user) {
+      router.push('/list-your-driveway')
+    } else {
+      const redirectTarget = encodeURIComponent('/list-your-driveway')
+      router.push(`/auth/signup?redirect=${redirectTarget}&host=true`)
+    }
+  }
+
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <Car className="h-8 w-8 text-blue-600 mr-2" />
-            <span className="text-xl font-bold text-gray-900">DriveMyWay</span>
+            <img 
+              src="/logo.png?v=2" 
+              alt="plekk logo" 
+              className="flex-shrink-0 h-12 w-auto object-contain"
+              style={{ maxHeight: '48px', maxWidth: '300px' }}
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -59,6 +78,7 @@ export function Navigation() {
             </Link>
             <Link 
               href="/list-your-driveway" 
+              onClick={handleListDrivewayClick}
               className="text-gray-600 hover:text-gray-900"
             >
               List Your Driveway
@@ -135,7 +155,7 @@ export function Navigation() {
                         <Link
                           href="/admin"
                           onClick={handleProfileClick}
-                          className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-medium"
+                          className="flex items-center px-4 py-2 text-sm text-accent-700 hover:bg-mist-100 font-medium"
                         >
                           <Shield className="h-4 w-4 mr-3" />
                           Admin Dashboard
@@ -163,7 +183,7 @@ export function Navigation() {
                 </Link>
                 <Link 
                   href="/auth/signup" 
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600"
                 >
                   Sign Up
                 </Link>
@@ -194,13 +214,13 @@ export function Navigation() {
                 <MapPin className="h-4 w-4 mr-2" />
                 Find Parking
               </Link>
-              <Link 
-                href="/list-your-driveway" 
-                className="block text-gray-600 hover:text-gray-900"
-                onClick={() => setIsMenuOpen(false)}
+              <button 
+                type="button"
+                onClick={handleListDrivewayClick}
+                className="block text-left w-full text-gray-600 hover:text-gray-900"
               >
                 List Your Driveway
-              </Link>
+              </button>
               {user && (
                 <>
                   <div className="pt-4 border-t">
@@ -257,7 +277,7 @@ export function Navigation() {
                     {(user?.role === 'admin' || user?.role === 'super_admin') && (
                       <Link
                         href="/admin"
-                        className="block text-blue-600 hover:text-blue-700 flex items-center mb-2 font-medium"
+                        className="block text-accent-600 hover:text-accent-700 flex items-center mb-2 font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <Shield className="h-4 w-4 mr-2" />
@@ -285,7 +305,7 @@ export function Navigation() {
                   </Link>
                   <Link 
                     href="/auth/signup" 
-                    className="block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-center"
+                    className="block bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up

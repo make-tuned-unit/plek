@@ -39,10 +39,16 @@ function PaymentForm({
   const stripe = useStripe()
   const elements = useElements()
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [isElementReady, setIsElementReady] = useState(false)
 
   const handlePayment = async () => {
     if (!stripe || !elements) {
       toast.error('Payment system not ready')
+      return
+    }
+
+    if (!isElementReady) {
+      toast.error('Payment form is still loading')
       return
     }
 
@@ -79,12 +85,12 @@ function PaymentForm({
 
   return (
     <div className="p-6 space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+      <div className="bg-sand-100 border border-sand-200 rounded-lg p-4">
+        <h3 className="font-semibold text-primary-800 mb-2 flex items-center">
           <CheckCircle className="h-5 w-5 mr-2" />
           Booking Created
         </h3>
-        <p className="text-sm text-blue-800">
+        <p className="text-sm text-primary-700">
           Your booking has been created. Please complete payment to confirm.
         </p>
       </div>
@@ -96,14 +102,14 @@ function PaymentForm({
             Payment Information
           </h3>
           <div className="border border-gray-200 rounded-lg p-4">
-            <PaymentElement />
+            <PaymentElement onReady={() => setIsElementReady(true)} />
           </div>
         </div>
 
         {priceBreakdown && (
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="bg-mist-200 rounded-lg p-4 border border-mist-200">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+              <DollarSign className="h-5 w-5 mr-2 text-accent-600" />
               Payment Summary
             </h3>
             <div className="space-y-2 text-sm">
@@ -117,9 +123,9 @@ function PaymentForm({
                 <span className="text-gray-600">Service Fee (5%)</span>
                 <span className="font-medium">${priceBreakdown.bookerServiceFee.toFixed(2)}</span>
               </div>
-              <div className="border-t border-blue-200 pt-2 mt-2 flex justify-between">
+              <div className="border-t border-mist-200 pt-2 mt-2 flex justify-between">
                 <span className="font-bold text-gray-900">Total</span>
-                <span className="font-bold text-blue-600 text-lg">${priceBreakdown.total.toFixed(2)}</span>
+                <span className="font-bold text-accent-600 text-lg">${priceBreakdown.total.toFixed(2)}</span>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-3">
@@ -131,8 +137,10 @@ function PaymentForm({
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button
             type="button"
-            onClick={onBack}
-            className="flex-1 px-4 py-3 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={async () => {
+              await onBack()
+            }}
+            className="flex-1 px-4 py-3 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50 transition-colors"
             disabled={isProcessingPayment}
           >
             Back
@@ -140,10 +148,10 @@ function PaymentForm({
           <button
             type="button"
             onClick={handlePayment}
-            disabled={isProcessingPayment || !priceBreakdown}
-            className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+            disabled={isProcessingPayment || !stripe || !isElementReady}
+            className="flex-1 px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
           >
-            {isProcessingPayment ? 'Processing...' : `Pay $${priceBreakdown?.total.toFixed(2) ?? '0.00'}`}
+            {isProcessingPayment ? 'Processing...' : 'Pay Now'}
           </button>
         </div>
       </div>
@@ -408,7 +416,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 onChange={(e) => setStartDate(e.target.value)}
                 min={today}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
               />
             </div>
             <div>
@@ -421,7 +429,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
               />
             </div>
             <div>
@@ -435,7 +443,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate || today}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
               />
             </div>
             <div>
@@ -448,7 +456,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
               />
             </div>
           </div>
@@ -464,7 +472,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
               value={vehicleInfo}
               onChange={(e) => setVehicleInfo(e.target.value)}
               placeholder="e.g., Blue Honda Civic, License Plate: ABC123"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
             />
           </div>
 
@@ -478,15 +486,15 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
               onChange={(e) => setSpecialRequests(e.target.value)}
               placeholder="Any special requests or notes for the host..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
             />
           </div>
 
           {/* Price Breakdown */}
           {priceBreakdown && (
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="bg-mist-200 rounded-lg p-4 border border-mist-200">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+                <DollarSign className="h-5 w-5 mr-2 text-accent-600" />
                 Price Breakdown
               </h3>
               <div className="space-y-2 text-sm">
@@ -500,9 +508,9 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   <span className="text-gray-600">Service Fee (5%)</span>
                   <span className="font-medium">${priceBreakdown.bookerServiceFee.toFixed(2)}</span>
                 </div>
-                <div className="border-t border-blue-200 pt-2 mt-2 flex justify-between">
+                <div className="border-t border-mist-200 pt-2 mt-2 flex justify-between">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-blue-600 text-lg">${priceBreakdown.total.toFixed(2)}</span>
+                  <span className="font-bold text-accent-600 text-lg">${priceBreakdown.total.toFixed(2)}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-3">
@@ -533,7 +541,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-3 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={isSubmitting}
             >
               Cancel
@@ -541,7 +549,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
             <button
               type="submit"
               disabled={isSubmitting || !priceBreakdown}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="flex-1 px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
             >
               {isSubmitting ? 'Processing...' : 'Continue to Payment'}
             </button>
@@ -550,7 +558,14 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         ) : (
           clientSecret && bookingId ? (
             stripePromise ? (
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <Elements
+                stripe={stripePromise}
+                options={{
+                  clientSecret,
+                  appearance: { theme: 'stripe' },
+                }}
+                key={clientSecret}
+              >
                 <PaymentForm
                   bookingId={bookingId}
                   paymentIntentId={paymentIntentId}

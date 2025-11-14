@@ -60,7 +60,12 @@ export function initializeSupabase() {
     throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables');
   }
   
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
+  supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
   return supabase;
 }
 
@@ -144,10 +149,22 @@ export class SupabaseAuthService {
    */
   static async loginUser(email: string, password: string): Promise<{ user: DatabaseUser | null; token: string | null; error: AuthError | null }> {
     try {
-      const client = getSupabaseClient();
+      const supabaseUrl = process.env['SUPABASE_URL'];
+      const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+      
+      if (!supabaseUrl || !serviceKey) {
+        return { user: null, token: null, error: { message: 'Supabase configuration missing', name: 'ConfigError', status: 500 } as AuthError };
+      }
+      
+      const authClient = createClient(supabaseUrl, serviceKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
       
       // Authenticate with Supabase
-      const { data: authData, error: authError } = await client.auth.signInWithPassword({
+      const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
         email,
         password,
       });
@@ -161,7 +178,8 @@ export class SupabaseAuthService {
       }
 
       // Get user profile from our users table
-      const { data: profileData, error: profileError } = await client
+      const adminClient = getSupabaseClient();
+      const { data: profileData, error: profileError } = await adminClient
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
@@ -239,17 +257,34 @@ export class SupabaseAuthService {
    */
   static async verifyToken(token: string): Promise<{ user: DatabaseUser | null; error: AuthError | null }> {
     try {
-      const client = getSupabaseClient();
+      const supabaseUrl = process.env['SUPABASE_URL'];
+      const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+      
+      if (!supabaseUrl || !serviceKey) {
+        return { 
+          user: null, 
+          error: { message: 'Supabase configuration missing', name: 'ConfigError', status: 500 } as AuthError 
+        };
+      }
+      
+      // Use a dedicated client for auth verification to avoid mutating the global service client
+      const authClient = createClient(supabaseUrl, serviceKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
       
       // Verify the token with Supabase
-      const { data: { user }, error } = await client.auth.getUser(token);
+      const { data: { user }, error } = await authClient.auth.getUser(token);
 
       if (error || !user) {
         return { user: null, error: error || { message: 'Invalid token', name: 'InvalidToken', status: 401 } as AuthError };
       }
 
       // Get user profile from our users table
-      const { data: profileData, error: profileError } = await client
+      const adminClient = getSupabaseClient();
+      const { data: profileData, error: profileError } = await adminClient
         .from('users')
         .select('*')
         .eq('id', user.id)

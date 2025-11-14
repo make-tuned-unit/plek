@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <Loader2 className="h-12 w-12 animate-spin text-accent-500 mx-auto" />
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-blue-600" />
+                <Shield className="h-8 w-8 text-primary-700" />
                 Admin Dashboard
               </h1>
               <p className="mt-2 text-gray-600">
@@ -174,7 +174,7 @@ export default function AdminDashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              <span className="px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-sm font-medium">
                 {pendingProperties.length} Pending
               </span>
               <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
@@ -194,8 +194,8 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveTab('pending')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'pending'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
               }`}
             >
               <Clock className="h-4 w-4 inline mr-2" />
@@ -205,8 +205,8 @@ export default function AdminDashboardPage() {
               onClick={() => setActiveTab('all')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
               }`}
             >
               <List className="h-4 w-4 inline mr-2" />

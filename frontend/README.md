@@ -1,4 +1,4 @@
-# DriveMyWay Frontend
+# plekk Frontend
 
 Your frontend has been updated to work with your new Supabase-powered backend!
 

@@ -22,7 +22,8 @@ import {
   LogOut,
   Camera,
   Plus,
-  Trash2
+  Trash2,
+  CheckCircle
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
@@ -124,6 +125,11 @@ export default function ProfilePage() {
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<string>('pending');
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
+  const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
   const [listingFormData, setListingFormData] = useState({
     title: '',
     address: '',
@@ -247,6 +253,79 @@ export default function ProfilePage() {
     }
   }, [user, fetchUserProperties]);
 
+  // Check Stripe Connect status
+  useEffect(() => {
+    const checkStripeStatus = async () => {
+      if (user) {
+        try {
+          const response = await apiService.getConnectAccountStatus();
+          console.log('[Profile] Stripe status response:', response);
+          if (response.success && response.data) {
+            console.log('[Profile] Setting connected:', response.data.connected, 'status:', response.data.status);
+            setStripeConnected(response.data.connected);
+            setStripeStatus(response.data.status || 'pending');
+            setStripeNeedsVerification(response.data.needsVerification || false);
+            setStripeVerificationUrl(response.data.verificationUrl || null);
+          } else {
+            console.log('[Profile] Response missing data:', response);
+          }
+        } catch (error) {
+          console.error('Error checking Stripe status:', error);
+        }
+      }
+    };
+    checkStripeStatus();
+  }, [user]);
+
+  // Handle Stripe Connect onboarding
+  const handleConnectStripe = async () => {
+    setIsConnectingStripe(true);
+    try {
+      const response = await apiService.createConnectAccount();
+      if (response.success && response.data?.url) {
+        // Redirect to Stripe onboarding
+        window.location.href = response.data.url;
+      } else {
+        toast.error('Failed to start Stripe setup');
+      }
+    } catch (error: any) {
+      console.error('Error connecting Stripe:', error);
+      toast.error(error.message || 'Failed to connect Stripe account');
+    } finally {
+      setIsConnectingStripe(false);
+    }
+  };
+
+  // Check for Stripe return from URL params
+  useEffect(() => {
+    const stripeSuccess = searchParams.get('stripe_success');
+    const stripeRefresh = searchParams.get('stripe_refresh');
+    
+    if (stripeSuccess === 'true') {
+      toast.success('Stripe account connected successfully!');
+      // Refresh status after a short delay to ensure Stripe has processed
+      setTimeout(() => {
+        apiService.getConnectAccountStatus().then(response => {
+          console.log('[Profile] Status refresh after return:', response);
+          if (response.success && response.data) {
+            setStripeConnected(response.data.connected);
+            setStripeStatus(response.data.status || 'pending');
+            setStripeNeedsVerification(response.data.needsVerification || false);
+            setStripeVerificationUrl(response.data.verificationUrl || null);
+          }
+        }).catch(error => {
+          console.error('[Profile] Error refreshing status:', error);
+        });
+      }, 1000);
+      // Clean URL
+      router.replace('/profile?tab=payments', { scroll: false });
+    } else if (stripeRefresh === 'true') {
+      // User needs to complete onboarding
+      toast.info('Please complete your Stripe account setup');
+      router.replace('/profile?tab=payments', { scroll: false });
+    }
+  }, [searchParams, router]);
+
   const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true)
     try {
@@ -297,7 +376,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -553,12 +632,18 @@ export default function ProfilePage() {
                 ) : (
                   <>
                     <div className="relative inline-block">
-                      <img
-                        src={user?.avatar || '/api/placeholder/150/150'}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover mx-auto mb-4"
-                      />
-                      <button className="absolute bottom-4 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700">
+                      {user?.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt="Profile"
+                          className="w-24 h-24 rounded-full object-cover mx-auto mb-4"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto mb-4">
+                          <User className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <button className="absolute bottom-4 right-0 bg-accent-500 text-white rounded-full p-2 hover:bg-accent-600">
                         <Camera className="h-4 w-4" />
                       </button>
                     </div>
@@ -597,8 +682,8 @@ export default function ProfilePage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-50'
+                          ? 'bg-accent-50 text-accent-700'
+                          : 'text-gray-600 hover:bg-mist-100'
                       }`}
                     >
                       <Icon className="h-4 w-4 mr-3" />
@@ -629,7 +714,7 @@ export default function ProfilePage() {
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
+                      className="flex items-center px-4 py-2 text-sm text-accent-600 border border-accent-400 rounded-lg hover:bg-accent-50"
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
@@ -638,7 +723,7 @@ export default function ProfilePage() {
                     <div className="flex space-x-2">
                       <button
                         onClick={handleCancelEdit}
-                        className="flex items-center px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        className="flex items-center px-4 py-2 text-sm text-gray-600 border border-mist-300 rounded-lg hover:bg-mist-100"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -646,7 +731,7 @@ export default function ProfilePage() {
                       <button
                         onClick={handleSubmit(onSubmit)}
                         disabled={isLoading}
-                        className="flex items-center px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="flex items-center px-4 py-2 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50"
                       >
                         <Save className="h-4 w-4 mr-2" />
                         {isLoading ? 'Saving...' : 'Save Changes'}
@@ -665,7 +750,7 @@ export default function ProfilePage() {
                         {...register('firstName')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
                       {errors.firstName && (
                         <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
@@ -680,7 +765,7 @@ export default function ProfilePage() {
                         {...register('lastName')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
                       {errors.lastName && (
                         <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
@@ -696,7 +781,7 @@ export default function ProfilePage() {
                       {...register('email')}
                       type="email"
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                     />
                     {errors.email && (
                       <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -711,7 +796,7 @@ export default function ProfilePage() {
                       {...register('phone')}
                       type="tel"
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                     />
                     {errors.phone && (
                       <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
@@ -745,7 +830,7 @@ export default function ProfilePage() {
                           {...register('address')}
                           type="text"
                           disabled
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                         />
                       )}
                     </div>
@@ -758,7 +843,7 @@ export default function ProfilePage() {
                         {...register('city')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
                     </div>
 
@@ -770,7 +855,7 @@ export default function ProfilePage() {
                         {...register('state')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
                     </div>
 
@@ -782,7 +867,7 @@ export default function ProfilePage() {
                         {...register('zipCode')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
                     </div>
                   </div>
@@ -818,7 +903,7 @@ export default function ProfilePage() {
                           <span className={`inline-block px-2 py-1 text-xs rounded-full ${
                             booking.status === 'completed' 
                               ? 'bg-green-100 text-green-800' 
-                              : 'bg-blue-100 text-blue-800'
+                              : 'bg-accent-50 text-accent-800'
                           }`}>
                             {booking.status}
                           </span>
@@ -844,14 +929,14 @@ export default function ProfilePage() {
                   <button
                     onClick={() => setShowAddListingModal(true)}
                     disabled={isLoadingListings}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoadingListings ? 'Loading...' : 'Add New Listing'}
                   </button>
                 </div>
                 {isLoadingListings ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
                     <p className="mt-2 text-gray-600">Loading your listings...</p>
                   </div>
                 ) : listings.length === 0 ? (
@@ -863,7 +948,7 @@ export default function ProfilePage() {
                   listings.map((listing) => (
                     <div key={listing.id} className="border border-gray-200 rounded-lg overflow-hidden">
                       {/* Photo Section */}
-                      {listing.photos && listing.photos.length > 0 ? (
+                      {listing.photos && listing.photos.length > 0 && listing.photos[0]?.url ? (
                         <div className="relative h-48 bg-gray-200">
                           <img
                             src={listing.photos[0].url}
@@ -930,7 +1015,7 @@ export default function ProfilePage() {
                           <div className="flex space-x-2 ml-4">
                             <button
                               onClick={() => handleEditListing(listing)}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-2 text-gray-400 hover:text-accent-600 hover:bg-accent-50 rounded transition-colors"
                               title="Edit listing"
                             >
                               <Edit className="h-4 w-4" />
@@ -954,15 +1039,107 @@ export default function ProfilePage() {
             {/* Payments Tab */}
             {activeTab === 'payments' && (
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Payment Methods</h2>
-                <div className="text-center py-12">
-                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No payment methods added</h3>
-                  <p className="text-gray-600 mb-4">Add a payment method to receive earnings</p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Add Payment Method
-                  </button>
-                </div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Payout Account</h2>
+                
+                {!stripeConnected ? (
+                  <div className="text-center py-12">
+                    <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Connect Your Stripe Account</h3>
+                    <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                      To receive payments from bookings, you need to connect your Stripe account. 
+                      This allows us to securely transfer your earnings directly to your bank account.
+                    </p>
+                    <button
+                      onClick={handleConnectStripe}
+                      disabled={isConnectingStripe}
+                      className="px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                    >
+                      {isConnectingStripe ? 'Connecting...' : 'Connect Stripe Account'}
+                    </button>
+                    <p className="text-xs text-gray-500 mt-4">
+                      You'll be redirected to Stripe to securely set up your account
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className={`border rounded-lg p-4 ${
+                      stripeStatus === 'active' 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      <div className="flex items-start">
+                        <CheckCircle className={`h-5 w-5 mr-3 mt-0.5 ${
+                          stripeStatus === 'active' ? 'text-green-600' : 'text-yellow-600'
+                        }`} />
+                        <div className="flex-1">
+                          <h3 className={`font-semibold mb-1 ${
+                            stripeStatus === 'active' ? 'text-green-900' : 'text-yellow-900'
+                          }`}>
+                            {stripeStatus === 'active' 
+                              ? 'Stripe Account Connected' 
+                              : 'Stripe Account Pending'}
+                          </h3>
+                          <p className={`text-sm ${
+                            stripeStatus === 'active' ? 'text-green-800' : 'text-yellow-800'
+                          }`}>
+                            {stripeStatus === 'active'
+                              ? 'Your account is set up and ready to receive payouts. Earnings will be automatically transferred to your bank account.'
+                              : 'Your Stripe account is being set up. Please complete the onboarding process to start receiving payouts.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {stripeStatus === 'pending' && (
+                      <div className="bg-accent-50 border border-accent-200 rounded-lg p-4">
+                        <p className="text-sm text-accent-800 mb-3">
+                          <strong>Action Required:</strong> {
+                            stripeNeedsVerification 
+                              ? 'Your Stripe account needs identity verification. Please upload the required documents to enable payouts.'
+                              : 'Please complete your Stripe account setup to receive payouts.'
+                          }
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (stripeVerificationUrl) {
+                              window.location.href = stripeVerificationUrl;
+                            } else {
+                              handleConnectStripe();
+                            }
+                          }}
+                          disabled={isConnectingStripe}
+                          className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold"
+                        >
+                          {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="border-t border-gray-200 pt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">How Payouts Work</h3>
+                      <div className="space-y-3 text-sm text-gray-600">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
+                            1
+                          </div>
+                          <p>When a renter books your parking space, they pay through our platform</p>
+                        </div>
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
+                            2
+                          </div>
+                          <p>We automatically transfer your earnings (minus platform fee) to your Stripe account</p>
+                        </div>
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
+                            3
+                          </div>
+                          <p>Stripe automatically deposits funds to your bank account (typically daily)</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -975,15 +1152,15 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Notifications</h3>
                     <div className="space-y-3">
                       <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" defaultChecked />
+                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
                         <span className="ml-2 text-sm text-gray-700">Email notifications for new bookings</span>
                       </label>
                       <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" defaultChecked />
+                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
                         <span className="ml-2 text-sm text-gray-700">SMS notifications for urgent messages</span>
                       </label>
                       <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
                         <span className="ml-2 text-sm text-gray-700">Marketing emails and promotions</span>
                       </label>
                     </div>
@@ -993,11 +1170,11 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy</h3>
                     <div className="space-y-3">
                       <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" defaultChecked />
+                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
                         <span className="ml-2 text-sm text-gray-700">Show my profile to other users</span>
                       </label>
                       <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
                         <span className="ml-2 text-sm text-gray-700">Allow reviews and ratings</span>
                       </label>
                     </div>
@@ -1088,7 +1265,7 @@ export default function ProfilePage() {
                     required
                     value={listingFormData.title}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="e.g., Downtown Parking Spot"
                   />
                 </div>
@@ -1127,7 +1304,7 @@ export default function ProfilePage() {
                     rows={3}
                     value={listingFormData.description}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="Describe your driveway, parking space, or any special features..."
                   />
                 </div>
@@ -1169,7 +1346,7 @@ export default function ProfilePage() {
                               }));
                             }
                           }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                         />
                         <span className="text-sm text-gray-700">{feature}</span>
                       </label>
@@ -1206,7 +1383,7 @@ export default function ProfilePage() {
                           }
                         }));
                       }}
-                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      className="px-3 py-1 text-xs bg-accent-50 text-accent-700 rounded hover:bg-accent-100"
                     >
                       🕐 Set All Days to Same Time
                     </button>
@@ -1231,7 +1408,7 @@ export default function ProfilePage() {
                                 }
                               }));
                             }}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                           />
                           <span className="text-sm font-medium text-gray-700 capitalize">{day}</span>
                         </label>
@@ -1253,7 +1430,7 @@ export default function ProfilePage() {
                                   }
                                 }));
                               }}
-                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="px-2 py-1 text-sm border border-mist-300 rounded focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                             />
                             <span className="text-sm text-gray-500">to</span>
                             <input
@@ -1271,7 +1448,7 @@ export default function ProfilePage() {
                                   }
                                 }));
                               }}
-                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="px-2 py-1 text-sm border border-mist-300 rounded focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                             />
                           </>
                         )}
@@ -1319,7 +1496,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">
-                      <span className="font-medium text-blue-600 hover:text-blue-500">
+                      <span className="font-medium text-accent-600 hover:text-accent-500">
                         Click to upload
                       </span> or drag and drop
                     </p>
@@ -1391,7 +1568,7 @@ export default function ProfilePage() {
                     required
                     value={listingFormData.price}
                     onChange={(e) => setListingFormData(prev => ({ ...prev, price: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                     placeholder="15.00"
                   />
                 </div>
@@ -1429,14 +1606,14 @@ export default function ProfilePage() {
                     });
                   }}
                   disabled={isSubmittingListing}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingListing}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmittingListing 
                     ? (editingListing ? 'Updating...' : 'Creating...') 
@@ -1470,7 +1647,7 @@ export default function ProfilePage() {
                   setShowDeleteConfirm(false);
                   setDeletingListingId(null);
                 }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
               </button>

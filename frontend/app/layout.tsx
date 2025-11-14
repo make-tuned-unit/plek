@@ -9,10 +9,10 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'DriveMyWay - Rent Driveways by the Hour',
+  title: 'plekk - Rent Driveways by the Hour',
   description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
   keywords: 'driveway rental, parking, storage, parking space, hourly parking',
-  authors: [{ name: 'DriveMyWay Team' }],
+  authors: [{ name: 'plekk Team' }],
   viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',
 }
