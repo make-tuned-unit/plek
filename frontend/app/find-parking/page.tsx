@@ -226,6 +226,7 @@ export default function FindParkingPage() {
   const [properties, setProperties] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [locationAccuracyWarning, setLocationAccuracyWarning] = useState<string | null>(null)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>(undefined)
   const [showMap, setShowMap] = useState(false)
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
@@ -326,7 +327,10 @@ export default function FindParkingPage() {
   const handleLocationSelect = async (place: Place) => {
     setSelectedLocation(place)
     setSearchQuery(place.place_name)
-    setUserLocation({ lat: place.center[1], lng: place.center[0] })
+    // Don't overwrite userLocation - keep it separate from selected search location
+    // The map will use selectedLocation for centering, userLocation is for the user's actual GPS position
+    // Clear accuracy warning when user manually selects a location (more precise)
+    setLocationAccuracyWarning(null)
     await fetchPropertiesNearLocation(place.center[1], place.center[0], DEFAULT_RADIUS_KM)
   }
 
@@ -338,7 +342,18 @@ export default function FindParkingPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords
+        const { latitude, longitude, accuracy } = position.coords
+        
+        // Check if location accuracy is poor (more than 1000 meters = city-level)
+        if (accuracy && accuracy > 1000) {
+          const accuracyKm = (accuracy / 1000).toFixed(1)
+          console.warn(`Location accuracy is poor: ${accuracy.toFixed(0)} meters. This may only be city-level precision.`)
+          // Show a warning but don't block functionality
+          setLocationAccuracyWarning(`Location accuracy is limited (${accuracyKm} km radius). For precise location, ensure your browser has permission to use precise location.`)
+        } else {
+          setLocationAccuracyWarning(null)
+        }
+        
         setUserLocation({ lat: latitude, lng: longitude })
         setLocationPermission('granted')
         // Fetch properties near user location
@@ -352,15 +367,23 @@ export default function FindParkingPage() {
         setLocationPermission('denied')
         // Don't show error for user denial - just fetch all properties silently
         if (error.code !== 1) {
-          setError('Unable to get your location. Please allow location access or search manually.')
+          let errorMessage = 'Unable to get your location. '
+          if (error.code === 2) {
+            errorMessage += 'Location unavailable. Please try again or search manually.'
+          } else if (error.code === 3) {
+            errorMessage += 'Location request timed out. Please try again or search manually.'
+          } else {
+            errorMessage += 'Please allow location access or search manually.'
+          }
+          setError(errorMessage)
         }
         // Fall back to fetching all properties
         fetchProperties()
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
+        enableHighAccuracy: true, // Request GPS-level accuracy
+        timeout: 15000, // Increased timeout to allow GPS to get a fix
+        maximumAge: 0 // Don't use cached coordinates - always get fresh GPS reading
       }
     )
   }
@@ -622,8 +645,13 @@ export default function FindParkingPage() {
                   {userLocation && (
                     <div className="mt-2 p-2 bg-green-50 rounded-lg">
                       <p className="text-xs text-green-800">
-                        <strong>Your Location:</strong> {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                        <strong>Your GPS Location:</strong> {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
                       </p>
+                      {locationAccuracyWarning && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          ⚠️ {locationAccuracyWarning}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -811,6 +839,7 @@ export default function FindParkingPage() {
                   setSelectedFeatures([])
                   setIsFeatureFilterOpen(false)
                   setPriceRange([0, 50])
+                  setLocationAccuracyWarning(null)
                   setPropertyType('all')
                 }}
                 className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -828,6 +857,7 @@ export default function FindParkingPage() {
                 <PropertiesMap
                   properties={filteredProperties}
                   userLocation={userLocation}
+                  selectedLocation={selectedLocation ? { lat: selectedLocation.center[1], lng: selectedLocation.center[0] } : undefined}
                   onPropertyClick={handleOpenBooking}
                   className="h-[calc(100vh-250px)] min-h-[600px]"
                 />

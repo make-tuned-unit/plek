@@ -25,6 +25,7 @@ interface Property {
 interface PropertiesMapProps {
   properties: Property[]
   userLocation?: { lat: number; lng: number }
+  selectedLocation?: { lat: number; lng: number }
   onPropertyClick?: (property: Property) => void
   className?: string
 }
@@ -65,7 +66,7 @@ const formatPropertyAddress = (property: any) => {
   return parts.length > 0 ? parts.join(', ') : 'Address unavailable'
 }
 
-export function PropertiesMap({ properties, userLocation, onPropertyClick, className = '' }: PropertiesMapProps) {
+export function PropertiesMap({ properties, userLocation, selectedLocation, onPropertyClick, className = '' }: PropertiesMapProps) {
   const { user } = useAuth()
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -81,10 +82,10 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
       return
     }
 
-    // Initialize map - always center on Halifax, zoomed out
+    // Initialize map - use greyscale style so colored pins pop more
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/light-v11', // Greyscale/light style for better pin visibility
       center: HALIFAX_CENTER, // Always center on Halifax
       zoom: 12,
       accessToken: token
@@ -107,12 +108,22 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
       setMapLoaded(true)
     })
 
+    // Ensure markers stay fixed on zoom - re-validate positions when zoom changes
+    map.current.on('zoom', () => {
+      // Force markers to re-validate their positions
+      markersRef.current.forEach(({ marker }) => {
+        const lngLat = marker.getLngLat()
+        // Re-set the position to ensure it's correct at current zoom level
+        marker.setLngLat(lngLat)
+      })
+    })
+
     return () => {
       if (map.current) {
         map.current.remove()
       }
     }
-  }, [userLocation])
+  }, []) // Remove userLocation dependency - map should only initialize once
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return
@@ -121,32 +132,69 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
     markersRef.current.forEach(({ marker }) => marker.remove())
     markersRef.current = []
 
+    console.log(`Creating markers for ${properties.length} properties`)
+    
     // Add markers for each property with valid coordinates
     properties.forEach(property => {
-      if (typeof property.latitude !== 'number' || typeof property.longitude !== 'number') {
+      // Validate coordinates are numbers and in valid range
+      if (
+        typeof property.latitude !== 'number' || 
+        typeof property.longitude !== 'number' ||
+        isNaN(property.latitude) || 
+        isNaN(property.longitude) ||
+        property.latitude < -90 || 
+        property.latitude > 90 ||
+        property.longitude < -180 || 
+        property.longitude > 180
+      ) {
+        console.warn(`Invalid coordinates for property ${property.id}:`, property.latitude, property.longitude)
         return
       }
 
-      // Create marker element with P logo as map pin
+      // Create marker element with icon.png as map pin
       const markerEl = document.createElement('div')
       markerEl.className = 'property-marker'
+      // Let Mapbox handle positioning completely
       markerEl.style.width = '48px'
       markerEl.style.height = '48px'
       markerEl.style.cursor = 'pointer'
-      markerEl.style.position = 'relative'
       markerEl.style.display = 'flex'
       markerEl.style.alignItems = 'center'
       markerEl.style.justifyContent = 'center'
+      markerEl.style.pointerEvents = 'auto'
+      markerEl.style.margin = '0'
+      markerEl.style.padding = '0'
+      markerEl.style.border = 'none'
+      markerEl.style.outline = 'none'
+      // Don't set position, transform, or transformOrigin - let Mapbox handle all positioning
       
-      // Create image element for P logo
+      // Use icon.png for map pins
       const pinImage = document.createElement('img')
-      pinImage.src = '/logo.png'
+      pinImage.src = '/icon.png'
       pinImage.alt = 'Property location'
       pinImage.style.width = '48px'
       pinImage.style.height = '48px'
       pinImage.style.objectFit = 'contain'
       pinImage.style.display = 'block'
-      pinImage.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+      pinImage.style.margin = '0' // Remove any default margins
+      pinImage.style.padding = '0' // Remove any default padding
+      pinImage.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+      pinImage.style.pointerEvents = 'none' // Prevent image from intercepting clicks
+      pinImage.style.position = 'relative' // Ensure proper positioning
+      
+      // Handle image load errors - fallback to a simple colored div if PNG fails
+      pinImage.onerror = () => {
+        console.warn('Failed to load icon.png, using fallback marker')
+        pinImage.style.display = 'none'
+        const fallbackDiv = document.createElement('div')
+        fallbackDiv.style.width = '32px'
+        fallbackDiv.style.height = '32px'
+        fallbackDiv.style.borderRadius = '50%'
+        fallbackDiv.style.backgroundColor = '#3dbb85'
+        fallbackDiv.style.border = '3px solid white'
+        fallbackDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+        markerEl.appendChild(fallbackDiv)
+      }
       
       markerEl.appendChild(pinImage)
 
@@ -245,21 +293,52 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
 
       const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent)
 
-      // Add marker to map - anchor at center for P logo
+      // Validate coordinate order: Mapbox expects [longitude, latitude]
+      let lng = Number(property.longitude)
+      let lat = Number(property.latitude)
+      
+      // Detect and fix coordinate swap
+      // Latitude should be between -90 and 90
+      // Longitude should be between -180 and 180
+      // If both values are in the -90 to 90 range, check if they're swapped
+      const bothInLatRange = lat >= -90 && lat <= 90 && lng >= -90 && lng <= 90
+      const latInLngRange = (lat >= -180 && lat <= 180) && (lat < -90 || lat > 90)
+      const lngInLatRange = lng >= -90 && lng <= 90
+      
+      // If coordinates appear swapped (lat is outside -90 to 90 but in -180 to 180, and lng is in -90 to 90)
+      // OR if both are in lat range but the "lng" value looks more like a latitude (positive for northern hemisphere)
+      if (latInLngRange && lngInLatRange) {
+        console.warn(`Coordinate swap detected for property ${property.id}, correcting...`)
+        const temp = lng
+        lng = lat
+        lat = temp
+      } else if (bothInLatRange && lng > 0 && lat < 0) {
+        // Both in lat range, but lng is positive (northern hemisphere) and lat is negative - likely swapped
+        console.warn(`Coordinate swap detected for property ${property.id} (both in lat range), correcting...`)
+        const temp = lng
+        lng = lat
+        lat = temp
+      }
+      
+      // Create marker with validated coordinates
+      // Use 'center' anchor with a small upward offset to compensate for visual drift
       const marker = new mapboxgl.Marker({
         element: markerEl,
-        anchor: 'center'
+        anchor: 'center', // Center anchor - icon center aligns with coordinates
+        draggable: false,
+        // Ensure marker maintains position at all zoom levels
+        pitchAlignment: 'map',
+        rotationAlignment: 'map',
+        // Small upward offset to compensate for downward drift when zoomed out
+        // Offset is in pixels: [x, y] where positive y moves down, negative y moves up
+        offset: [0, -2] // Move up 2px to compensate for drift
       })
-        .setLngLat([property.longitude, property.latitude])
+        .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map.current!)
-
-      // Store marker reference if needed later (currently no scaling)
+      
       markersRef.current.push({ marker, element: markerEl })
-
-      // Ensure marker anchor is at center
-      markerEl.style.transform = 'translate3d(0, 0, 0)'
-      markerEl.style.transformOrigin = 'center center'
+      console.log(`Created marker for property ${property.id} at [${lng}, ${lat}]`)
 
       // Add click handler
       markerEl.addEventListener('click', () => {
@@ -270,7 +349,7 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
     })
 
     // Add user location marker if available
-    if (userLocation) {
+    if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
       const userMarkerEl = document.createElement('div')
       userMarkerEl.className = 'user-marker'
       userMarkerEl.style.width = '20px'
@@ -279,29 +358,103 @@ export function PropertiesMap({ properties, userLocation, onPropertyClick, class
       userMarkerEl.style.backgroundColor = '#10B981'
       userMarkerEl.style.border = '3px solid white'
       userMarkerEl.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+      userMarkerEl.style.transform = 'none'
+      userMarkerEl.style.transformOrigin = 'center center'
 
-      new mapboxgl.Marker(userMarkerEl)
-        .setLngLat([userLocation.lng, userLocation.lat])
-        .addTo(map.current!)
+      // Validate user location coordinates
+      const userLng = Number(userLocation.lng)
+      const userLat = Number(userLocation.lat)
+      
+      if (
+        !isNaN(userLng) && !isNaN(userLat) &&
+        userLat >= -90 && userLat <= 90 &&
+        userLng >= -180 && userLng <= 180
+      ) {
+        new mapboxgl.Marker({
+          element: userMarkerEl,
+          anchor: 'center',
+          draggable: false
+        })
+          .setLngLat([userLng, userLat])
+          .addTo(map.current!)
+      } else {
+        console.warn('Invalid user location coordinates:', userLocation)
+      }
     }
 
     // When multiple properties have coordinates, fit the map to include all markers.
     const propertiesWithCoords = properties.filter(
-      (property) =>
-        typeof property.latitude === 'number' && typeof property.longitude === 'number'
+      (property) => {
+        const lat = Number(property.latitude)
+        const lng = Number(property.longitude)
+        return (
+          typeof property.latitude === 'number' && 
+          typeof property.longitude === 'number' &&
+          !isNaN(lat) && !isNaN(lng) &&
+          lat >= -90 && lat <= 90 &&
+          lng >= -180 && lng <= 180
+        )
+      }
     )
 
-    if (propertiesWithCoords.length > 1) {
+    // Center map based on selectedLocation, properties, or default
+    if (selectedLocation) {
+      // If user selected a location, center on it
+      map.current!.setCenter([selectedLocation.lng, selectedLocation.lat])
+      map.current!.setZoom(14)
+    } else if (propertiesWithCoords.length > 1) {
       const bounds = new mapboxgl.LngLatBounds()
       propertiesWithCoords.forEach((property) => {
-        bounds.extend([property.longitude, property.latitude])
+        let lng = Number(property.longitude)
+        let lat = Number(property.latitude)
+        
+        // Apply same swap detection logic
+        const latInLngRange = lat >= -180 && lat <= 180 && (lat < -90 || lat > 90)
+        const lngInLatRange = lng >= -90 && lng <= 90
+        const bothInLatRange = lat >= -90 && lat <= 90 && lng >= -90 && lng <= 90
+        
+        if (latInLngRange && lngInLatRange) {
+          const temp = lng
+          lng = lat
+          lat = temp
+        } else if (bothInLatRange && lng > 0 && lat < 0) {
+          const temp = lng
+          lng = lat
+          lat = temp
+        }
+        
+        bounds.extend([lng, lat])
       })
       map.current!.fitBounds(bounds, { padding: 80, maxZoom: 15 })
+    } else if (propertiesWithCoords.length === 1) {
+      const property = propertiesWithCoords[0]
+      let lng = Number(property.longitude)
+      let lat = Number(property.latitude)
+      
+      // Apply same swap detection logic
+      const latInLngRange = lat >= -180 && lat <= 180 && (lat < -90 || lat > 90)
+      const lngInLatRange = lng >= -90 && lng <= 90
+      const bothInLatRange = lat >= -90 && lat <= 90 && lng >= -90 && lng <= 90
+      
+      if (latInLngRange && lngInLatRange) {
+        const temp = lng
+        lng = lat
+        lat = temp
+      } else if (bothInLatRange && lng > 0 && lat < 0) {
+        const temp = lng
+        lng = lat
+        lat = temp
+      }
+      
+      map.current!.setCenter([lng, lat])
+      map.current!.setZoom(14)
     } else {
       map.current!.setCenter(HALIFAX_CENTER)
       map.current!.setZoom(12)
     }
-  }, [properties, mapLoaded, userLocation, onPropertyClick])
+    
+    console.log(`Map centered. Properties with coords: ${propertiesWithCoords.length}, Markers created: ${markersRef.current.length}`)
+  }, [properties, mapLoaded, userLocation, selectedLocation, onPropertyClick])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const isTokenConfigured = token && token !== 'your_mapbox_token_here'

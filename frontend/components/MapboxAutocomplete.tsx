@@ -68,7 +68,18 @@ export function MapboxAutocomplete({
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation([position.coords.longitude, position.coords.latitude])
+          const { longitude, latitude, accuracy } = position.coords
+          
+          // Log accuracy for debugging
+          if (accuracy) {
+            if (accuracy > 1000) {
+              console.warn(`Geolocation accuracy is poor: ${accuracy.toFixed(0)} meters (city-level)`)
+            } else {
+              console.log(`Geolocation accuracy: ${accuracy.toFixed(0)} meters`)
+            }
+          }
+          
+          setUserLocation([longitude, latitude])
         },
         (error) => {
           // Only log if it's not a user denial (code 1)
@@ -77,9 +88,9 @@ export function MapboxAutocomplete({
           }
         },
         {
-          enableHighAccuracy: false,
-          timeout: 5000,
-          maximumAge: 300000 // 5 minutes
+          enableHighAccuracy: true, // Request GPS-level accuracy
+          timeout: 10000, // Increased timeout for GPS fix
+          maximumAge: 0 // Don't use cached coordinates - always get fresh GPS reading
         }
       )
     }
