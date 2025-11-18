@@ -4,32 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
-import { AvailabilityDisplay } from '@/components/AvailabilityDisplay'
 import { PropertiesMap } from '@/components/PropertiesMap'
 import { BookingModal } from '@/components/BookingModal'
+import { DatePicker } from '@/components/DatePicker'
+import { TimePicker } from '@/components/TimePicker'
 import { apiService } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { listingFeatures } from '@/data/listingFeatures'
-
-const formatTimeLabel = (hours: number, minutes: number) => {
-  const date = new Date()
-  date.setHours(hours, minutes, 0, 0)
-  return new Intl.DateTimeFormat('en-CA', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date)
-}
-
-const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
-  const hours = Math.floor(index / 4)
-  const minutes = (index % 4) * 15
-  const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-  return {
-    value,
-    label: formatTimeLabel(hours, minutes),
-  }
-})
 
 const DEFAULT_RADIUS_KM = 25
 
@@ -159,66 +140,9 @@ export default function FindParkingPage() {
   const [selectedLocation, setSelectedLocation] = useState<Place | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
-  const dateInputRef = useRef<HTMLInputElement | null>(null)
-  const timeInputRef = useRef<HTMLInputElement | null>(null)
-  const timeFieldRef = useRef<HTMLDivElement | null>(null)
-  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false)
-  const openDatePicker = () => {
-    const input = dateInputRef.current
-    if (!input) return
-    input.focus()
-    if (typeof input.showPicker === 'function') {
-      try {
-        input.showPicker()
-      } catch (error) {
-        // Ignore browsers that block programmatic picker opening
-      }
-    }
-  }
-
-  const openTimePicker = () => {
-    const input = timeInputRef.current
-    if (!input) return
-    input.focus()
-    setIsTimePickerOpen((prev) => !prev)
-  }
-
-  const handleTimeSelect = (value: string) => {
-    setSelectedTime(value)
-    setIsTimePickerOpen(false)
-    timeInputRef.current?.blur()
-  }
-
-  useEffect(() => {
-    if (!isTimePickerOpen) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (timeFieldRef.current && !timeFieldRef.current.contains(event.target as Node)) {
-        setIsTimePickerOpen(false)
-      }
-    }
-
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsTimePickerOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleEsc)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleEsc)
-    }
-  }, [isTimePickerOpen])
-
-  const getTimeDisplay = (value: string) => {
-    if (!value) return ''
-    const [hours, minutes] = value.split(':').map(Number)
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return value
-    return formatTimeLabel(hours, minutes)
-  }
+  
+  // Set today as minimum date
+  const today = new Date().toISOString().split('T')[0]
   const [priceRange, setPriceRange] = useState([0, 50])
   const [propertyType, setPropertyType] = useState('all')
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
@@ -597,8 +521,14 @@ export default function FindParkingPage() {
                     : 'border-mist-300 hover:bg-mist-100'
                 }`}
               >
-                {showMap ? <Navigation className="h-5 w-5 mr-2" /> : <MapIcon className="h-5 w-5 mr-2" />}
-                {showMap ? 'List View' : 'Map View'}
+                {showMap ? (
+                  <Navigation className="h-5 w-5 mr-2 text-white" />
+                ) : (
+                  <MapIcon className="h-5 w-5 mr-2 text-accent-500" />
+                )}
+                <span className={showMap ? 'text-white' : 'text-accent-500'}>
+                  {showMap ? 'List View' : 'Map View'}
+                </span>
               </button>
             </div>
           </div>
@@ -658,81 +588,19 @@ export default function FindParkingPage() {
 
               {/* Date & Time */}
               <div className="mb-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={openDatePicker}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
-                      aria-label="Open date picker"
-                    >
-                      <Calendar className="h-5 w-5" />
-                    </button>
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      onClick={openDatePicker}
-                      className="w-full pl-12 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent cursor-pointer"
-                    />
-                  </div>
-                </div>
-                
-                <div ref={timeFieldRef}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Time
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={openTimePicker}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
-                      aria-label="Open time picker"
-                    >
-                      <Clock className="h-5 w-5" />
-                    </button>
-                    <input
-                      ref={timeInputRef}
-                      type="text"
-                      value={getTimeDisplay(selectedTime)}
-                      readOnly
-                      onClick={openTimePicker}
-                      onKeyDown={(event) => {
-                        if (event.key === ' ' || event.key === 'Enter') {
-                          event.preventDefault()
-                          openTimePicker()
-                        }
-                      }}
-                      placeholder="Select time"
-                      className="w-full pl-12 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent cursor-pointer"
-                    />
-                    {isTimePickerOpen && (
-                      <div className="absolute left-0 right-0 mt-2 bg-white border border-mist-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
-                        {TIME_OPTIONS.map((option) => {
-                          const isSelected = option.value === selectedTime
-                          return (
-                            <button
-                              type="button"
-                              key={option.value}
-                              onClick={() => handleTimeSelect(option.value)}
-                              className={`w-full text-left px-4 py-2 text-sm ${
-                                isSelected
-                                  ? 'bg-accent-50 text-accent-700 font-medium'
-                                  : 'text-charcoal-600 hover:bg-mist-100'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <DatePicker
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  min={today}
+                  label="Date"
+                  placeholder="Select date"
+                />
+                <TimePicker
+                  value={selectedTime}
+                  onChange={setSelectedTime}
+                  label="Time"
+                  placeholder="Select time"
+                />
               </div>
 
               {/* Property Type */}
@@ -871,7 +739,7 @@ export default function FindParkingPage() {
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
-                  <select className="px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                  <select className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
                     <option>Sort by: Recommended</option>
                     <option>Price: Low to High</option>
                     <option>Price: High to Low</option>
@@ -943,65 +811,61 @@ export default function FindParkingPage() {
                     </div>
                     
                     <div className="p-6">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{property.title || 'Parking Space'}</h3>
-                        <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="ml-1 text-sm text-gray-600">{property.rating || 0}</span>
-                          <span className="ml-1 text-sm text-gray-500">({property.review_count || 0})</span>
-                        </div>
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 pr-2">{property.title || 'Parking Space'}</h3>
+                        {(property.rating || property.review_count) > 0 && (
+                          <div className="flex items-center flex-shrink-0">
+                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                            <span className="ml-1 text-sm text-gray-600">{property.rating || 0}</span>
+                            {property.review_count > 0 && (
+                              <span className="ml-1 text-sm text-gray-500">({property.review_count})</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       
-                      <p className="text-gray-600 mb-3 flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}
-                      </p>
+                      <div className="space-y-2 mb-4">
+                        <p className="text-gray-600 flex items-center text-sm">
+                          <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                          <span className="line-clamp-1">{locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}</span>
+                        </p>
+                        
+                        {property.start_time && property.end_time && (
+                          <p className="text-gray-600 flex items-center text-sm">
+                            <Clock className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                            <span>
+                              {(() => {
+                                const formatTime = (time: string) => {
+                                  if (!time) return '';
+                                  const [hours, minutes] = time.split(':');
+                                  const hour = parseInt(hours);
+                                  const ampm = hour >= 12 ? 'PM' : 'AM';
+                                  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                  return `${displayHour}:${minutes} ${ampm}`;
+                                };
+                                return `${formatTime(property.start_time)} - ${formatTime(property.end_time)}`;
+                              })()}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                       
                       {property.description && (
                         <p className="text-sm text-gray-500 mb-4 line-clamp-2">{property.description}</p>
                       )}
                       
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {property.type && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                            {property.type}
-                          </span>
-                        )}
-                        {property.status && property.status !== 'active' && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                            {property.status.replace(/_/g, ' ')}
-                          </span>
-                        )}
-                        {/* Display features */}
-                        {property.features && property.features.length > 0 && 
-                          property.features.slice(0, 3).map((feature: string, index: number) => (
-                            <span key={index} className="px-2 py-1 bg-accent-50 text-accent-700 text-xs rounded">
+                      {property.features && property.features.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {property.features.slice(0, 3).map((feature: string, index: number) => (
+                            <span key={index} className="px-2 py-0.5 bg-accent-50 text-accent-700 text-xs rounded">
                               {feature}
                             </span>
-                          ))
-                        }
-                        {property.features && property.features.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                            +{property.features.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Availability info */}
-                      {property.start_time && property.end_time && (
-                        <div className="mb-4">
-                          <AvailabilityDisplay 
-                            availability={{
-                              monday: { start: property.start_time, end: property.end_time, available: property.monday_available || false },
-                              tuesday: { start: property.start_time, end: property.end_time, available: property.tuesday_available || false },
-                              wednesday: { start: property.start_time, end: property.end_time, available: property.wednesday_available || false },
-                              thursday: { start: property.start_time, end: property.end_time, available: property.thursday_available || false },
-                              friday: { start: property.start_time, end: property.end_time, available: property.friday_available || false },
-                              saturday: { start: property.start_time, end: property.end_time, available: property.saturday_available || false },
-                              sunday: { start: property.start_time, end: property.end_time, available: property.sunday_available || false }
-                            }}
-                            className="text-xs"
-                          />
+                          ))}
+                          {property.features.length > 3 && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                              +{property.features.length - 3}
+                            </span>
+                          )}
                         </div>
                       )}
                       
@@ -1013,7 +877,7 @@ export default function FindParkingPage() {
                         <button
                           onClick={() => handleOpenBooking(property)}
                           disabled={property.status !== 'active'}
-                          className="w-full bg-accent-500 text-white py-2 px-4 rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="w-full bg-accent-500 text-white py-2.5 px-4 rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                         >
                           {property.status === 'active' ? 'Book Now' : 'Currently Unavailable'}
                         </button>

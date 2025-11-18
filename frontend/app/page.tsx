@@ -26,16 +26,10 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-mist-200/75 backdrop-blur-sm" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-32 lg:pb-28">
           <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-10 leading-tight">
               Finding parking shouldn't{' '}
               <span className="text-accent-500">mean circling the block</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-700 mb-10 max-w-4xl mx-auto leading-relaxed font-light">
-              Decades of research show that in busy neighbourhoods, up to{' '}
-              <span className="font-semibold text-primary-700">1 in 3 cars</span> on the road 
-              is just searching for a place to park. That wasted time creates traffic, 
-              frustration, and unnecessary emissions.
-            </p>
             
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto mb-10">
@@ -58,6 +52,22 @@ export default function HomePage() {
                 List Your Driveway
                 <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
               </Link>
+            </div>
+
+            {/* Branding Banner */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+              <div className="flex items-center gap-3 px-6 py-3 bg-primary-900/90 backdrop-blur-sm rounded-full shadow-lg">
+                <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-accent-500 text-charcoal-900 font-semibold shadow-lg shadow-accent-500/30 overflow-hidden">
+                  <img 
+                    src="/HeroIcon.png" 
+                    alt="plekk icon" 
+                    className="h-full w-full object-contain p-1.5"
+                  />
+                </span>
+                <p className="font-medium tracking-wide text-white text-sm sm:text-base">
+                  plekk — parking marketplace powered by local driveways
+                </p>
+              </div>
             </div>
 
             {/* Trust indicators */}

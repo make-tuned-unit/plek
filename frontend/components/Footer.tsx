@@ -4,24 +4,6 @@ import { Car, Mail, Phone, MapPin } from 'lucide-react'
 export function Footer() {
   return (
     <footer className="bg-gradient-to-b from-primary-900 via-primary-800 to-charcoal-900 text-mist-100">
-      <div className="border-b border-primary-800/60 bg-primary-900/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-mist-200/80">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-accent-500/90 text-charcoal-900 font-semibold shadow-lg shadow-accent-500/30">
-              <Car className="h-4 w-4" />
-            </span>
-            <p className="font-medium tracking-wide text-mist-100">
-              plekk — parking marketplace powered by local driveways
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-sand-200/80">
-            <span>Halifax</span>
-            <span className="h-3 w-px bg-sand-300/40" />
-            <span>Nova Scotia</span>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Company Info */}

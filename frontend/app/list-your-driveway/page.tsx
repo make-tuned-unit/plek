@@ -42,8 +42,8 @@ const propertySchema = z.object({
   }),
   startTime: z.string(),
   endTime: z.string(),
-  instantBooking: z.boolean(),
   requireApproval: z.boolean(),
+  leadTimeHours: z.number().min(0, 'Lead time must be 0 or greater').default(24),
 })
 
 type PropertyForm = z.infer<typeof propertySchema>
@@ -103,8 +103,8 @@ export default function ListYourDrivewayPage() {
       },
       startTime: '00:00',
       endTime: '23:59',
-      instantBooking: true,
       requireApproval: false,
+      leadTimeHours: 24, // Default: 24 hours lead time
     },
   })
 
@@ -434,15 +434,30 @@ export default function ListYourDrivewayPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    {...register('instantBooking')}
-                    type="checkbox"
-                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">
-                    Allow instant booking (no approval required)
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Booking Lead Time
                   </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Set how much advance notice you need before a booking can be auto-approved. Bookings with less notice will require your approval.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <select
+                      {...register('leadTimeHours', { valueAsNumber: true })}
+                      className="px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                    >
+                      <option value={0}>Same day (always require approval)</option>
+                      <option value={12}>12 hours</option>
+                      <option value={24}>24 hours (1 day)</option>
+                      <option value={48}>48 hours (2 days)</option>
+                      <option value={72}>72 hours (3 days)</option>
+                      <option value={168}>1 week</option>
+                      <option value={336}>2 weeks</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Bookings made with at least this much advance notice will be auto-approved. You'll receive a notification email.
+                  </p>
                 </div>
 
                 <div className="flex items-center">
@@ -452,7 +467,7 @@ export default function ListYourDrivewayPage() {
                     className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">
-                    Require approval for all bookings
+                    Always require approval (ignore lead time)
                   </label>
                 </div>
               </div>
