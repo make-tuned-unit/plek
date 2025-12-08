@@ -168,7 +168,7 @@ export default function ProfilePage() {
       address: user?.address || '',
       city: user?.city || '',
       state: user?.state || '',
-      zipCode: user?.zip_code || '',
+      zipCode: user?.zipCode || '',
     },
   })
 
@@ -190,7 +190,7 @@ export default function ProfilePage() {
         address: user.address || '',
         city: user.city || '',
         state: user.state || '',
-        zipCode: user.zip_code || '',
+        zipCode: user.zipCode || '',
       })
     }
   }, [user, reset])
@@ -351,7 +351,7 @@ export default function ProfilePage() {
         address: user.address || '',
         city: user.city || '',
         state: user.state || '',
-        zipCode: user.zip_code || '',
+        zipCode: user.zipCode || '',
       })
     }
     setIsEditing(false)
