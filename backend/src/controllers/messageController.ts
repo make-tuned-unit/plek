@@ -155,7 +155,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
         sender_id: userId,
         receiver_id: receiverId,
         content: content.trim(),
-        message_type: messageType || 'TEXT',
+        message_type: (messageType || 'text').toLowerCase(),
         is_read: false,
       })
       .select(`
@@ -177,7 +177,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
     // Create notification for receiver
     await supabase.from('notifications').insert({
       user_id: receiverId,
-      type: 'MESSAGE_RECEIVED',
+      type: 'message_received',
       title: 'New Message',
       message: `You have a new message about your booking`,
       data: { booking_id: bookingId, message_id: message.id },

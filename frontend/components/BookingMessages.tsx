@@ -72,7 +72,7 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       const response = await apiService.sendMessage({
         bookingId,
         content,
-        messageType: 'TEXT',
+        messageType: 'text',
       })
 
       if (response.success && response.data?.message) {
