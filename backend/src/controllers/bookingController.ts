@@ -580,6 +580,63 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
     if (status) updateData.status = status;
     if (paymentStatus) updateData.payment_status = paymentStatus;
     
+    // If host is cancelling (rejecting) a paid booking, process refund first
+    if (status === 'cancelled' && existingBooking.payment_status === 'completed') {
+      const isHostCancelling = existingBooking.host_id === userId;
+      if (isHostCancelling) {
+        try {
+          // Get payment record
+          const { data: paymentRecord } = await supabase
+            .from('payments')
+            .select('*')
+            .eq('booking_id', id)
+            .eq('status', 'completed')
+            .single();
+          
+          if (paymentRecord && paymentRecord.stripe_payment_id) {
+            // Import Stripe and process refund
+            const Stripe = await import('stripe').then(m => m.default);
+            const stripeSecretKey = process.env['STRIPE_SECRET_KEY'];
+            if (!stripeSecretKey) {
+              console.error('[Booking] STRIPE_SECRET_KEY not set, cannot process refund');
+            } else {
+              const cleanKey = stripeSecretKey.replace(/^["']|["']$/g, '');
+              const stripeInstance = new Stripe(cleanKey, {
+                apiVersion: '2023-10-16',
+              });
+              
+              try {
+                const refund = await stripeInstance.refunds.create({
+                  payment_intent: paymentRecord.stripe_payment_id,
+                  reason: 'requested_by_customer',
+                });
+                
+                // Update payment record with refund info
+                await supabase
+                  .from('payments')
+                  .update({
+                    status: 'refunded',
+                    stripe_refund_id: refund.id,
+                  })
+                  .eq('id', paymentRecord.id);
+                
+                // Update booking payment status to refunded
+                updateData.payment_status = 'refunded';
+                
+                console.log(`[Booking] Refund processed for booking ${id}: ${refund.id}`);
+              } catch (refundError: any) {
+                console.error(`[Booking] Failed to process refund for booking ${id}:`, refundError);
+                // Continue with cancellation even if refund fails - admin can handle manually
+              }
+            }
+          }
+        } catch (error: any) {
+          console.error(`[Booking] Error processing refund for booking ${id}:`, error);
+          // Continue with cancellation even if refund fails
+        }
+      }
+    }
+    
     // Update booking
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
@@ -612,8 +669,10 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
       await supabase.from('notifications').insert({
         user_id: notifyUserId,
         type: 'booking_cancelled',
-        title: 'Booking Cancelled',
-        message: `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
+        title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
+        message: isHost 
+          ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected. You will receive a full refund.`
+          : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
         data: { booking_id: id, property_id: existingBooking.property_id },
         is_read: false,
       } as any);
