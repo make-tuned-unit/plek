@@ -46,7 +46,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate email confirmation link and send via Resend (NOT Supabase email service)
-    // All Plekk emails use Resend for consistent branding and messaging control
+    // All plekk emails use Resend for consistent branding and messaging control
     // Supabase's generateLink only creates the token - we send the email ourselves
     let emailSent = false;
     try {

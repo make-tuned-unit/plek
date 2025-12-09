@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 /**
- * All Plekk transactional emails are sent through Resend
+ * All plekk transactional emails are sent through Resend
  * This ensures consistent branding, messaging control, and deliverability
  * Supabase is only used for authentication - NOT for sending emails
  */

@@ -149,10 +149,10 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <span className="inline-flex items-center px-4 py-2 rounded-full bg-accent-100 text-accent-700 text-sm font-medium mb-6 border border-accent-200">
               <Sparkles className="w-4 h-4 mr-2" />
-              The Plekk Solution
+              The plekk Solution
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 max-w-4xl mx-auto">
-              Plekk fixes that
+              plekk fixes that
             </h2>
             <p className="text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed font-light">
               We turn unused driveways into bookable parking spots, so drivers go directly 
@@ -309,7 +309,7 @@ export default function HomePage() {
               Trust & Convenience
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Why Choose Plekk?
+              Why Choose plekk?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Built for trust, designed for convenience
