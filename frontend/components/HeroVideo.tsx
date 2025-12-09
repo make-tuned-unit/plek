@@ -1,8 +1,49 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 export default function HeroVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    // Check if mobile on mount and window resize
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    // Update video source when screen size changes
+    if (videoRef.current) {
+      const video = videoRef.current
+      const currentTime = video.currentTime
+      const wasPlaying = !video.paused
+      
+      video.src = isMobile 
+        ? '/Plekkdriveway mobile.mov' 
+        : '/hero-driveway.mp4'
+      
+      video.load()
+      
+      // Restore playback state
+      if (wasPlaying) {
+        video.currentTime = currentTime
+        video.play().catch(() => {
+          // Autoplay might be blocked, that's okay
+        })
+      }
+    }
+  }, [isMobile])
+
   return (
     <video
+      ref={videoRef}
       className="absolute inset-0 h-full w-full object-cover"
       autoPlay
       muted
@@ -11,22 +52,8 @@ export default function HeroVideo() {
       controls={false}
       preload="auto"
       loop
-    >
-      {/* Mobile video */}
-      <source 
-        src="/Plekkdriveway mobile.mov" 
-        type="video/quicktime" 
-        media="(max-width: 768px)"
-      />
-      {/* Desktop video */}
-      <source 
-        src="/hero-driveway.mp4" 
-        type="video/mp4" 
-        media="(min-width: 769px)"
-      />
-      {/* Fallback for browsers that don't support media queries in source */}
-      <source src="/hero-driveway.mp4" type="video/mp4" />
-    </video>
+      src={isMobile ? '/Plekkdriveway mobile.mov' : '/hero-driveway.mp4'}
+    />
   )
 }
 
