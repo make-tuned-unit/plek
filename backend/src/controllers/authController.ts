@@ -216,6 +216,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
           isHost: user.is_host,
           role: user.role,
           createdAt: user.created_at,
+          rating: user.rating || 0,
+          reviewCount: user.review_count || 0,
           hostProfile: user.is_host ? {
             // You can add host profile data here if needed
             businessName: null,

@@ -83,7 +83,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('profile')
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { user, logout, isLoading: authLoading, updateProfile } = useAuth()
+  const { user, logout, isLoading: authLoading, updateProfile, refreshUser } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -216,6 +216,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (activeTab === 'notifications' && user) {
       fetchNotifications()
+      // Refresh user data to get updated ratings
+      refreshUser()
     }
   }, [activeTab, user])
 
@@ -976,8 +978,8 @@ export default function ProfilePage() {
                     <p className="text-gray-600">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</p>
                     <div className="flex items-center justify-center mt-2">
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm text-gray-600">{(user as any)?.rating || 0}</span>
-                      <span className="ml-1 text-sm text-gray-500">({(user as any)?.review_count || 0} reviews)</span>
+                      <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
+                      <span className="ml-1 text-sm text-gray-500">({user?.reviewCount || 0} reviews)</span>
                     </div>
                   </>
                 )}

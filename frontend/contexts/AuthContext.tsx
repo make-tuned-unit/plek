@@ -20,6 +20,8 @@ interface User {
   isHost?: boolean
   role?: string
   createdAt?: string
+  rating?: number
+  reviewCount?: number
 }
 
 interface AuthContextType {
@@ -37,6 +39,7 @@ interface AuthContextType {
   ) => Promise<boolean>
   logout: () => Promise<void>
   updateProfile: (profileData: Partial<User>) => Promise<boolean>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -203,8 +206,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshUser = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    if (token) {
+      try {
+        const response = await apiService.getMe()
+        if (response.data?.user) {
+          setUser(response.data.user)
+        }
+      } catch (error) {
+        console.error('Failed to refresh user:', error)
+      }
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithToken, signup, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithToken, signup, logout, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
