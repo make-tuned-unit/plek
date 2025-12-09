@@ -539,16 +539,31 @@ export default function ProfilePage() {
       
       if (response.success && response.data?.avatar) {
         // Update user profile with new avatar
-        const updateResponse = await updateProfile({ avatar: response.data.avatar })
-        if (updateResponse) {
-          toast.success('Profile picture updated successfully!')
+        try {
+          const updateResponse = await updateProfile({ avatar: response.data.avatar })
+          if (updateResponse) {
+            toast.success('Profile picture updated successfully!')
+            setShowAvatarModal(false)
+            setAvatarPreview(null)
+            setSelectedAvatarFile(null)
+            // Refresh user data to ensure UI updates
+            await refreshUser()
+          } else {
+            // If updateProfile fails, still refresh to get the avatar from the database
+            await refreshUser()
+            toast.success('Profile picture uploaded successfully!')
+            setShowAvatarModal(false)
+            setAvatarPreview(null)
+            setSelectedAvatarFile(null)
+          }
+        } catch (updateError: any) {
+          // If updateProfile fails, still refresh to get the avatar from the database
+          console.error('Profile update error (non-fatal):', updateError)
+          await refreshUser()
+          toast.success('Profile picture uploaded successfully!')
           setShowAvatarModal(false)
           setAvatarPreview(null)
           setSelectedAvatarFile(null)
-          // Refresh user data to ensure UI updates
-          await refreshUser()
-        } else {
-          throw new Error('Failed to update profile')
         }
       } else {
         throw new Error('Upload response invalid')

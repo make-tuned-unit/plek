@@ -160,10 +160,15 @@ class ApiService {
     const url = `${this.getBaseURL()}/auth/avatar`;
     const token = localStorage.getItem('auth_token');
     
+    if (!token) {
+      throw new Error('No authentication token found. Please sign in again.');
+    }
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        // Don't set Content-Type - browser will set it with boundary for FormData
       },
       body: formData,
     });
@@ -171,7 +176,12 @@ class ApiService {
     const contentType = response.headers.get('content-type') || '';
     let data;
     if (contentType.includes('application/json')) {
-      data = await response.json();
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch (parseError: any) {
+        throw new Error(`Invalid JSON response: ${parseError.message}`);
+      }
     } else {
       const text = await response.text();
       throw new Error(`Invalid response format: ${text.substring(0, 200)}`);
@@ -180,9 +190,10 @@ class ApiService {
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem('auth_token');
-        throw new Error(data.message || 'Authentication failed. Please sign in again.');
+        const errorMessage = data?.message || data?.error || 'Authentication failed. Please sign in again.';
+        throw new Error(errorMessage);
       }
-      const error: any = new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+      const error: any = new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
       error.response = { data, status: response.status };
       throw error;
     }
