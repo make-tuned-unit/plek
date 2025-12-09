@@ -337,12 +337,14 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
 export const createPaymentIntent = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
+      bookingId,
       propertyId,
       startTime,
       endTime,
       vehicleInfo,
       specialRequests,
     }: {
+      bookingId?: string;
       propertyId?: string;
       startTime?: string;
       endTime?: string;
@@ -352,10 +354,137 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
 
+    // If bookingId is provided, fetch booking details from it
+    if (bookingId) {
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          property:properties(*, host:users!properties_host_id_fkey(*))
+        `)
+        .eq('id', bookingId)
+        .eq('renter_id', renterId)
+        .single();
+
+      if (bookingError || !booking) {
+        res.status(404).json({
+          success: false,
+          error: 'Booking not found or not authorized',
+        });
+        return;
+      }
+
+      // Use booking data to create payment intent
+      const bookingPropertyId = booking.property_id;
+      const bookingStartTime = booking.start_time;
+      const bookingEndTime = booking.end_time;
+      const bookingVehicleInfo = booking.vehicle_info;
+      const bookingSpecialRequests = booking.special_requests;
+
+      // Continue with payment intent creation using booking data
+      const startDate = new Date(bookingStartTime);
+      const endDate = new Date(bookingEndTime);
+
+      // Get property with host info (use booking.property if available, otherwise fetch)
+      let property = booking.property;
+      if (!property || !property.host) {
+        const { data: fetchedProperty, error: propertyError } = await supabase
+          .from('properties')
+          .select(`
+            *,
+            host:users!properties_host_id_fkey(
+              id,
+              email,
+              first_name,
+              last_name,
+              phone,
+              stripe_account_id,
+              stripe_account_status
+            )
+          `)
+          .eq('id', bookingPropertyId)
+          .eq('status', 'active')
+          .single();
+
+        if (propertyError || !fetchedProperty) {
+          res.status(404).json({
+            success: false,
+            error: 'Property not found or not available',
+          });
+          return;
+        }
+        property = fetchedProperty;
+      }
+
+      // Continue with existing payment intent creation logic using booking data
+      // (will replace the rest of the function logic below)
+      if (!property.host?.stripe_account_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Host has not set up payment account. Please contact support.',
+        });
+        return;
+      }
+
+      if (property.host?.stripe_account_status !== 'active') {
+        res.status(400).json({
+          success: false,
+          error: 'Host payment account is not yet active. Please try again later.',
+        });
+        return;
+      }
+
+      const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } =
+        calculateBookingPriceForProperty(property, startDate, endDate);
+
+      const applicationFee = bookerServiceFee + hostServiceFee;
+
+      const paymentIntent = await getStripe().paymentIntents.create({
+        amount: Math.round(totalAmount * 100), // Convert to cents
+        currency: 'usd',
+        application_fee_amount: Math.round(applicationFee * 100),
+        on_behalf_of: property.host.stripe_account_id,
+        transfer_data: {
+          destination: property.host.stripe_account_id,
+        },
+        metadata: {
+          booking_id: bookingId,
+          renter_id: renterId,
+          host_id: property.host_id,
+          property_id: bookingPropertyId,
+          start_time: bookingStartTime,
+          end_time: bookingEndTime,
+          base_amount: baseAmount.toString(),
+          total_amount: totalAmount.toString(),
+          booker_service_fee: bookerServiceFee.toString(),
+          host_service_fee: hostServiceFee.toString(),
+          instant_booking: property.instant_booking ? 'true' : 'false',
+          ...(bookingVehicleInfo && { vehicle_info: JSON.stringify(bookingVehicleInfo) }),
+          ...(bookingSpecialRequests && { special_requests: bookingSpecialRequests }),
+        },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          clientSecret: paymentIntent.client_secret,
+          paymentIntentId: paymentIntent.id,
+          pricing: {
+            totalAmount,
+            baseAmount,
+            bookerServiceFee,
+            hostServiceFee,
+          },
+        },
+      });
+      return;
+    }
+
+    // Original logic for creating payment intent without booking (legacy support)
     if (!propertyId || !startTime || !endTime) {
       res.status(400).json({
         success: false,
-        error: 'Property ID, start time, and end time are required',
+        error: 'Booking ID or Property ID, start time, and end time are required',
       });
       return;
     }

@@ -270,13 +270,15 @@ class ApiService {
   }
 
   // Payments
-  async createPaymentIntent(payload: {
-    propertyId: string;
-    startTime: string;
-    endTime: string;
-    vehicleInfo?: any;
-    specialRequests?: string;
-  }): Promise<ApiResponse<{
+  async createPaymentIntent(
+    bookingIdOrPayload: string | {
+      propertyId: string;
+      startTime: string;
+      endTime: string;
+      vehicleInfo?: any;
+      specialRequests?: string;
+    }
+  ): Promise<ApiResponse<{
     clientSecret: string;
     paymentIntentId: string;
     pricing?: {
@@ -286,6 +288,11 @@ class ApiService {
       hostServiceFee: number;
     };
   }>> {
+    // If it's a string, treat it as bookingId
+    const payload = typeof bookingIdOrPayload === 'string' 
+      ? { bookingId: bookingIdOrPayload }
+      : bookingIdOrPayload;
+    
     return this.request('/payments', {
       method: 'POST',
       body: JSON.stringify(payload),
