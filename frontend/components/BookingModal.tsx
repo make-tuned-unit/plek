@@ -369,8 +369,8 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         propertyId: property.id,
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
-        vehicleInfo: vehicleInfo || null,
-        specialRequests: specialRequests || null,
+        vehicleInfo: vehicleInfo || undefined,
+        specialRequests: specialRequests || undefined,
       })
 
       if (!paymentResponse.success) {
