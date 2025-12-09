@@ -157,6 +157,7 @@ export default function FindParkingPage() {
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false) // Collapsed by default on mobile
+  const [sortBy, setSortBy] = useState<'recommended' | 'price-low' | 'price-high' | 'distance' | 'rating'>('recommended')
 
   const geocodeProperty = useCallback(async (property: any) => {
     if (!mapboxToken || !property?.id) return null
@@ -510,12 +511,50 @@ export default function FindParkingPage() {
       return matchesSearch && matchesType && matchesPrice && matchesFeatures
     })
     .sort((a, b) => {
-      const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
-      const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
-      if (distanceA === distanceB) {
-        return 0
+      switch (sortBy) {
+        case 'price-low':
+          return (a.hourly_rate || 0) - (b.hourly_rate || 0)
+        case 'price-high':
+          return (b.hourly_rate || 0) - (a.hourly_rate || 0)
+        case 'distance':
+          const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+          const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+          if (distanceA === distanceB) {
+            return 0
+          }
+          return distanceA - distanceB
+        case 'rating':
+          const ratingA = a.rating || 0
+          const ratingB = b.rating || 0
+          if (ratingA === ratingB) {
+            // If ratings are equal, sort by review count
+            return (b.review_count || 0) - (a.review_count || 0)
+          }
+          return ratingB - ratingA
+        case 'recommended':
+        default:
+          // Recommended: prioritize by distance if available, then by rating
+          const distA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+          const distB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+          if (distA !== Number.POSITIVE_INFINITY && distB !== Number.POSITIVE_INFINITY) {
+            // Both have distance, sort by distance
+            return distA - distB
+          } else if (distA !== Number.POSITIVE_INFINITY) {
+            // Only A has distance, prioritize it
+            return -1
+          } else if (distB !== Number.POSITIVE_INFINITY) {
+            // Only B has distance, prioritize it
+            return 1
+          } else {
+            // Neither has distance, sort by rating
+            const rateA = a.rating || 0
+            const rateB = b.rating || 0
+            if (rateA === rateB) {
+              return (b.review_count || 0) - (a.review_count || 0)
+            }
+            return rateB - rateA
+          }
       }
-      return distanceA - distanceB
     })
 
   return (
@@ -793,12 +832,16 @@ export default function FindParkingPage() {
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
-                  <select className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
-                    <option>Sort by: Recommended</option>
-                    <option>Price: Low to High</option>
-                    <option>Price: High to Low</option>
-                    <option>Distance</option>
-                    <option>Rating</option>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat"
+                  >
+                    <option value="recommended">Sort by: Recommended</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="distance">Distance</option>
+                    <option value="rating">Rating</option>
                   </select>
                 </div>
 
