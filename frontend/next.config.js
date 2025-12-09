@@ -1,5 +1,10 @@
-const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+// dotenv is optional - Railway provides environment variables directly
+try {
+  const path = require('path')
+  require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+} catch (e) {
+  // dotenv not available, which is fine in production
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
