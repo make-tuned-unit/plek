@@ -31,8 +31,8 @@ export default function HomePage() {
               <span className="text-accent-500">mean circling the block</span>
             </h1>
             
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-10">
+            {/* Search Bar - Hidden on mobile */}
+            <div className="hidden md:block max-w-2xl mx-auto mb-10">
               <SearchBar />
             </div>
 
