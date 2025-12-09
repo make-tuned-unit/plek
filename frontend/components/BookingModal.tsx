@@ -364,6 +364,25 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     setIsSubmitting(true)
 
     try {
+      // Check availability before starting payment flow
+      const availability = await apiService.checkAvailability(
+        property.id,
+        startDateTime.toISOString(),
+        endDateTime.toISOString()
+      )
+
+      const isAvailable = availability.success !== false && availability.data?.isAvailable !== false
+      if (!isAvailable) {
+        const reason =
+          availability.data?.hasConflict || availability.data?.isAvailable === false
+            ? 'This property is no longer available for the selected dates'
+            : availability.error
+
+        toast.error(reason || 'This property is not available for the selected dates')
+        setIsSubmitting(false)
+        return
+      }
+
       // Create payment intent directly (booking will be created only after payment succeeds)
       const paymentResponse = await apiService.createPaymentIntent({
         propertyId: property.id,

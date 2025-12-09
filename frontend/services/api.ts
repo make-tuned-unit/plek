@@ -324,6 +324,19 @@ class ApiService {
   async getPaymentHistory(): Promise<ApiResponse<{ payments: any[] }>> {
     return this.request('/payments');
   }
+
+  async checkAvailability(propertyId: string, startTime: string, endTime: string): Promise<ApiResponse<{
+    isAvailable: boolean;
+    hasConflict?: boolean;
+    conflictingBookings?: any[];
+  }>> {
+    const params = new URLSearchParams({
+      startTime,
+      endTime,
+    });
+
+    return this.request(`/bookings/availability/${propertyId}?${params.toString()}`);
+  }
 }
 
 export const apiService = new ApiService();

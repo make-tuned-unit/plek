@@ -490,6 +490,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       amount: Math.round(totalAmount * 100), // Convert to cents
       currency: 'usd',
       application_fee_amount: Math.round(applicationFee * 100), // Platform share from booker + host fees
+      on_behalf_of: property.host.stripe_account_id, // Required for cross-border destination charges
       transfer_data: {
         destination: property.host.stripe_account_id,
       },
