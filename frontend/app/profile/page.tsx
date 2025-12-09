@@ -533,6 +533,10 @@ export default function ProfilePage() {
       if (editingListing) {
         // Update existing listing
         propertyId = editingListing.id;
+        if (!propertyId) {
+          toast.error('Invalid listing ID');
+          return;
+        }
         response = await apiService.updateProperty(propertyId, propertyData);
         if (response.success) {
           toast.success('Listing updated successfully!');
@@ -650,11 +654,11 @@ export default function ProfilePage() {
                     <h2 className="text-xl font-semibold text-gray-900">
                       {user?.firstName} {user?.lastName}
                     </h2>
-                    <p className="text-gray-600">Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Recently'}</p>
+                    <p className="text-gray-600">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</p>
                     <div className="flex items-center justify-center mt-2">
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
-                      <span className="ml-1 text-sm text-gray-500">({user?.review_count || 0} reviews)</span>
+                      <span className="ml-1 text-sm text-gray-600">{(user as any)?.rating || 0}</span>
+                      <span className="ml-1 text-sm text-gray-500">({(user as any)?.review_count || 0} reviews)</span>
                     </div>
                   </>
                 )}
@@ -664,11 +668,11 @@ export default function ProfilePage() {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Bookings</span>
-                  <span className="font-medium">{user?.total_bookings || 0}</span>
+                  <span className="font-medium">{(user as any)?.total_bookings || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Earnings</span>
-                  <span className="font-medium">${user?.total_earnings || 0}</span>
+                  <span className="font-medium">${(user as any)?.total_earnings || 0}</span>
                 </div>
               </div>
 

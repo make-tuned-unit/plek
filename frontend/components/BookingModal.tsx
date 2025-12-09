@@ -72,7 +72,7 @@ function PaymentForm({
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         const intentId = paymentIntentId || paymentIntent.id
-        await apiService.confirmPayment(intentId, bookingId)
+        await apiService.confirmPayment(intentId)
 
         toast.success('Payment successful! Your booking is confirmed.')
         onPaymentSuccess()
@@ -402,7 +402,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         setBookingId(null)
         setClientSecret(null)
         setPaymentIntentId(null)
-        setStep('booking')
+        setStep('details')
         return
       }
 
@@ -419,7 +419,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         setBookingId(null)
         setClientSecret(null)
         setPaymentIntentId(null)
-        setStep('booking')
+        setStep('details')
         return
       }
 

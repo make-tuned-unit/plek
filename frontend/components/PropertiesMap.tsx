@@ -199,7 +199,7 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       markerEl.appendChild(pinImage)
 
       // Create popup with Book Now button (hide if user owns the property)
-      const isOwnProperty = property.host_id === user?.id
+      const isOwnProperty = (property as any).hostId || (property as any).host_id === user?.id
       const popupContent = document.createElement('div')
       popupContent.style.padding = '12px'
       popupContent.style.minWidth = '220px'
