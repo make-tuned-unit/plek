@@ -204,7 +204,6 @@ The schema is designed to support future property types:
 - Add event-specific fields (capacity, amenities, noise restrictions)
 - Implement event planning tools
 - Add vendor coordination features
-- Include event insurance integration
 
 ## 🤝 Contributing
 

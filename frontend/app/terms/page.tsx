@@ -35,9 +35,9 @@ const sections = [
       'Cancellation terms are defined by the host for each listing. Drivers should review the policy before booking. plekk processes refunds according to the applicable policy and is not responsible for any costs beyond the amounts processed through the platform.',
   },
   {
-    title: '7. Insurance & Risk Allocation',
+    title: '7. Risk Allocation',
     content:
-      'plekk does not provide insurance, roadside assistance, or guarantees regarding listed spaces. Users are encouraged to carry appropriate insurance coverage. By using the platform, you acknowledge that plekk is not liable for any property damage, vehicle theft, personal injury, fines, or legal claims arising from a booking.',
+      'plekk does not provide insurance, roadside assistance, or guarantees regarding listed spaces. By using the platform, you acknowledge that plekk is not liable for any property damage, vehicle theft, personal injury, fines, or legal claims arising from a booking. All risks rest entirely with the host and the driver.',
   },
   {
     title: '8. Prohibited Activities',

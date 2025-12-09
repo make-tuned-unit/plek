@@ -321,14 +321,12 @@ eventFeatures: JSON {
   amenities: String[]
   noiseRestrictions: String[]
   vendorCoordination: Boolean
-  insuranceRequired: Boolean
 }
 ```
 
 #### New Features
 - **Event Planning Tools**: Event management interface
 - **Vendor Coordination**: Connect with event vendors
-- **Insurance Integration**: Event insurance requirements
 - **Capacity Management**: Guest list and capacity tracking
 - **Event Timeline**: Scheduling and coordination tools
 
@@ -336,7 +334,6 @@ eventFeatures: JSON {
 ```
 POST /api/events/create         - Create event booking
 GET  /api/events/vendors        - List available vendors
-POST /api/events/insurance      - Insurance verification
 GET  /api/events/timeline       - Event timeline management
 ```
 

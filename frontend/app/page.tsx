@@ -320,7 +320,7 @@ export default function HomePage() {
             <FeatureCard
               icon={<Shield className="w-8 h-8" strokeWidth={1.6} />}
               title="Secure & Verified"
-              description="All spaces are verified and secure. Protected payments and insurance coverage give you peace of mind."
+              description="All spaces are verified and secure. Protected payments give you peace of mind."
             />
             <FeatureCard
               icon={<Clock className="w-8 h-8" strokeWidth={1.6} />}
