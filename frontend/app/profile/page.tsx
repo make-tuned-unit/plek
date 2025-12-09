@@ -528,7 +528,7 @@ export default function ProfilePage() {
       };
 
       let response;
-      let propertyId: string;
+      let propertyId: string | undefined;
       
       if (editingListing) {
         // Update existing listing
@@ -558,7 +558,7 @@ export default function ProfilePage() {
         }
       }
       
-      if (response.success && propertyId) {
+      if (response.success && propertyId && typeof propertyId === 'string') {
         // Upload photos if any were selected
         if (selectedPhotos.length > 0) {
           toast.loading('Uploading photos...', { id: 'photo-upload' });
