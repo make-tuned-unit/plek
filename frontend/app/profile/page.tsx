@@ -132,6 +132,8 @@ export default function ProfilePage() {
     state: '',
     zipCode: '',
     features: [] as string[],
+    requireApproval: false,
+    leadTimeHours: 0,
     availability: {
       monday: { start: '09:00', end: '17:00', available: true },
       tuesday: { start: '09:00', end: '17:00', available: true },
@@ -799,6 +801,8 @@ export default function ProfilePage() {
       state: listing.state || '',
       zipCode: listing.zip_code || '',
       features: listing.features || [],
+      requireApproval: listing.require_approval === true,
+      leadTimeHours: listing.lead_time_hours ?? 0,
       availability: {
         monday: { 
           start: listing.start_time || '09:00', 
@@ -923,6 +927,9 @@ export default function ProfilePage() {
         price: listingData.price, // Backend expects 'price' not 'hourly_rate'
         property_type: 'driveway',
         max_vehicles: 1,
+        require_approval: listingData.require_approval === true,
+        lead_time_hours: Number(listingData.lead_time_hours) || 0,
+        instant_booking: listingData.require_approval ? false : true,
         coordinates: listingData.coordinates // Include coordinates from the form
       };
 
@@ -2170,6 +2177,9 @@ export default function ProfilePage() {
                 zip_code: listingFormData.zipCode,
                 coordinates: listingFormData.coordinates,
                 features: listingFormData.features,
+                require_approval: listingFormData.requireApproval,
+                lead_time_hours: listingFormData.leadTimeHours,
+                instant_booking: !listingFormData.requireApproval,
                 availability: listingFormData.availability,
                 photos: (document.getElementById('photo-upload') as HTMLInputElement)?.files || null,
               };
@@ -2379,6 +2389,44 @@ export default function ProfilePage() {
                     💡 Set when your parking space is available each day
                   </p>
                 </div>
+
+              {/* Booking Preferences */}
+              <div className="bg-accent-50 border border-accent-100 rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Booking Preferences</p>
+                    <p className="text-xs text-gray-600">Enable host approval if you want to review requests before confirming.</p>
+                  </div>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <span className="mr-2 text-sm text-gray-700">Require approval</span>
+                    <input
+                      type="checkbox"
+                      checked={listingFormData.requireApproval}
+                      onChange={(e) => setListingFormData(prev => ({ ...prev, requireApproval: e.target.checked }))}
+                      className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lead time (hours)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={listingFormData.leadTimeHours}
+                      onChange={(e) => setListingFormData(prev => ({ ...prev, leadTimeHours: Number(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                      placeholder="0"
+                      disabled={!listingFormData.requireApproval}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Set to 0 for instant booking. If enabled, requests inside this window require approval.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
                           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

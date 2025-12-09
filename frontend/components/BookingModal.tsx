@@ -726,16 +726,20 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
           {/* Booking Type Info */}
           {(() => {
             // Calculate if booking can be auto-approved based on lead time
+            const leadTimeHours = property?.lead_time_hours ?? 0
             const canAutoApprove = (() => {
               if (property?.require_approval) return false; // Host always requires approval
-              if (!startDate || !startTime) return false;
+              if (!startDate || !startTime) return true; // Assume auto-approve if not enough info yet
               
-              const bookingStart = new Date(`${startDate}T${startTime}`)
-              const now = new Date()
-              const hoursUntilBooking = (bookingStart.getTime() - now.getTime()) / (1000 * 60 * 60)
-              const leadTimeHours = property?.lead_time_hours || 24
+              // If host set a lead time, enforce it; otherwise auto-approve
+              if (leadTimeHours > 0) {
+                const bookingStart = new Date(`${startDate}T${startTime}`)
+                const now = new Date()
+                const hoursUntilBooking = (bookingStart.getTime() - now.getTime()) / (1000 * 60 * 60)
+                return hoursUntilBooking >= leadTimeHours
+              }
               
-              return hoursUntilBooking >= leadTimeHours
+              return true
             })()
             
             return canAutoApprove ? (
@@ -754,14 +758,9 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <div>
                   <p className="text-sm font-medium text-blue-900 mb-1">Requires Host Approval</p>
                   <p className="text-sm text-blue-800">
-                    {startDate && startTime ? (
-                      <>
-                        This booking requires {property?.lead_time_hours || 24} hours advance notice. 
-                        Your booking request will be sent to the host for review after payment.
-                      </>
-                    ) : (
-                      'Your booking request will be sent to the host for review after payment.'
-                    )}
+                    {leadTimeHours > 0
+                      ? `This booking requires ${leadTimeHours} hours advance notice. Your booking request will be sent to the host for review after payment.`
+                      : 'Your booking request will be sent to the host for review after payment.'}
                   </p>
                 </div>
               </div>
@@ -792,7 +791,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 </span>
               ) : (
                 <>
-                  Continue to Payment
+                  Continue
                   <span className="md:hidden text-sm font-normal opacity-90">(2/3)</span>
                 </>
               )}

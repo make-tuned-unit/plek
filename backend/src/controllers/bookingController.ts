@@ -272,7 +272,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const totalHours = calculateTotalHours(startDate, endDate);
     
     // Always create booking as 'pending' - will be confirmed only after successful payment
-    const initialStatus = 'pending';
+    const requiresApproval = property.require_approval === true;
+    const initialStatus = requiresApproval ? 'pending' : 'confirmed';
     
     // Create booking
     const { data: booking, error: bookingError } = await supabase
@@ -287,7 +288,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         total_amount: totalAmount,
         service_fee: bookerServiceFee,
         status: initialStatus,
-        payment_status: 'pending',
+        payment_status: requiresApproval ? 'pending' : 'pending',
         special_requests: specialRequests || null,
         vehicle_info: vehicleInfo || null,
       } as any)
@@ -303,12 +304,14 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       throw bookingError;
     }
     
-    // Create notification for host
+    // Notify host
     await supabase.from('notifications').insert({
       user_id: property.host_id,
-      type: 'booking_request',
-      title: 'New Booking Request',
-      message: `You have a new booking request for ${property.title}`,
+      type: requiresApproval ? 'booking_request' : 'booking_confirmed',
+      title: requiresApproval ? 'New Booking Request' : 'New Booking Confirmed',
+      message: requiresApproval
+        ? `You have a new booking request for ${property.title}`
+        : `A driver just booked ${property.title}`,
       data: { booking_id: booking.id, property_id: propertyId },
       is_read: false,
     } as any);
