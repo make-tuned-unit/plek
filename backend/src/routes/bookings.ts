@@ -7,6 +7,7 @@ import {
   updateBooking,
   cancelBooking,
   checkAvailability,
+  generateReviewReminders,
 } from '../controllers/bookingController';
 
 const router = Router();
@@ -16,6 +17,7 @@ router.get('/availability/:propertyId', checkAvailability);
 
 // Protected routes
 router.route('/').get(protect, getBookings).post(protect, createBooking);
+router.post('/generate-review-reminders', protect, generateReviewReminders);
 router.route('/:id').get(protect, getBooking).put(protect, updateBooking).delete(protect, cancelBooking);
 
 export { router as bookingRoutes }; 

@@ -252,6 +252,17 @@ class ApiService {
     });
   }
 
+  async generateReviewReminders(bookingId?: string): Promise<ApiResponse<{
+    processed: number;
+    created: number;
+    message: string;
+  }>> {
+    return this.request('/bookings/generate-review-reminders', {
+      method: 'POST',
+      body: JSON.stringify({ bookingId }),
+    });
+  }
+
   // Message endpoints
   async getMessages(): Promise<ApiResponse<{ conversations: any[] }>> {
     return this.request('/messages');

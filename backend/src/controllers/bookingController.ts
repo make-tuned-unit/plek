@@ -983,3 +983,176 @@ export const checkAvailability = async (req: Request, res: Response): Promise<vo
   }
 };
 
+// @desc    Generate review reminders for completed bookings
+// @route   POST /api/bookings/generate-review-reminders
+// @access  Private (Admin or for specific booking)
+export const generateReviewReminders = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    const { bookingId } = req.body;
+
+    // Verify user is admin or booking participant
+    const { data: user } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+    let query = supabase
+      .from('bookings')
+      .select(`
+        id,
+        renter_id,
+        host_id,
+        property_id,
+        status,
+        property:properties(title)
+      `)
+      .eq('status', 'completed');
+
+    // If bookingId provided, only process that booking
+    if (bookingId) {
+      query = query.eq('id', bookingId);
+      
+      // If not admin, verify user is part of the booking
+      if (!isAdmin) {
+        const { data: booking } = await query.single();
+        if (!booking || (booking.renter_id !== userId && booking.host_id !== userId)) {
+          res.status(403).json({
+            success: false,
+            error: 'Not authorized',
+          });
+          return;
+        }
+      }
+    } else if (!isAdmin) {
+      // If no bookingId and not admin, only process user's bookings
+      query = query.or(`renter_id.eq.${userId},host_id.eq.${userId}`);
+    }
+
+    const { data: bookings, error: bookingsError } = await query;
+
+    if (bookingsError) {
+      console.error('Error fetching bookings:', bookingsError);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch bookings',
+      });
+      return;
+    }
+
+    if (!bookings || bookings.length === 0) {
+      res.json({
+        success: true,
+        data: {
+          processed: 0,
+          created: 0,
+          message: 'No completed bookings found',
+        },
+      });
+      return;
+    }
+
+    let createdCount = 0;
+    let processedCount = 0;
+
+    for (const booking of bookings) {
+      processedCount++;
+
+      // Check if reviews already exist for this booking
+      const { data: existingReviews } = await supabase
+        .from('reviews')
+        .select('reviewer_id')
+        .eq('booking_id', booking.id);
+
+      const reviewerIds = (existingReviews || []).map((r: any) => r.reviewer_id);
+
+      // Check if review reminder notifications already exist
+      const { data: existingNotifications } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', 'review_reminder')
+        .or(`data->>'booking_id'.eq.${booking.id},data->>'bookingId'.eq.${booking.id}`);
+
+      const hasNotifications = existingNotifications && existingNotifications.length > 0;
+
+      const propertyTitle = booking.property?.title || 'property';
+
+      // Notify renter to review host (if not already reviewed and no notification exists)
+      if (!reviewerIds.includes(booking.renter_id) && !hasNotifications) {
+        const { data: hostUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', booking.host_id)
+          .single();
+
+        const hostName = hostUser ? `${hostUser.first_name || ''} ${hostUser.last_name || ''}`.trim() : 'the host';
+
+        const { error: notifyError } = await supabase.from('notifications').insert({
+          user_id: booking.renter_id,
+          type: 'review_reminder',
+          title: 'Leave a Review',
+          message: `How was your experience with ${hostName}? Leave a review for ${propertyTitle}`,
+          data: { 
+            booking_id: booking.id, 
+            property_id: booking.property_id,
+            reviewed_user_id: booking.host_id,
+          },
+          is_read: false,
+        } as any);
+
+        if (!notifyError) {
+          createdCount++;
+        }
+      }
+
+      // Notify host to review renter (if not already reviewed and no notification exists)
+      if (!reviewerIds.includes(booking.host_id) && !hasNotifications) {
+        const { data: renterUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', booking.renter_id)
+          .single();
+
+        const renterName = renterUser ? `${renterUser.first_name || ''} ${renterUser.last_name || ''}`.trim() : 'the renter';
+
+        const { error: notifyError } = await supabase.from('notifications').insert({
+          user_id: booking.host_id,
+          type: 'review_reminder',
+          title: 'Leave a Review',
+          message: `How was your experience with ${renterName}? Leave a review for your booking at ${propertyTitle}`,
+          data: { 
+            booking_id: booking.id, 
+            property_id: booking.property_id,
+            reviewed_user_id: booking.renter_id,
+          },
+          is_read: false,
+        } as any);
+
+        if (!notifyError) {
+          createdCount++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        processed: processedCount,
+        created: createdCount,
+        message: `Processed ${processedCount} booking(s), created ${createdCount} review reminder notification(s)`,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error generating review reminders:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate review reminders',
+      message: error.message,
+    });
+  }
+};
+
