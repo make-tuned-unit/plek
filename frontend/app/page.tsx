@@ -23,7 +23,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <HeroVideo />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-mist-200/75 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/75 via-white/65 to-mist-200/60 backdrop-blur-sm" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-32 lg:pb-28">
           <div className="text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-10 leading-tight">
