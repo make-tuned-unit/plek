@@ -284,10 +284,18 @@ export default function FindParkingPage() {
         // Always update userLocation with actual GPS coordinates
         setUserLocation({ lat: latitude, lng: longitude })
         setLocationPermission('granted')
-        // Clear selected location when using GPS - user wants to use their actual location
+        // Clear selected location and search query when using GPS - user wants to use their actual location
+        // This overrides all filters and takes user to their current location
         setSelectedLocation(null)
         setSearchQuery('')
         setError(null)
+        // Clear all filters when using GPS location - it's an override
+        setSelectedDate('')
+        setSelectedTime('')
+        setPropertyType('all')
+        setSelectedFeatures([])
+        setPriceRange([0, 50])
+        setLocationAccuracyWarning(null)
         // Fetch properties near user's actual GPS location
         fetchPropertiesNearLocation(latitude, longitude, DEFAULT_RADIUS_KM)
       },

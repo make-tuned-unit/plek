@@ -94,15 +94,17 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
 
-    // Add geolocate control
-    const geolocate = new mapboxgl.GeolocateControl({
-      positionOptions: {
-        enableHighAccuracy: true
-      },
-      trackUserLocation: true,
-      showUserHeading: true
-    })
-    map.current.addControl(geolocate, 'top-left')
+    // Add geolocate control only if geolocation is supported
+    if (navigator.geolocation) {
+      const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        trackUserLocation: true,
+        showUserHeading: true
+      })
+      map.current.addControl(geolocate, 'top-left')
+    }
 
     map.current.on('load', () => {
       setMapLoaded(true)
@@ -397,11 +399,15 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       }
     )
 
-    // Center map based on selectedLocation, properties, or default
+    // Center map based on selectedLocation, userLocation (GPS), properties, or default
     if (selectedLocation) {
       // If user selected a location, center on it
       map.current!.setCenter([selectedLocation.lng, selectedLocation.lat])
       map.current!.setZoom(14)
+    } else if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+      // If user clicked "Use My Location", prioritize their GPS location over properties
+      map.current!.setCenter([userLocation.lng, userLocation.lat])
+      map.current!.setZoom(12)
     } else if (propertiesWithCoords.length > 1) {
       const bounds = new mapboxgl.LngLatBounds()
       propertiesWithCoords.forEach((property) => {
@@ -448,10 +454,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       
       map.current!.setCenter([lng, lat])
       map.current!.setZoom(14)
-    } else if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
-      // Fall back to user's GPS location if no properties and no selected location
-      map.current!.setCenter([userLocation.lng, userLocation.lat])
-      map.current!.setZoom(12)
     } else {
       map.current!.setCenter(HALIFAX_CENTER)
       map.current!.setZoom(12)
