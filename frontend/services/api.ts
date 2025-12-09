@@ -51,14 +51,26 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Handle non-JSON responses (like 404)
+      // Handle non-JSON responses (like 404 or HTML error pages)
       let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          // Try to parse JSON, handle malformed JSON
+          if (text.trim().startsWith('"') && !text.trim().startsWith('{"')) {
+            // Response might be a quoted string instead of JSON object
+            throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+          }
+          data = JSON.parse(text);
+        } catch (parseError: any) {
+          // If JSON parsing fails, try to extract error message
+          const text = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Invalid response format: ${text.substring(0, 200)}`);
+        }
       } else {
         // If response is not JSON, create a generic error
-        const text = await response.text();
+        const text = await response.text().catch(() => response.statusText);
         throw new Error(`HTTP error! status: ${response.status} - ${text || response.statusText}`);
       }
 
