@@ -30,17 +30,29 @@ const PORT = parseInt(process.env['PORT'] || '8000', 10);
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: [
-    process.env['FRONTEND_URL'] || 'http://localhost:3000',
-    'http://localhost:3001',
-    'https://staging.parkplekk.com',
-    'https://drivemyway-frontend-production.up.railway.app',
-    // Allow any subdomain of parkplekk.com for staging
-    /^https:\/\/.*\.parkplekk\.com$/,
-    // Allow Railway frontend domains
-    /^https:\/\/.*\.railway\.app$/,
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env['FRONTEND_URL'] || 'http://localhost:3000',
+      'http://localhost:3001',
+      'https://staging.parkplekk.com',
+      'https://drivemyway-frontend-production.up.railway.app',
+    ];
+    
+    // Check if origin matches allowed origins or patterns
+    if (allowedOrigins.includes(origin) ||
+        /^https:\/\/.*\.parkplekk\.com$/.test(origin) ||
+        /^https:\/\/.*\.railway\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Rate limiting
