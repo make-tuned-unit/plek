@@ -231,7 +231,8 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
         success: true,
         data: {
           conversations: [],
-        });
+        },
+      });
       return;
     }
 
