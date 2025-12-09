@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -36,6 +36,7 @@ export default function SignUpPage() {
   const redirectParam = searchParams.get('redirect')
   const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : null
   const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
+  const checkEmail = searchParams.get('check-email') === 'true'
 
   const defaultValues = useMemo(() => ({
     firstName: '',
@@ -65,20 +66,68 @@ export default function SignUpPage() {
     try {
       const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
       if (success) {
-        toast.success('Account created successfully!')
-        const destination = redirectTarget && redirectTarget.startsWith('/')
-          ? redirectTarget
-          : '/profile'
-        router.push(destination)
+        toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
+        // Don't redirect - show message about checking email
+        router.push('/auth/signup?check-email=true')
       } else {
         toast.error('Failed to create account. Please try again.')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign up error:', error)
-      toast.error('An error occurred during sign up')
+      // Check if it's a success response but without token (email confirmation required)
+      if (error?.response?.data?.success && error?.response?.data?.message?.includes('check your email')) {
+        toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
+        router.push('/auth/signup?check-email=true')
+      } else {
+        toast.error(error?.response?.data?.message || 'An error occurred during sign up')
+      }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Show check email message if redirected here after successful signup
+  if (checkEmail) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="mb-6">
+            <div className="mx-auto w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mb-4">
+              <Mail className="h-8 w-8 text-accent-600" />
+            </div>
+            <CheckCircle2 className="h-6 w-6 text-accent-500 mx-auto mb-4" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Check your email</h1>
+          <p className="text-gray-600 mb-6">
+            We've sent a confirmation email to your inbox. Please click the link in the email to confirm your account and activate it.
+          </p>
+          <div className="bg-accent-50 border border-accent-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-700">
+              <strong>Didn't receive the email?</strong>
+            </p>
+            <ul className="text-sm text-gray-600 mt-2 text-left list-disc list-inside space-y-1">
+              <li>Check your spam or junk folder</li>
+              <li>Make sure you entered the correct email address</li>
+              <li>Wait a few minutes - emails can take up to 5 minutes to arrive</li>
+            </ul>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => router.push('/auth/signup')}
+              className="text-accent-600 hover:text-accent-700 font-semibold text-sm"
+            >
+              Try signing up again
+            </button>
+            <Link
+              href="/auth/signin"
+              className="text-gray-600 hover:text-gray-900 font-semibold text-sm"
+            >
+              Already confirmed? Sign in →
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -26,6 +26,7 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<boolean>
+  loginWithToken: (token: string) => Promise<boolean>
   signup: (
     email: string,
     password: string,
@@ -88,6 +89,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginWithToken = async (token: string): Promise<boolean> => {
+    setIsLoading(true)
+    try {
+      localStorage.setItem('auth_token', token)
+      const response = await apiService.getMe()
+      if (response.data?.user) {
+        setUser(response.data.user)
+        setIsLoading(false)
+        return true
+      }
+      localStorage.removeItem('auth_token')
+      setIsLoading(false)
+      return false
+    } catch (error) {
+      console.error('Login with token failed:', error)
+      localStorage.removeItem('auth_token')
+      setIsLoading(false)
+      return false
+    }
+  }
+
   const signup = async (
     email: string,
     password: string,
@@ -107,16 +129,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isHost,
       })
 
-      if (response.data?.user && response.data?.token) {
-        localStorage.setItem('auth_token', response.data.token)
-        setUser(response.data.user)
+      // Handle both cases: with token (old flow) or without token (email confirmation required)
+      // Response structure: { success: true, data: { user: {...}, token?: "..." }, message?: "..." }
+      const userData = response.data?.user;
+      const token = response.data?.token;
+      
+      if (response.success && userData) {
+        if (token) {
+          localStorage.setItem('auth_token', token)
+          setUser(userData)
+        }
+        // If no token, user needs to confirm email - still return true to show success message
+        setIsLoading(false)
+        return true
+      }
+      
+      // Fallback: check if response has user data directly
+      if (userData) {
+        if (token) {
+          localStorage.setItem('auth_token', token)
+          setUser(userData)
+        }
         setIsLoading(false)
         return true
       }
       setIsLoading(false)
       return false
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup failed:', error)
+      // Check if it's actually a success response (email confirmation required)
+      // Sometimes the API returns success but axios/fetch treats it as an error
+      if (error?.response?.data?.success && (error?.response?.data?.data?.user || error?.response?.data?.user)) {
+        setIsLoading(false)
+        return true // Return true so UI can show "check your email" message
+      }
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
@@ -149,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithToken, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )

@@ -30,7 +30,13 @@ const PORT = process.env['PORT'] || 8000;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: [process.env['FRONTEND_URL'] || 'http://localhost:3000', 'http://localhost:3001'],
+  origin: [
+    process.env['FRONTEND_URL'] || 'http://localhost:3000',
+    'http://localhost:3001',
+    'https://staging.parkplekk.com',
+    // Allow any subdomain of parkplekk.com for staging
+    /^https:\/\/.*\.parkplekk\.com$/,
+  ],
   credentials: true,
 }));
 

@@ -85,16 +85,19 @@ export class SupabaseAuthService {
     try {
       const client = getSupabaseClient();
       
-      // Create user in Supabase Auth
+      const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+      
+      // Create user in Supabase Auth (email confirmation required)
       const { data: authData, error: authError } = await client.auth.admin.createUser({
         email: userData.email,
         password: userData.password,
-        email_confirm: true, // Auto-confirm email for now
+        email_confirm: false, // Require email confirmation
         user_metadata: {
           first_name: userData.first_name,
           last_name: userData.last_name,
           phone: userData.phone,
         },
+        email_redirect_to: `${frontendUrl}/auth/confirm-email`, // Where to redirect after confirmation
       });
 
       if (authError) {
@@ -115,7 +118,7 @@ export class SupabaseAuthService {
           last_name: userData.last_name,
           phone: userData.phone,
           role: 'user',
-          is_verified: true, // Auto-verify for now
+          is_verified: false, // Require email confirmation
           is_host: userData.isHost || false,
           total_bookings: 0,
           total_earnings: 0,
@@ -195,6 +198,77 @@ export class SupabaseAuthService {
         user: null, 
         token: null, 
         error: { message: 'Internal server error', name: 'InternalError', status: 500 } as AuthError 
+      };
+    }
+  }
+
+  /**
+   * Generate email confirmation link using Supabase admin API
+   * This generates a link WITHOUT sending an email through Supabase
+   * We send the email ourselves via Resend for branding control
+   */
+  static async generateEmailConfirmationLink(email: string, userId: string): Promise<{ link: string | null; error: AuthError | null }> {
+    try {
+      const client = getSupabaseClient();
+      const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+      
+      // Generate a signup link using Supabase admin API
+      // This creates the token but doesn't send an email (we'll send via Resend)
+      const result = await client.auth.admin.generateLink({
+        type: 'signup',
+        email: email,
+        options: {
+          redirectTo: `${frontendUrl}/auth/confirm-email`,
+        },
+      });
+
+      if (result.error) {
+        console.error('[Email] Supabase generateLink error:', JSON.stringify(result.error, null, 2));
+        return { link: null, error: result.error };
+      }
+
+      if (!result.data) {
+        console.error('[Email] No data returned from generateLink');
+        return { 
+          link: null, 
+          error: { message: 'Failed to generate confirmation link - no data returned', name: 'LinkGenerationError', status: 500 } as AuthError 
+        };
+      }
+
+      // Extract tokens from Supabase's response
+      // We'll construct our own link pointing to our backend endpoint
+      const hashedToken = result.data.properties?.hashed_token;
+      const verificationToken = result.data.properties?.verification_token;
+      
+      if (!hashedToken || !verificationToken) {
+        console.error('[Email] No tokens in Supabase response. Full data:', JSON.stringify(result.data, null, 2));
+        
+        // Fallback: try to use action_link if available
+        const actionLink = result.data.properties?.action_link;
+        if (actionLink) {
+          console.log('[Email] Using Supabase action_link as fallback');
+          return { link: actionLink, error: null };
+        }
+        
+        return { 
+          link: null, 
+          error: { message: 'Failed to generate confirmation link - no tokens in response', name: 'LinkGenerationError', status: 500 } as AuthError 
+        };
+      }
+
+      // Construct link pointing to our backend endpoint via frontend API proxy
+      // Using frontend URL ensures it works with ngrok and Next.js rewrites
+      // The backend will verify the token and redirect to frontend with session token
+      const confirmationLink = `${frontendUrl}/api/auth/confirm-email?token_hash=${hashedToken}&token=${verificationToken}&type=signup&email=${encodeURIComponent(email)}`;
+      
+      console.log(`[Email] Successfully generated confirmation link for ${email}`);
+      return { link: confirmationLink, error: null };
+    } catch (error: any) {
+      console.error('[Email] Supabase generate link error:', error);
+      console.error('[Email] Error stack:', error?.stack);
+      return { 
+        link: null, 
+        error: { message: `Failed to generate confirmation link: ${error?.message || 'Unknown error'}`, name: 'LinkGenerationError', status: 500 } as AuthError 
       };
     }
   }

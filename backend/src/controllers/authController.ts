@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { SupabaseAuthService } from '../services/supabaseService';
-import { sendWelcomeEmail } from '../services/emailService';
+import { SupabaseAuthService, getSupabaseClient } from '../services/supabaseService';
+import { sendEmailConfirmationEmail, sendPasswordResetEmail } from '../services/emailService';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -29,6 +29,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (error) {
+      console.error('Registration error:', error);
       res.status(400).json({
         success: false,
         message: error.message || 'Registration failed',
@@ -44,25 +45,41 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generate JWT token using Supabase
-    const { user: authUser, token: authToken, error: authError } = await SupabaseAuthService.loginUser(email, password);
+    // Generate email confirmation link and send via Resend (NOT Supabase email service)
+    // All Plekk emails use Resend for consistent branding and messaging control
+    // Supabase's generateLink only creates the token - we send the email ourselves
+    let emailSent = false;
+    try {
+      console.log(`[Registration] Attempting to generate confirmation link for ${email}`);
+      const { link: confirmationLink, error: linkError } = await SupabaseAuthService.generateEmailConfirmationLink(email, user.id);
 
-    if (authError || !authUser || !authToken) {
-      res.status(500).json({
-        success: false,
-        message: 'Login after registration failed',
-      });
-      return;
+      if (linkError) {
+        console.error('[Registration] Failed to generate confirmation link:', JSON.stringify(linkError, null, 2));
+      } else if (!confirmationLink) {
+        console.error('[Registration] No confirmation link returned from generateEmailConfirmationLink');
+      } else {
+        console.log(`[Registration] Confirmation link generated: ${confirmationLink.substring(0, 50)}...`);
+        try {
+          // Send email via Resend (our branded email service)
+          await sendEmailConfirmationEmail(user.email, user.first_name, confirmationLink);
+          emailSent = true;
+          console.log(`[Registration] Confirmation email sent successfully via Resend to ${email}`);
+        } catch (emailSendError: any) {
+          console.error('[Registration] Failed to send confirmation email via Resend:', emailSendError?.message || emailSendError);
+          console.error('[Registration] Email send error stack:', emailSendError?.stack);
+        }
+      }
+    } catch (emailError: any) {
+      console.error('[Registration] Email confirmation setup error:', emailError?.message || emailError);
+      console.error('[Registration] Email error stack:', emailError?.stack);
     }
 
-    // Send welcome email (don't wait for it - fire and forget)
-    sendWelcomeEmail(user.email, user.first_name).catch((error) => {
-      console.error('Failed to send welcome email:', error);
-    });
-
-    // Return user data and token
+    // Return success message (don't return token - user needs to confirm email first)
     res.status(201).json({
       success: true,
+      message: emailSent 
+        ? 'Account created successfully! Please check your email to confirm your account.'
+        : 'Account created successfully! However, we were unable to send the confirmation email. Please contact support or try signing in to request a new confirmation email.',
       data: {
         user: {
           id: user.id,
@@ -71,20 +88,21 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           lastName: user.last_name,
           name: `${user.first_name} ${user.last_name}`,
           phone: user.phone,
-          isVerified: user.is_verified,
+          isVerified: false, // Not verified until email is confirmed
           isHost: user.is_host,
           avatar: user.avatar,
           role: user.role,
           createdAt: user.created_at,
         },
-        token: authToken, // Use the actual JWT token from Supabase
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
+    console.error('Error stack:', error?.stack);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: error?.message || 'Server error',
+      ...(process.env['NODE_ENV'] === 'development' && { stack: error?.stack }),
     });
   }
 };
@@ -292,6 +310,146 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// @desc    Confirm email and log user in
+// @route   GET /api/auth/confirm-email
+// @access  Public
+export const confirmEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token_hash, token, type, email } = req.query;
+    const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+
+    console.log('Confirmation request params:', { token_hash: !!token_hash, token: !!token, type, email });
+
+    const client = getSupabaseClient();
+
+    // If we have token_hash and token, verify them
+    if (token_hash && token) {
+      try {
+        // Verify the token using Supabase
+        // Use 'signup' type for email confirmation (not 'email')
+        const { data: verifyData, error: verifyError } = await client.auth.admin.verifyOtp({
+          type: (type as string) === 'signup' ? 'signup' : 'email',
+          token_hash: token_hash as string,
+          token: token as string,
+        });
+
+        if (verifyError || !verifyData.user) {
+          console.error('[Email Confirmation] Token verification error:', verifyError);
+          console.error('[Email Confirmation] Verify data:', verifyData);
+          res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=invalid`);
+          return;
+        }
+
+        // Update user to verified in our users table
+        const { error: profileError } = await client
+          .from('users')
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq('id', verifyData.user.id);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=profile`);
+          return;
+        }
+
+        // Send welcome email after successful email confirmation
+        try {
+          const { sendWelcomeEmail } = await import('../services/emailService');
+          const { data: userData } = await client
+            .from('users')
+            .select('email, first_name')
+            .eq('id', verifyData.user.id)
+            .single();
+          
+          if (userData && userData.email && userData.first_name) {
+            sendWelcomeEmail(userData.email, userData.first_name).catch((error) => {
+              console.error('[Email Confirmation] Failed to send welcome email:', error);
+              // Don't fail the confirmation if welcome email fails
+            });
+          }
+        } catch (welcomeEmailError) {
+          console.error('[Email Confirmation] Error sending welcome email:', welcomeEmailError);
+          // Don't fail the confirmation if welcome email fails
+        }
+
+        // Create a session for the user
+        const { data: session, error: sessionCreateError } = await client.auth.admin.createSession({
+          userId: verifyData.user.id,
+        });
+
+        if (sessionCreateError || !session?.session?.access_token) {
+          console.error('Session creation error:', sessionCreateError);
+          res.redirect(`${frontendUrl}/auth/confirm-email?success=true&error=session`);
+          return;
+        }
+
+        // Redirect to frontend with token
+        res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
+        return;
+      } catch (error: any) {
+        console.error('Confirmation processing error:', error);
+        res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
+        return;
+      }
+    }
+
+    // If we have email but no tokens, Supabase may have already verified
+    // Try to find the user and confirm them
+    if (email) {
+      try {
+        const { data: users, error: findError } = await client
+          .from('users')
+          .select('*')
+          .eq('email', email as string)
+          .limit(1);
+
+        if (!findError && users && users.length > 0) {
+          const user = users[0];
+          
+          // Update to verified
+          await client
+            .from('users')
+            .update({ is_verified: true, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+
+          // Send welcome email after successful email confirmation
+          try {
+            const { sendWelcomeEmail } = await import('../services/emailService');
+            if (user.email && user.first_name) {
+              sendWelcomeEmail(user.email, user.first_name).catch((error) => {
+                console.error('[Email Confirmation] Failed to send welcome email:', error);
+                // Don't fail the confirmation if welcome email fails
+              });
+            }
+          } catch (welcomeEmailError) {
+            console.error('[Email Confirmation] Error sending welcome email:', welcomeEmailError);
+            // Don't fail the confirmation if welcome email fails
+          }
+
+          // Try to create a session
+          const { data: session, error: sessionError } = await client.auth.admin.createSession({
+            userId: user.id,
+          });
+
+          if (!sessionError && session?.session?.access_token) {
+            res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
+            return;
+          }
+        }
+      } catch (error: any) {
+        console.error('Email-based confirmation error:', error);
+      }
+    }
+
+    // If we get here, something went wrong
+    res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=missing_params`);
+  } catch (error: any) {
+    console.error('Email confirmation error:', error);
+    const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
+  }
+};
+
 // @desc    Logout user
 // @route   POST /api/auth/logout
 // @access  Private
@@ -322,6 +480,171 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({
       success: false,
       message: 'Server error',
+    });
+  }
+};
+
+// @desc    Request password reset
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+      return;
+    }
+
+    const client = getSupabaseClient();
+
+    // Check if user exists
+    const { data: users, error: findError } = await client
+      .from('users')
+      .select('id, email, first_name')
+      .eq('email', email)
+      .limit(1);
+
+    if (findError || !users || users.length === 0) {
+      // Don't reveal if email exists for security
+      res.json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.',
+      });
+      return;
+    }
+
+    const user = users[0];
+
+    // Generate password reset link using Supabase
+    const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+    const { data: resetData, error: resetError } = await client.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: `${frontendUrl}/auth/reset-password`,
+      },
+    });
+
+    if (resetError || !resetData) {
+      console.error('[Password Reset] Failed to generate reset link:', resetError);
+      // Don't reveal error to user for security
+      res.json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.',
+      });
+      return;
+    }
+
+    // Extract tokens from Supabase's response
+    const hashedToken = resetData.properties?.hashed_token;
+    const recoveryToken = resetData.properties?.recovery_token;
+
+    if (!hashedToken || !recoveryToken) {
+      console.error('[Password Reset] No tokens in Supabase response');
+      res.json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.',
+      });
+      return;
+    }
+
+    // Construct reset link pointing to our backend endpoint
+    const resetLink = `${frontendUrl}/api/auth/reset-password?token_hash=${hashedToken}&token=${recoveryToken}&type=recovery&email=${encodeURIComponent(email)}`;
+
+    // Send password reset email via Resend
+    try {
+      await sendPasswordResetEmail(user.email, user.first_name, resetLink);
+      console.log(`[Password Reset] Reset email sent successfully to ${email}`);
+    } catch (emailError: any) {
+      console.error('[Password Reset] Failed to send reset email:', emailError);
+      // Don't reveal error to user for security
+    }
+
+    res.json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    // Don't reveal error details for security
+    res.json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    });
+  }
+};
+
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token_hash, token, type, email, newPassword } = req.body;
+
+    if (!token_hash || !token || !newPassword) {
+      res.status(400).json({
+        success: false,
+        message: 'Token and new password are required',
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+      return;
+    }
+
+    const client = getSupabaseClient();
+
+    // Verify the token using Supabase
+    const { data: verifyData, error: verifyError } = await client.auth.admin.verifyOtp({
+      type: (type as string) === 'recovery' ? 'recovery' : 'email',
+      token_hash: token_hash as string,
+      token: token as string,
+    });
+
+    if (verifyError || !verifyData.user) {
+      console.error('[Password Reset] Token verification error:', verifyError);
+      res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token',
+      });
+      return;
+    }
+
+    // Update password using Supabase admin API
+    const { data: updateData, error: updateError } = await client.auth.admin.updateUserById(
+      verifyData.user.id,
+      {
+        password: newPassword,
+      }
+    );
+
+    if (updateError || !updateData.user) {
+      console.error('[Password Reset] Password update error:', updateError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reset password. Please try again.',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
+    });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password. Please try again.',
     });
   }
 }; 

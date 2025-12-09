@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+// API base URL - will be determined dynamically in the ApiService class
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -8,17 +8,20 @@ interface ApiResponse<T = any> {
 }
 
 class ApiService {
-  private baseURL: string;
-
-  constructor() {
-    this.baseURL = API_BASE_URL;
+  private getBaseURL(): string {
+    // Always use relative URL in browser to work with Next.js rewrites
+    if (typeof window !== 'undefined') {
+      return '/api';
+    }
+    // Server-side: use full URL
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.getBaseURL()}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
@@ -58,7 +61,10 @@ class ApiService {
           localStorage.removeItem('auth_token');
           throw new Error(data.message || 'Authentication failed. Please sign in again.');
         }
-        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+        // Create error object that includes response data for better error handling
+        const error: any = new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+        error.response = { data, status: response.status };
+        throw error;
       }
 
       return data;

@@ -786,19 +786,8 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       });
     }
 
-    if (booking.renter?.email) {
-      sendPaymentReceiptEmail({
-        bookingId: booking.id,
-        userName: `${booking.renter.first_name} ${booking.renter.last_name}`,
-        userEmail: booking.renter.email,
-        propertyTitle: booking.property?.title || 'Parking Space',
-        amount: paymentIntent.amount / 100,
-        paymentDate: new Date().toISOString(),
-        transactionId: paymentIntent.id,
-      }).catch((error) => {
-        console.error('Failed to send payment receipt email:', error);
-      });
-    }
+    // Payment receipt email is sent from Stripe webhook handler to avoid duplicates
+    // Removed from here to prevent duplicate emails
 
     res.json({
       success: true,
