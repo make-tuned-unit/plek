@@ -47,6 +47,7 @@ export interface UpdateUserData {
   state?: string;
   zip_code?: string;
   country?: string;
+  avatar?: string;
 }
 
 // Initialize Supabase client

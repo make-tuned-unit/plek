@@ -346,6 +346,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       state,
       zipCode,
       country,
+      avatar,
     } = req.body;
 
     // Update user profile in Supabase
@@ -359,6 +360,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       state,
       zip_code: zipCode,
       country,
+      avatar,
     });
 
     if (error || !user) {
@@ -373,21 +375,27 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     res.json({
       success: true,
       data: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone: user.phone,
-        avatar: user.avatar,
-        bio: user.bio,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        zipCode: user.zip_code,
-        country: user.country,
-        isVerified: user.is_verified,
-        isHost: user.is_host,
-        createdAt: user.created_at,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          phone: user.phone,
+          avatar: user.avatar,
+          bio: user.bio,
+          address: user.address,
+          city: user.city,
+          state: user.state,
+          zipCode: user.zip_code,
+          country: user.country,
+          isVerified: user.is_verified,
+          isHost: user.is_host,
+          role: user.role,
+          createdAt: user.created_at,
+          rating: user.rating || 0,
+          reviewCount: user.review_count || 0,
+        },
       },
     });
   } catch (error) {
