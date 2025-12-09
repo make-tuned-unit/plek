@@ -122,9 +122,19 @@ export const createReview = async (req: Request, res: Response): Promise<void> =
 
     if (reviewError || !review) {
       console.error('Error creating review:', reviewError);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to create review';
+      if (reviewError?.code === '23505') { // Unique constraint violation
+        errorMessage = 'A review for this booking already exists. Each booking can only have one review.';
+      } else if (reviewError?.message) {
+        errorMessage = reviewError.message;
+      }
+      
       res.status(500).json({
         success: false,
-        error: 'Failed to create review',
+        error: errorMessage,
+        details: reviewError,
       });
       return;
     }
