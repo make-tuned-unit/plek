@@ -160,6 +160,24 @@ export const createReview = async (req: Request, res: Response): Promise<void> =
       },
     } as any);
 
+    // Update reviewed user's rating and review count
+    // Note: This is also handled by database trigger, but we do it here for immediate update
+    const { data: userReviews } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('reviewed_user_id', reviewedUserId);
+
+    if (userReviews && userReviews.length > 0) {
+      const avgRating = userReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / userReviews.length;
+      await supabase
+        .from('users')
+        .update({
+          rating: Math.round(avgRating * 100) / 100,
+          review_count: userReviews.length,
+        })
+        .eq('id', reviewedUserId);
+    }
+
     res.json({
       success: true,
       data: review,
