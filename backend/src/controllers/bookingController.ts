@@ -820,17 +820,16 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
     
     // Create notification for the other party
     const notifyUserId = isHost ? existingBooking.renter_id : existingBooking.host_id;
-    await supabase.from('notifications').insert({
-      user_id: notifyUserId,
-      type: 'booking_cancelled',
-      title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
-      message: isHost 
-        ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected. You will receive a full refund.`
-        : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
-      message: `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
-      data: { booking_id: id, property_id: existingBooking.property_id },
-      is_read: false,
-    } as any);
+      await supabase.from('notifications').insert({
+        user_id: notifyUserId,
+        type: 'booking_cancelled',
+        title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
+        message: isHost 
+          ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected. You will receive a full refund.`
+          : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
+        data: { booking_id: id, property_id: existingBooking.property_id },
+        is_read: false,
+      } as any);
     
     res.json({
       success: true,
