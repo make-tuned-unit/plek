@@ -17,23 +17,27 @@ CREATE OR REPLACE FUNCTION update_user_rating_on_review()
 RETURNS TRIGGER AS $$
 DECLARE
   avg_rating DECIMAL(3,2);
-  review_count INTEGER;
+  total_reviews INTEGER;
+  reviewed_user_uuid UUID;
 BEGIN
+  -- Get the reviewed user ID
+  reviewed_user_uuid := COALESCE(NEW.reviewed_user_id, OLD.reviewed_user_id);
+  
   -- Calculate new average rating and count for the reviewed user
   SELECT 
     COALESCE(AVG(rating), 0.00),
     COUNT(*)
-  INTO avg_rating, review_count
+  INTO avg_rating, total_reviews
   FROM public.reviews
-  WHERE reviewed_user_id = COALESCE(NEW.reviewed_user_id, OLD.reviewed_user_id);
+  WHERE reviewed_user_id = reviewed_user_uuid;
   
   -- Update the reviewed user's rating and review count
   UPDATE public.users
   SET 
     rating = avg_rating,
-    review_count = review_count,
+    review_count = total_reviews,
     updated_at = NOW()
-  WHERE id = COALESCE(NEW.reviewed_user_id, OLD.reviewed_user_id);
+  WHERE id = reviewed_user_uuid;
   
   RETURN COALESCE(NEW, OLD);
 END;
@@ -70,7 +74,7 @@ DO $$
 DECLARE
   user_record RECORD;
   avg_rating DECIMAL(3,2);
-  review_count INTEGER;
+  total_reviews INTEGER;
 BEGIN
   -- Loop through all users who have been reviewed
   FOR user_record IN 
@@ -81,7 +85,7 @@ BEGIN
     SELECT 
       COALESCE(AVG(rating), 0.00),
       COUNT(*)
-    INTO avg_rating, review_count
+    INTO avg_rating, total_reviews
     FROM public.reviews
     WHERE reviewed_user_id = user_record.reviewed_user_id;
     
@@ -89,7 +93,7 @@ BEGIN
     UPDATE public.users
     SET 
       rating = avg_rating,
-      review_count = review_count,
+      review_count = total_reviews,
       updated_at = NOW()
     WHERE id = user_record.reviewed_user_id;
   END LOOP;
