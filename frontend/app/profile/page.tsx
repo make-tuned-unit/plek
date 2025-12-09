@@ -1547,7 +1547,7 @@ export default function ProfilePage() {
                             <p className="text-gray-700 mb-4 whitespace-pre-wrap">{review.comment}</p>
                           )}
                           
-                          {review.cleanliness || review.communication || review.check_in || review.checkIn || review.accuracy || review.value ? (
+                          {(review.cleanliness || review.communication || review.check_in || review.checkIn || review.accuracy || review.value) && (
                             <div className="grid grid-cols-2 gap-3 mb-4 pt-4 border-t border-gray-100">
                               {review.cleanliness && (
                                 <div className="flex items-center justify-between">
