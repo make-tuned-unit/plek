@@ -426,7 +426,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
       setClientSecret(clientSecret)
       setPaymentIntentId(paymentId)
       setStep('payment') // Move to payment step
-      toast.success('Booking created! Please complete payment.')
+      toast('Booking request created. Complete payment to confirm your booking.', { 
+        icon: '💳',
+        duration: 4000 
+      })
     } catch (error: any) {
       console.error('Error creating booking:', error)
       toast.error(error.message || 'Failed to create booking. Please try again.')
