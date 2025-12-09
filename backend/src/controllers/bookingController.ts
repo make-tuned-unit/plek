@@ -271,8 +271,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     // Calculate total hours
     const totalHours = calculateTotalHours(startDate, endDate);
     
-    // Determine initial status based on property settings
-    const initialStatus = property.instant_booking ? 'confirmed' : 'pending';
+    // Always create booking as 'pending' - will be confirmed only after successful payment
+    const initialStatus = 'pending';
     
     // Create booking
     const { data: booking, error: bookingError } = await supabase
@@ -372,9 +372,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     res.status(201).json({
       success: true,
       data: booking,
-      message: initialStatus === 'confirmed' 
-        ? 'Booking confirmed successfully' 
-        : 'Booking request created. Waiting for host approval.',
+      message: 'Booking request created. Please complete payment to confirm your booking.',
     });
   } catch (error: any) {
     console.error('Error creating booking:', error);

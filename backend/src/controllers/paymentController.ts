@@ -575,6 +575,15 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
 
     const existingBookingId = paymentIntent.metadata['booking_id'];
     if (existingBookingId) {
+      // Update existing booking to confirmed status after successful payment
+      await supabase
+        .from('bookings')
+        .update({ 
+          status: 'confirmed',
+          payment_status: 'completed' 
+        })
+        .eq('id', existingBookingId);
+      
       const { data: existingBooking } = await supabase
         .from('bookings')
         .select(`
@@ -676,7 +685,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         total_hours: totalHours,
         total_amount: totalAmount,
         service_fee: bookerServiceFee,
-        status: instantBooking ? 'confirmed' : 'pending',
+        status: 'confirmed', // Always confirmed after successful payment
         payment_status: 'completed',
         special_requests: specialRequestsMetadata || null,
         vehicle_info: vehicleInfoMetadata ? { note: vehicleInfoMetadata } : null,
@@ -722,11 +731,9 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
 
     await supabase.from('notifications').insert({
       user_id: property.host_id,
-      type: instantBooking ? 'booking_confirmed' : 'booking_request',
-      title: instantBooking ? 'New Booking Confirmed' : 'New Booking Request',
-      message: instantBooking
-        ? `A driver just booked ${property.title}`
-        : `You have a new booking request for ${property.title}`,
+      type: 'booking_confirmed',
+      title: 'New Booking Confirmed',
+      message: `A driver just booked ${property.title}`,
       data: { booking_id: booking.id, property_id: propertyId },
       is_read: false,
     } as any);
@@ -915,10 +922,13 @@ async function handlePaymentSuccess(
     return;
   }
   
-  // Update booking status
+  // Update booking status to confirmed and payment status to completed
   await supabase
     .from('bookings')
-    .update({ payment_status: 'completed' })
+    .update({ 
+      status: 'confirmed',
+      payment_status: 'completed' 
+    })
     .eq('id', bookingId);
   
   // Create or update payment record
