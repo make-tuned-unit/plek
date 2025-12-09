@@ -119,6 +119,8 @@ export default function ProfilePage() {
     propertyTitle?: string;
     reviewedUserName?: string;
   } | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [listingFormData, setListingFormData] = useState({
     title: '',
     address: '',
@@ -191,7 +193,7 @@ export default function ProfilePage() {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
     
-    if (tabParam && ['profile', 'bookings', 'notifications', 'listings', 'payments', 'settings'].includes(tabParam)) {
+    if (tabParam && ['profile', 'bookings', 'reviews', 'notifications', 'listings', 'payments', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
     
@@ -218,6 +220,13 @@ export default function ProfilePage() {
       fetchNotifications()
       // Refresh user data to get updated ratings
       refreshUser()
+    }
+  }, [activeTab, user])
+
+  // Fetch reviews when reviews tab is active
+  useEffect(() => {
+    if (activeTab === 'reviews' && user) {
+      fetchReviews()
     }
   }, [activeTab, user])
 
@@ -306,6 +315,25 @@ export default function ProfilePage() {
     })
     setShowReviewModal(true)
     handleMarkAsRead(notification.id)
+  }
+
+  const fetchReviews = async () => {
+    try {
+      setIsLoadingReviews(true)
+      if (!user?.id) return
+
+      const response = await apiService.getUserReviews(user.id)
+      if (response.success && response.data) {
+        setReviews(response.data || [])
+      } else {
+        setReviews([])
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+      setReviews([])
+    } finally {
+      setIsLoadingReviews(false)
+    }
   }
 
   // Resize image to max dimensions while maintaining aspect ratio
@@ -682,6 +710,7 @@ export default function ProfilePage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'bookings', label: 'My Bookings', icon: Calendar },
+    { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'listings', label: 'My Listings', icon: Car },
     { id: 'payments', label: 'Payments', icon: CreditCard },
@@ -1452,6 +1481,171 @@ export default function ProfilePage() {
                               )}
                             </div>
                           </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reviews Tab */}
+            {activeTab === 'reviews' && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Reviews</h2>
+                {isLoadingReviews ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
+                    <span className="ml-3 text-gray-600">Loading reviews...</span>
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">No reviews yet</p>
+                    <p className="text-sm text-gray-500">Reviews from your bookings will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {reviews.map((review: any) => {
+                      const reviewer = review.reviewer || {}
+                      const property = review.property || {}
+                      const reviewDate = review.created_at ? new Date(review.created_at) : null
+                      
+                      return (
+                        <div key={review.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center">
+                                <User className="h-6 w-6 text-accent-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {reviewer.first_name && reviewer.last_name
+                                    ? `${reviewer.first_name} ${reviewer.last_name}`
+                                    : 'Anonymous'}
+                                </h3>
+                                {property.title && (
+                                  <p className="text-sm text-gray-500">{property.title}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-5 w-5 ${
+                                    star <= (review.rating || 0)
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {review.comment && (
+                            <p className="text-gray-700 mb-4 whitespace-pre-wrap">{review.comment}</p>
+                          )}
+                          
+                          {review.cleanliness || review.communication || review.check_in || review.checkIn || review.accuracy || review.value ? (
+                            <div className="grid grid-cols-2 gap-3 mb-4 pt-4 border-t border-gray-100">
+                              {review.cleanliness && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Cleanliness</span>
+                                  <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= review.cleanliness
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {review.communication && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Communication</span>
+                                  <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= review.communication
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {(review.check_in || review.checkIn) && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Check-in</span>
+                                  <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= (review.check_in || review.checkIn || 0)
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {review.accuracy && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Accuracy</span>
+                                  <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= review.accuracy
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {review.value && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Value</span>
+                                  <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= review.value
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {reviewDate && (
+                            <p className="text-xs text-gray-500">
+                              {reviewDate.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </p>
+                          )}
                         </div>
                       )
                     })}
@@ -2373,6 +2567,7 @@ export default function ProfilePage() {
                       ref={videoRef}
                       autoPlay
                       playsInline
+                      muted
                       className="w-full h-auto max-h-64 object-cover"
                     />
                     <canvas ref={canvasRef} className="hidden" />
