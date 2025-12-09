@@ -58,7 +58,7 @@ function PaymentForm({
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/profile?payment_success=true`,
+          return_url: `${window.location.origin}/booking-success`,
         },
         redirect: 'if_required',
       })
@@ -70,10 +70,19 @@ function PaymentForm({
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         const intentId = paymentIntentId || paymentIntent.id
-        await apiService.confirmPayment(intentId)
+        const confirmResponse = await apiService.confirmPayment(intentId)
 
-        toast.success('Payment successful! Your booking is confirmed.')
-        onPaymentSuccess()
+        if (confirmResponse.success && confirmResponse.data?.booking?.id) {
+          toast.success('Payment successful! Your booking is confirmed.')
+          onPaymentSuccess()
+          onClose()
+          router.push(`/booking-success?bookingId=${confirmResponse.data.booking.id}`)
+        } else {
+          toast.success('Payment successful! Your booking is confirmed.')
+          onPaymentSuccess()
+          onClose()
+          router.push('/booking-success')
+        }
       }
     } catch (error: any) {
       console.error('Error processing payment:', error)
@@ -791,12 +800,8 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   priceBreakdown={priceBreakdown}
                   onBack={handleReturnToBooking}
                   onPaymentSuccess={async () => {
-                    setClientSecret(null)
-                    setPaymentIntentId(null)
-                    setStep('date-time')
-                    onSuccess?.()
-                    onClose()
-                    router.push('/profile')
+                    // This will be handled in the PaymentForm component
+                    // after payment confirmation
                   }}
                 />
               </Elements>

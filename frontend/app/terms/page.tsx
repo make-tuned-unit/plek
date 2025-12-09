@@ -27,7 +27,7 @@ const sections = [
   {
     title: '5. Fees & Payments',
     content:
-      'plekk charges a total service fee equal to 10% of each confirmed booking: renters pay a 5% fee that is added to their checkout total, and hosts pay a 5% fee that is deducted from their earnings before payout. Fees, payout schedules, and cancellation policies are shown during booking or listing creation. plekk may withhold payouts if required to resolve disputes, comply with law, or prevent fraud.',
+      'plekk charges service fees on confirmed bookings. Fees are shown during booking or listing creation. plekk may withhold payouts if required to resolve disputes, comply with law, or prevent fraud.',
   },
   {
     title: '6. Cancellations & Refunds',

@@ -153,6 +153,43 @@ class ApiService {
     });
   }
 
+  async uploadAvatar(file: File): Promise<ApiResponse<{ avatar: string }>> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const url = `${this.getBaseURL()}/auth/avatar`;
+    const token = localStorage.getItem('auth_token');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    
+    const contentType = response.headers.get('content-type') || '';
+    let data;
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(`Invalid response format: ${text.substring(0, 200)}`);
+    }
+    
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('auth_token');
+        throw new Error(data.message || 'Authentication failed. Please sign in again.');
+      }
+      const error: any = new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+      error.response = { data, status: response.status };
+      throw error;
+    }
+    
+    return data;
+  }
+
   // Property endpoints
   async getProperties(filters?: any): Promise<ApiResponse<{ properties: any[] }>> {
     const queryParams = filters ? `?${new URLSearchParams(filters).toString()}` : '';

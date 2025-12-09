@@ -1,8 +1,24 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword } from '../controllers/authController';
+import multer from 'multer';
+import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+
+// Configure multer for avatar uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit for avatars
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 const router = Router();
 
@@ -41,6 +57,7 @@ router.post('/forgot-password', forgotPasswordValidation, validate, forgotPasswo
 router.post('/reset-password', resetPasswordValidation, validate, resetPassword);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.post('/avatar', protect, upload.single('avatar'), uploadAvatar);
 router.post('/logout', protect, logout);
 
 export { router as authRoutes }; 

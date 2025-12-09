@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { 
   User, 
   Mail, 
@@ -23,7 +24,9 @@ import {
   Camera,
   Plus,
   Trash2,
-  CheckCircle
+  CheckCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
@@ -45,41 +48,7 @@ type ProfileForm = z.infer<typeof profileSchema>
 
 
 
-const mockBookings = [
-  {
-    id: 1,
-    propertyTitle: 'Downtown Parking Spot',
-    address: '123 Main St, Downtown',
-    date: '2024-01-20',
-    time: '14:00 - 18:00',
-    duration: '4 hours',
-    price: 60.00,
-    status: 'completed',
-    rating: 5,
-  },
-  {
-    id: 2,
-    propertyTitle: 'Residential Driveway',
-    address: '456 Oak Ave, Residential Area',
-    date: '2024-01-18',
-    time: '09:00 - 17:00',
-    duration: '8 hours',
-    price: 64.00,
-    status: 'completed',
-    rating: 4,
-  },
-  {
-    id: 3,
-    propertyTitle: 'Secure Parking Garage',
-    address: '789 Business Blvd, Commercial District',
-    date: '2024-01-25',
-    time: '10:00 - 12:00',
-    duration: '2 hours',
-    price: 50.00,
-    status: 'upcoming',
-    rating: null,
-  },
-]
+// Bookings will be fetched from API
 
 const mockListings = [
   {
@@ -130,6 +99,11 @@ export default function ProfilePage() {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [listingFormData, setListingFormData] = useState({
     title: '',
     address: '',
@@ -195,13 +169,200 @@ export default function ProfilePage() {
     }
   }, [user, reset])
 
-  // Handle tab from URL parameter
+  // Handle tab and bookingId from URL parameters
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
+  
   useEffect(() => {
     const tabParam = searchParams.get('tab')
+    const bookingIdParam = searchParams.get('bookingId')
+    
     if (tabParam && ['profile', 'bookings', 'listings', 'payments', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
+    
+    // If bookingId is in URL, expand that booking
+    if (bookingIdParam) {
+      setExpandedBookingId(bookingIdParam)
+      // Ensure bookings tab is active
+      if (tabParam !== 'bookings') {
+        setActiveTab('bookings')
+      }
+    }
   }, [searchParams])
+
+  // Fetch bookings when bookings tab is active
+  useEffect(() => {
+    if (activeTab === 'bookings' && user) {
+      fetchBookings()
+    }
+  }, [activeTab, user])
+
+  // Auto-expand booking when bookingId is in URL and bookings are loaded
+  useEffect(() => {
+    const bookingIdParam = searchParams.get('bookingId')
+    if (bookingIdParam && bookings.length > 0 && !expandedBookingId) {
+      // Check if the booking exists in the loaded bookings
+      const bookingExists = bookings.some((b: any) => b.id === bookingIdParam)
+      if (bookingExists) {
+        setExpandedBookingId(bookingIdParam)
+        // Scroll to the booking after a short delay to ensure it's rendered
+        setTimeout(() => {
+          const element = document.getElementById(`booking-${bookingIdParam}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 100)
+      }
+    }
+  }, [bookings, searchParams, expandedBookingId])
+
+  const fetchBookings = async () => {
+    try {
+      setIsLoadingBookings(true)
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('No auth token found, skipping bookings fetch')
+        return
+      }
+
+      const response = await apiService.getUserBookings()
+      if (response.success && response.data) {
+        setBookings(response.data.bookings || [])
+      } else {
+        setBookings([])
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      setBookings([])
+    } finally {
+      setIsLoadingBookings(false)
+    }
+  }
+
+  // Resize image to max dimensions while maintaining aspect ratio
+  const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          // Calculate new dimensions
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width
+              width = maxWidth
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height
+              height = maxHeight
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'))
+            return
+          }
+
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob)
+              } else {
+                reject(new Error('Failed to create blob'))
+              }
+            },
+            file.type,
+            0.9 // Quality
+          )
+        }
+        img.onerror = () => reject(new Error('Failed to load image'))
+        img.src = e.target?.result as string
+      }
+      reader.onerror = () => reject(new Error('Failed to read file'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
+
+  const handleAvatarFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    try {
+      // Show preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setAvatarPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Store file for upload
+      setSelectedAvatarFile(file)
+    } catch (error: any) {
+      console.error('Error processing avatar:', error)
+      toast.error(error.message || 'Failed to process image')
+      setAvatarPreview(null)
+      setSelectedAvatarFile(null)
+    } finally {
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
+  const uploadAvatar = async (file?: File) => {
+    const fileToUpload = file || selectedAvatarFile
+    if (!fileToUpload) {
+      toast.error('Please select an image first')
+      return
+    }
+    try {
+      setIsUploadingAvatar(true)
+      
+      // Resize image to max 800x800 for avatars
+      const resizedBlob = await resizeImage(fileToUpload, 800, 800)
+      const resizedFile = new File([resizedBlob], fileToUpload.name, { type: fileToUpload.type })
+      
+      const response = await apiService.uploadAvatar(resizedFile)
+      
+      if (response.success && response.data?.avatar) {
+        // Update user profile with new avatar
+        await updateProfile({ avatar: response.data.avatar })
+        toast.success('Profile picture updated successfully!')
+        setShowAvatarModal(false)
+        setAvatarPreview(null)
+        setSelectedAvatarFile(null)
+      } else {
+        throw new Error('Upload response invalid')
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error)
+      toast.error(error.message || 'Failed to upload profile picture')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
 
   // Fetch user's properties function - memoized with useCallback
   const fetchUserProperties = useCallback(async () => {
@@ -647,7 +808,11 @@ export default function ProfilePage() {
                           <User className="h-12 w-12 text-gray-400" />
                         </div>
                       )}
-                      <button className="absolute bottom-4 right-0 bg-accent-500 text-white rounded-full p-2 hover:bg-accent-600">
+                      <button 
+                        onClick={() => setShowAvatarModal(true)}
+                        className="absolute bottom-4 right-0 bg-accent-500 text-white rounded-full p-2 hover:bg-accent-600 transition-colors shadow-lg"
+                        title="Change profile picture"
+                      >
                         <Camera className="h-4 w-4" />
                       </button>
                     </div>
@@ -883,45 +1048,247 @@ export default function ProfilePage() {
             {activeTab === 'bookings' && (
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">My Bookings</h2>
-                <div className="space-y-4">
-                  {mockBookings.map((booking) => (
-                    <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{booking.propertyTitle}</h3>
-                          <p className="text-gray-600 text-sm mt-1">{booking.address}</p>
-                          <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                            <span className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {booking.date}
-                            </span>
-                            <span className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1" />
-                              {booking.time}
-                            </span>
-                            <span>{booking.duration}</span>
+                {isLoadingBookings ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
+                    <span className="ml-3 text-gray-600">Loading bookings...</span>
+                  </div>
+                ) : bookings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">No bookings yet</p>
+                    <p className="text-sm text-gray-500 mb-6">Start by booking a parking space!</p>
+                    <Link
+                      href="/find-parking"
+                      className="inline-flex items-center px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-semibold"
+                    >
+                      Find Parking
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.map((booking) => {
+                      const property = booking.property || {}
+                      const startDate = booking.start_time ? new Date(booking.start_time) : null
+                      const endDate = booking.end_time ? new Date(booking.end_time) : null
+                      const coverPhoto = property.photos?.[0] 
+                        ? (typeof property.photos[0] === 'string' ? property.photos[0] : property.photos[0]?.url)
+                        : null
+
+                      const isExpanded = expandedBookingId === booking.id
+                      const host = booking.host || {}
+                      
+                      return (
+                        <div id={`booking-${booking.id}`} key={booking.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                          <div className="flex">
+                            {coverPhoto && (
+                              <div className="w-32 h-32 flex-shrink-0">
+                                <img
+                                  src={coverPhoto}
+                                  alt={property.title || 'Property'}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-medium text-gray-900">{property.title || 'Parking Space'}</h3>
+                                  <p className="text-gray-600 text-sm mt-1">{property.address || 'Address not available'}</p>
+                                  <div className="flex items-center mt-3 space-x-4 text-sm text-gray-500">
+                                    {startDate && (
+                                      <span className="flex items-center">
+                                        <Calendar className="h-4 w-4 mr-1" />
+                                        {startDate.toLocaleDateString('en-US', { 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        })}
+                                      </span>
+                                    )}
+                                    {startDate && endDate && (
+                                      <span className="flex items-center">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        {startDate.toLocaleTimeString('en-US', { 
+                                          hour: 'numeric', 
+                                          minute: '2-digit',
+                                          hour12: true 
+                                        })} - {endDate.toLocaleTimeString('en-US', { 
+                                          hour: 'numeric', 
+                                          minute: '2-digit',
+                                          hour12: true 
+                                        })}
+                                      </span>
+                                    )}
+                                    {booking.total_hours && (
+                                      <span>{booking.total_hours} {booking.total_hours === 1 ? 'hour' : 'hours'}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right ml-4">
+                                  {booking.total_amount && (
+                                    <p className="font-medium text-gray-900">${booking.total_amount.toFixed(2)}</p>
+                                  )}
+                                  <span className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
+                                    booking.status === 'confirmed' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : booking.status === 'completed'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : booking.status === 'cancelled'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {booking.status === 'confirmed' ? 'Confirmed' :
+                                     booking.status === 'completed' ? 'Completed' :
+                                     booking.status === 'cancelled' ? 'Cancelled' :
+                                     booking.status === 'pending' ? 'Pending' :
+                                     booking.status || 'Unknown'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Expand/Collapse Button */}
+                              <button
+                                onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                                className="mt-4 flex items-center text-sm text-accent-600 hover:text-accent-700 font-medium"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4 mr-1" />
+                                    Hide Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4 mr-1" />
+                                    View Details
+                                  </>
+                                )}
+                              </button>
+                              
+                              {/* Expanded Details */}
+                              {isExpanded && (
+                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Booking Information</h4>
+                                      <div className="space-y-2 text-sm">
+                                        <div>
+                                          <span className="text-gray-500">Booking ID:</span>
+                                          <span className="ml-2 font-mono text-gray-900">{booking.id}</span>
+                                        </div>
+                                        {startDate && (
+                                          <div>
+                                            <span className="text-gray-500">Start:</span>
+                                            <span className="ml-2 text-gray-900">
+                                              {startDate.toLocaleString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit',
+                                                hour12: true
+                                              })}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {endDate && (
+                                          <div>
+                                            <span className="text-gray-500">End:</span>
+                                            <span className="ml-2 text-gray-900">
+                                              {endDate.toLocaleString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit',
+                                                hour12: true
+                                              })}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {booking.total_hours && (
+                                          <div>
+                                            <span className="text-gray-500">Duration:</span>
+                                            <span className="ml-2 text-gray-900">
+                                              {booking.total_hours} {booking.total_hours === 1 ? 'hour' : 'hours'}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Payment Details</h4>
+                                      <div className="space-y-2 text-sm">
+                                        {booking.total_amount && (
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-500">Total Amount:</span>
+                                            <span className="font-semibold text-gray-900">${booking.total_amount.toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        {booking.service_fee && (
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-500">Service Fee:</span>
+                                            <span className="text-gray-900">${booking.service_fee.toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        {booking.payment_status && (
+                                          <div>
+                                            <span className="text-gray-500">Payment Status:</span>
+                                            <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                              booking.payment_status === 'completed'
+                                                ? 'bg-green-100 text-green-800'
+                                                : booking.payment_status === 'pending'
+                                                ? 'bg-yellow-100 text-yellow-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                            }`}>
+                                              {booking.payment_status}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {booking.vehicle_info && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Vehicle Information</h4>
+                                      <p className="text-sm text-gray-900">
+                                        {typeof booking.vehicle_info === 'string' 
+                                          ? booking.vehicle_info 
+                                          : booking.vehicle_info.note || 'Not specified'}
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {booking.special_requests && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Requests</h4>
+                                      <p className="text-sm text-gray-900">{booking.special_requests}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {host.first_name && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Host Information</h4>
+                                      <p className="text-sm text-gray-900">
+                                        {host.first_name} {host.last_name}
+                                        {host.email && ` (${host.email})`}
+                                        {host.phone && ` - ${host.phone}`}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">${booking.price}</p>
-                          <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                            booking.status === 'completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-accent-50 text-accent-800'
-                          }`}>
-                            {booking.status}
-                          </span>
-                          {booking.rating && (
-                            <div className="flex items-center mt-1">
-                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                              <span className="text-xs text-gray-600 ml-1">{booking.rating}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1661,6 +2028,101 @@ export default function ProfilePage() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Avatar Upload Modal */}
+      {showAvatarModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Change Profile Picture</h3>
+                <button
+                  onClick={() => {
+                    setShowAvatarModal(false)
+                    setAvatarPreview(null)
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Preview */}
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Preview"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-accent-500"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-300">
+                      <User className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* File Input */}
+              <div className="mb-6">
+                <label className="block">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    onChange={handleAvatarFileSelect}
+                    className="hidden"
+                    id="avatar-upload"
+                    disabled={isUploadingAvatar}
+                  />
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-accent-500 transition-colors cursor-pointer">
+                    <Camera className="h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 text-center">
+                      <span className="font-medium text-accent-600">Click to upload</span> or use camera
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAvatarModal(false)
+                    setAvatarPreview(null)
+                    setSelectedAvatarFile(null)
+                  }}
+                  disabled={isUploadingAvatar}
+                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Cancel
+                </button>
+                {avatarPreview && (
+                  <button
+                    onClick={() => uploadAvatar()}
+                    disabled={isUploadingAvatar}
+                    className="flex-1 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                  >
+                    {isUploadingAvatar ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading...
+                      </span>
+                    ) : (
+                      'Upload Photo'
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

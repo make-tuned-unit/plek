@@ -309,9 +309,6 @@ export async function sendBookingConfirmationEmail(
                       <td style="text-align: right; padding: 12px 0; font-size: 16px; color: ${BRAND_COLORS.accent};">$${(data.baseAmount + data.serviceFee + data.securityDeposit).toFixed(2)}</td>
                     </tr>
                   </table>
-                  <p style="margin-top: 12px; color: ${BRAND_COLORS.textLight}; font-size: 13px;">
-                    Note: Hosts pay a separate 5% plekk service fee from their payout.
-                  </p>
                 </div>
                 
                 ${data.specialRequests ? `
@@ -378,25 +375,6 @@ export async function sendBookingNotificationEmail(
                   ${data.vehicleInfo ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Vehicle:</strong> ${data.vehicleInfo}</p>` : ''}
                 </div>
                 
-                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="margin-top: 0; color: ${BRAND_COLORS.text}; font-size: 18px; font-weight: 600;">Estimated Payout</h3>
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                      <td style="padding: 10px 0; font-size: 15px;">Booking Subtotal:</td>
-                      <td style="text-align: right; padding: 10px 0; font-size: 15px;">$${data.baseAmount.toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 10px 0; font-size: 15px;">plekk Host Fee (5%):</td>
-                      <td style="text-align: right; padding: 10px 0; font-size: 15px; color: #dc2626;">-$${data.hostServiceFee.toFixed(2)}</td>
-                    </tr>
-                    <tr style="border-top: 2px solid ${BRAND_COLORS.text}; font-weight: bold;">
-                      <td style="padding: 12px 0; font-size: 16px;">Estimated Payout:</td>
-                      <td style="text-align: right; padding: 12px 0; font-size: 16px; color: ${BRAND_COLORS.accent};">$${(data.baseAmount - data.hostServiceFee).toFixed(2)}</td>
-                    </tr>
-                  </table>
-                  <p style="color: ${BRAND_COLORS.textLight}; font-size: 13px; margin-top: 12px;">Any security deposit or adjustments will be handled separately.</p>
-                </div>
-                
                 ${data.specialRequests ? `
                   <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
                     <p style="margin: 0; font-size: 15px;"><strong>Special Requests:</strong> ${data.specialRequests}</p>
@@ -410,7 +388,7 @@ export async function sendBookingNotificationEmail(
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${getFrontendUrl()}/profile" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Manage Booking</a>
+                  <a href="${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Manage Booking</a>
                 </div>
                 
                 <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
@@ -468,7 +446,7 @@ export async function sendPaymentReceiptEmail(
                 <p style="font-size: 16px; margin: 30px 0;">This receipt confirms your payment has been processed successfully.</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${getFrontendUrl()}/profile" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View Booking</a>
+                  <a href="${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View Booking</a>
                 </div>
                 
                 <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>

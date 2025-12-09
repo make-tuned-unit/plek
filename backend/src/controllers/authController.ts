@@ -234,6 +234,93 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// @desc    Upload user avatar
+// @route   POST /api/auth/avatar
+// @access  Private
+export const uploadAvatar = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user || !req.user.id) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
+    // Check if file was uploaded
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: 'No image file provided',
+      });
+      return;
+    }
+
+    const userId = req.user.id;
+    const supabase = getSupabaseClient();
+
+    // Generate unique filename
+    const fileExt = req.file.originalname.split('.').pop() || 'jpg';
+    const fileName = `avatars/${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    // Upload to Supabase Storage (use property-photos bucket or create avatars bucket)
+    const bucketName = process.env['SUPABASE_STORAGE_BUCKET'] || 'property-photos';
+    
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        cacheControl: '3600',
+        upsert: true, // Allow overwriting existing avatars
+      });
+
+    if (uploadError) {
+      console.error('Avatar upload error:', uploadError);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to upload avatar',
+        message: uploadError.message,
+      });
+      return;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(fileName);
+
+    // Update user's avatar in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ avatar: publicUrl })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating avatar in database:', updateError);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update avatar',
+        message: updateError.message,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        avatar: publicUrl,
+      },
+    });
+  } catch (error: any) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
