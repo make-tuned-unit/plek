@@ -354,7 +354,7 @@ export async function sendBookingNotificationEmail(
     await client.emails.send({
       from: getFromEmail(),
       to: data.hostEmail,
-      subject: `New Booking: ${data.propertyTitle}`,
+      subject: `Booking Confirmed: ${data.propertyTitle}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -364,10 +364,10 @@ export async function sendBookingNotificationEmail(
           </head>
           <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
             <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              ${getEmailHeader('New Booking Request')}
+              ${getEmailHeader('Your Space Has Been Booked')}
               <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
                 <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
-                <p style="font-size: 16px; margin: 0 0 30px 0;">You have a new booking request for your parking space!</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">Your parking space has been booked! A driver has confirmed their reservation and payment has been processed.</p>
                 
                 <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
                   <h2 style="margin-top: 0; color: ${BRAND_COLORS.accent}; font-size: 20px; font-weight: 600;">${data.propertyTitle}</h2>
@@ -402,6 +402,12 @@ export async function sendBookingNotificationEmail(
                     <p style="margin: 0; font-size: 15px;"><strong>Special Requests:</strong> ${data.specialRequests}</p>
                   </div>
                 ` : ''}
+                
+                <div style="background: ${BRAND_COLORS.background}; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <p style="margin: 0; font-size: 14px; color: ${BRAND_COLORS.textLight};">
+                    <strong>Note:</strong> If you need to cancel this booking, you can do so from your dashboard. The driver will receive a full refund.
+                  </p>
+                </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="${getFrontendUrl()}/profile" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Manage Booking</a>
