@@ -321,7 +321,7 @@ export default function ProfilePage() {
       router.replace('/profile?tab=payments', { scroll: false });
     } else if (stripeRefresh === 'true') {
       // User needs to complete onboarding
-      toast.info('Please complete your Stripe account setup');
+      toast('Please complete your Stripe account setup', { icon: 'ℹ️' });
       router.replace('/profile?tab=payments', { scroll: false });
     }
   }, [searchParams, router]);
