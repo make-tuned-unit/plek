@@ -113,6 +113,7 @@ export default function ProfilePage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'inbox' | 'history'>('inbox');
+  const [hasFetchedNotifications, setHasFetchedNotifications] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedReviewBooking, setSelectedReviewBooking] = useState<{
     bookingId: string;
@@ -214,14 +215,16 @@ export default function ProfilePage() {
     }
   }, [activeTab, user])
 
-  // Fetch notifications when notifications tab is active
+  // Fetch notifications when notifications tab is active (only once per tab switch)
   useEffect(() => {
-    if (activeTab === 'notifications' && user) {
+    if (activeTab === 'notifications' && user?.id && !hasFetchedNotifications) {
       fetchNotifications()
-      // Refresh user data to get updated ratings
-      refreshUser()
+      setHasFetchedNotifications(true)
+    } else if (activeTab !== 'notifications') {
+      // Reset flag when switching away from notifications tab
+      setHasFetchedNotifications(false)
     }
-  }, [activeTab, user])
+  }, [activeTab, user?.id, hasFetchedNotifications])
 
   // Fetch reviews when reviews tab is active
   useEffect(() => {
@@ -273,6 +276,9 @@ export default function ProfilePage() {
   }
 
   const fetchNotifications = async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoadingNotifications) return
+    
     try {
       setIsLoadingNotifications(true)
       const token = localStorage.getItem('auth_token')
@@ -287,9 +293,15 @@ export default function ProfilePage() {
       } else {
         setNotifications([])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching notifications:', error)
-      setNotifications([])
+      // Don't clear notifications on error, keep existing ones
+      if (error.message?.includes('429')) {
+        // Rate limited - don't retry immediately
+        console.warn('Rate limited, skipping notification fetch')
+      } else {
+        setNotifications([])
+      }
     } finally {
       setIsLoadingNotifications(false)
     }
@@ -617,21 +629,26 @@ export default function ProfilePage() {
     }
   }, []);
 
-  // Fetch user's properties on component mount
+  // Fetch user's properties on component mount (only once per user)
+  const [hasFetchedProperties, setHasFetchedProperties] = useState(false);
   useEffect(() => {
-    if (user) {
+    if (user?.id && !hasFetchedProperties) {
       // Check if we have a valid token before trying to fetch
       const token = localStorage.getItem('auth_token');
       if (token) {
         // Add a small delay to ensure token is fully available
         const timer = setTimeout(() => {
           fetchUserProperties();
+          setHasFetchedProperties(true);
         }, 100);
         
         return () => clearTimeout(timer);
       }
+    } else if (!user?.id) {
+      // Reset flag when user logs out
+      setHasFetchedProperties(false);
     }
-  }, [user, fetchUserProperties]);
+  }, [user?.id, hasFetchedProperties, fetchUserProperties]);
 
   // Check Stripe Connect status (only once when user is available)
   useEffect(() => {
@@ -1748,7 +1765,7 @@ export default function ProfilePage() {
                     </button>
                   </nav>
                 </div>
-                {isLoadingNotifications ? (
+                {isLoadingNotifications && notifications.length === 0 ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
                     <span className="ml-3 text-gray-600">Loading notifications...</span>
