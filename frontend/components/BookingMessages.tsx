@@ -75,9 +75,10 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
         messageType: 'TEXT',
       })
 
-      if (response.success && response.data) {
+      if (response.success && response.data?.message) {
         // Add new message to the list
-        setMessages((prev) => [...prev, response.data.message])
+        const newMessage = response.data.message
+        setMessages((prev) => [...prev, newMessage])
         // Scroll to bottom after a brief delay
         setTimeout(scrollToBottom, 100)
       } else {
