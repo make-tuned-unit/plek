@@ -759,6 +759,7 @@ export default function FindParkingPage() {
               >
                 Clear All Filters
               </button>
+              </div>
             </div>
           </div>
 
