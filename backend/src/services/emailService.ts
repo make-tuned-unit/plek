@@ -51,9 +51,9 @@ const BRAND_COLORS = {
 function getEmailHeader(title: string): string {
   const logoUrl = `${getFrontendUrl()}/logo.png`;
   return `
-    <div style="background: ${BRAND_COLORS.white}; padding: 30px 20px; text-align: center; border-bottom: 3px solid ${BRAND_COLORS.accent};">
-      <img src="${logoUrl}" alt="plekk logo" style="max-width: 200px; height: auto; margin-bottom: 20px;" />
-      <h1 style="color: ${BRAND_COLORS.primary}; margin: 0; font-size: 28px; font-weight: 600;">${title}</h1>
+    <div style="background: ${BRAND_COLORS.white}; padding: 30px 20px; border-bottom: 3px solid ${BRAND_COLORS.accent};">
+      <img src="${logoUrl}" alt="plekk logo" style="max-width: 100px; height: auto; margin-bottom: 20px;" />
+      <h1 style="color: ${BRAND_COLORS.primary}; margin: 0; font-size: 28px; font-weight: 600; text-align: left;">${title}</h1>
     </div>
   `;
 }
