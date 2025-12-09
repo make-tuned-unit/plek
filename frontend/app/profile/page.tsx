@@ -2566,6 +2566,8 @@ export default function ProfilePage() {
                       state: '',
                       zipCode: '',
                       features: [],
+                      requireApproval: false,
+                      leadTimeHours: 0,
                       availability: {
                         monday: { start: '09:00', end: '17:00', available: true },
                         tuesday: { start: '09:00', end: '17:00', available: true },
