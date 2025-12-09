@@ -23,12 +23,14 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <HeroVideo />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/75 via-white/65 to-mist-200/60 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/25 backdrop-blur-sm" />
+        {/* Header fade for readability over video */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/25 to-transparent pointer-events-none" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-32 lg:pb-28">
           <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-10 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-50 mb-10 leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
               Finding parking shouldn't{' '}
-              <span className="text-accent-500">mean circling the block</span>
+              <span className="text-accent-400 drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">mean circling the block</span>
             </h1>
             
             {/* Search Bar - Hidden on mobile */}
@@ -37,17 +39,17 @@ export default function HomePage() {
             </div>
 
             {/* Primary CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Link 
                 href="/find-parking" 
-                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-accent-500 text-white shadow-xl shadow-accent-500/30 hover:bg-accent-600 hover:shadow-accent-600/40 transition-all duration-200 transform hover:-translate-y-0.5"
+                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-[#18A46C] text-slate-50 border border-[#0F7F52] shadow-xl shadow-[#18A46C]/30 hover:bg-[#14935F] hover:shadow-[#14935F]/40 transition-all duration-200 transform hover:-translate-y-0.5"
               >
                 Find Parking
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link 
                 href="/list-your-driveway" 
-                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-white text-primary-700 border-2 border-primary-200 shadow-lg hover:bg-primary-50 hover:border-primary-300 transition-all duration-200 transform hover:-translate-y-0.5"
+                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-white text-slate-900 border border-[#CBD5E1] shadow-lg hover:bg-slate-50 transition-all duration-200 transform hover:-translate-y-0.5"
               >
                 List Your Driveway
                 <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -71,20 +73,20 @@ export default function HomePage() {
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-accent-500" />
-                <span>Secure & Verified</span>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-900">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
+                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
+                <span className="font-medium">Secure & Verified</span>
               </div>
               <div className="hidden sm:block h-4 w-px bg-gray-300" />
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-accent-500" />
-                <span>Instant Booking</span>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
+                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
+                <span className="font-medium">Instant Booking</span>
               </div>
               <div className="hidden sm:block h-4 w-px bg-gray-300" />
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-accent-500" />
-                <span>Protected Payments</span>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
+                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
+                <span className="font-medium">Protected Payments</span>
               </div>
             </div>
           </div>
