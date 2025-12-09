@@ -24,7 +24,6 @@ interface PriceBreakdown {
 }
 
 interface PaymentFormProps {
-  bookingId: string
   paymentIntentId: string | null
   priceBreakdown: PriceBreakdown | null
   onBack: () => Promise<void> | void
@@ -32,7 +31,6 @@ interface PaymentFormProps {
 }
 
 function PaymentForm({
-  bookingId,
   paymentIntentId,
   priceBreakdown,
   onBack,
@@ -221,7 +219,6 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
   const [specialRequests, setSpecialRequests] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState<'date-time' | 'details' | 'payment'>('date-time')
-  const [bookingId, setBookingId] = useState<string | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null)
@@ -367,8 +364,8 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     setIsSubmitting(true)
 
     try {
-      // Step 1: Create booking
-      const bookingResponse = await apiService.createBooking({
+      // Create payment intent directly (booking will be created only after payment succeeds)
+      const paymentResponse = await apiService.createPaymentIntent({
         propertyId: property.id,
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
@@ -376,57 +373,22 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         specialRequests: specialRequests || null,
       })
 
-      if (!bookingResponse.success) {
-        throw new Error(bookingResponse.error || 'Failed to create booking')
-      }
-
-      const booking = bookingResponse.data
-      if (!booking) {
-        throw new Error('Booking created but no data returned')
-      }
-
-      setBookingId(booking.id)
-
-      // Step 2: Create payment intent
-      const paymentResponse = await apiService.createPaymentIntent(booking.id)
-
       if (!paymentResponse.success) {
-        toast.error(paymentResponse.error || 'Unable to start payment. Your booking was cancelled.')
-        
-        try {
-          await apiService.cancelBooking(booking.id)
-        } catch (cancelError) {
-          console.error('Failed to cancel booking after payment setup error:', cancelError)
-        }
-
-        setBookingId(null)
-        setClientSecret(null)
-        setPaymentIntentId(null)
-        setStep('details')
-        return
+        throw new Error(paymentResponse.error || 'Unable to start payment')
       }
 
       const clientSecret = (paymentResponse as any).clientSecret ?? paymentResponse.data?.clientSecret ?? null
       const paymentId = (paymentResponse as any).paymentIntentId ?? paymentResponse.data?.paymentIntentId ?? null
 
       if (!clientSecret) {
-        toast.error('Payment setup did not return a client secret. Booking was cancelled.')
-        try {
-          await apiService.cancelBooking(booking.id)
-        } catch (cancelError) {
-          console.error('Failed to cancel booking after missing client secret:', cancelError)
-        }
-        setBookingId(null)
-        setClientSecret(null)
-        setPaymentIntentId(null)
-        setStep('details')
+        toast.error('Payment setup did not return a client secret. Please try again.')
         return
       }
 
       setClientSecret(clientSecret)
       setPaymentIntentId(paymentId)
       setStep('payment') // Move to payment step
-      toast('Booking request created. Complete payment to confirm your booking.', { 
+      toast('Please complete payment to confirm your booking.', { 
         icon: '💳',
         duration: 4000 
       })
@@ -439,27 +401,14 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
   }
 
   const handleReturnToBooking = async () => {
-    if (bookingId) {
-      try {
-        await apiService.cancelBooking(bookingId)
-      } catch (error) {
-        console.error('Failed to cancel booking when returning to edit:', error)
-      }
-    }
-    setBookingId(null)
     setClientSecret(null)
     setPaymentIntentId(null)
     setStep('date-time')
   }
 
   const handleClose = async () => {
-    if (step === 'payment' && bookingId) {
-      try {
-        await apiService.cancelBooking(bookingId)
-      } catch (error) {
-        console.error('Failed to cancel booking when closing modal:', error)
-      }
-      setBookingId(null)
+    if (step === 'payment') {
+      // Payment in progress - just reset state
       setClientSecret(null)
       setPaymentIntentId(null)
       setStep('date-time')
@@ -808,7 +757,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
           </div>
         </form>
         ) : (
-          clientSecret && bookingId ? (
+          clientSecret ? (
             stripePromise ? (
               <Elements
                 stripe={stripePromise}
@@ -819,12 +768,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 key={clientSecret}
               >
                 <PaymentForm
-                  bookingId={bookingId}
                   paymentIntentId={paymentIntentId}
                   priceBreakdown={priceBreakdown}
                   onBack={handleReturnToBooking}
                   onPaymentSuccess={async () => {
-                    setBookingId(null)
                     setClientSecret(null)
                     setPaymentIntentId(null)
                     setStep('date-time')
