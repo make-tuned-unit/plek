@@ -27,7 +27,7 @@ interface PaymentFormProps {
   paymentIntentId: string | null
   priceBreakdown: PriceBreakdown | null
   onBack: () => Promise<void> | void
-  onPaymentSuccess: () => void
+  onPaymentSuccess: (bookingId?: string) => void
 }
 
 function PaymentForm({
@@ -74,14 +74,10 @@ function PaymentForm({
 
         if (confirmResponse.success && confirmResponse.data?.booking?.id) {
           toast.success('Payment successful! Your booking is confirmed.')
-          onPaymentSuccess()
-          onClose()
-          router.push(`/booking-success?bookingId=${confirmResponse.data.booking.id}`)
+          onPaymentSuccess(confirmResponse.data.booking.id)
         } else {
           toast.success('Payment successful! Your booking is confirmed.')
           onPaymentSuccess()
-          onClose()
-          router.push('/booking-success')
         }
       }
     } catch (error: any) {
@@ -799,9 +795,17 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   paymentIntentId={paymentIntentId}
                   priceBreakdown={priceBreakdown}
                   onBack={handleReturnToBooking}
-                  onPaymentSuccess={async () => {
-                    // This will be handled in the PaymentForm component
-                    // after payment confirmation
+                  onPaymentSuccess={(bookingId) => {
+                    setClientSecret(null)
+                    setPaymentIntentId(null)
+                    setStep('date-time')
+                    onSuccess?.()
+                    onClose()
+                    if (bookingId) {
+                      router.push(`/booking-success?bookingId=${bookingId}`)
+                    } else {
+                      router.push('/booking-success')
+                    }
                   }}
                 />
               </Elements>
