@@ -34,8 +34,11 @@ app.use(cors({
     process.env['FRONTEND_URL'] || 'http://localhost:3000',
     'http://localhost:3001',
     'https://staging.parkplekk.com',
+    'https://drivemyway-frontend-production.up.railway.app',
     // Allow any subdomain of parkplekk.com for staging
     /^https:\/\/.*\.parkplekk\.com$/,
+    // Allow Railway frontend domains
+    /^https:\/\/.*\.railway\.app$/,
   ],
   credentials: true,
 }));
