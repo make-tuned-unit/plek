@@ -407,14 +407,22 @@ export default function ProfilePage() {
       })
       setWebcamStream(stream)
       setShowWebcam(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
     } catch (error: any) {
       console.error('Error accessing webcam:', error)
       toast.error('Could not access webcam. Please check permissions.')
     }
   }
+
+  // Assign stream to video element when both are available
+  useEffect(() => {
+    if (showWebcam && webcamStream && videoRef.current) {
+      videoRef.current.srcObject = webcamStream
+      // Ensure video plays
+      videoRef.current.play().catch((error) => {
+        console.error('Error playing video:', error)
+      })
+    }
+  }, [showWebcam, webcamStream])
 
   // Stop webcam
   const stopWebcam = () => {
