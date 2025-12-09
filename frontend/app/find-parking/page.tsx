@@ -255,6 +255,8 @@ export default function FindParkingPage() {
     // The map will use selectedLocation for centering, userLocation is for the user's actual GPS position
     // Clear accuracy warning when user manually selects a location (more precise)
     setLocationAccuracyWarning(null)
+    // Clear any previous error
+    setError(null)
     await fetchPropertiesNearLocation(place.center[1], place.center[0], DEFAULT_RADIUS_KM)
   }
 
@@ -278,9 +280,14 @@ export default function FindParkingPage() {
           setLocationAccuracyWarning(null)
         }
         
+        // Always update userLocation with actual GPS coordinates
         setUserLocation({ lat: latitude, lng: longitude })
         setLocationPermission('granted')
-        // Fetch properties near user location
+        // Clear selected location when using GPS - user wants to use their actual location
+        setSelectedLocation(null)
+        setSearchQuery('')
+        setError(null)
+        // Fetch properties near user's actual GPS location
         fetchPropertiesNearLocation(latitude, longitude, DEFAULT_RADIUS_KM)
       },
       (error) => {
@@ -430,7 +437,7 @@ export default function FindParkingPage() {
 
             setSelectedLocation(place)
             setSearchQuery(feature.place_name)
-            setUserLocation({ lat: feature.center[1], lng: feature.center[0] })
+            // Don't overwrite userLocation - keep GPS location separate from searched location
             await fetchPropertiesNearLocation(feature.center[1], feature.center[0], DEFAULT_RADIUS_KM)
           } else {
             setError('Could not find that location. Showing all listings.')
@@ -893,7 +900,27 @@ export default function FindParkingPage() {
                   <div className="text-center py-12">
                     <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No parking spots found</h3>
-                    <p className="text-gray-600">Try adjusting your search criteria or location</p>
+                    {selectedLocation ? (
+                      <div className="max-w-md mx-auto space-y-4">
+                        <p className="text-gray-600 mb-4">
+                          We don't have any listings in {selectedLocation.place_name} yet.
+                        </p>
+                        <div className="bg-accent-50 border border-accent-200 rounded-lg p-6">
+                          <p className="text-accent-900 font-semibold mb-2">Do you live here?</p>
+                          <p className="text-accent-800 text-sm mb-4">
+                            List your driveway now to begin earning passive income and help drivers in your area find parking.
+                          </p>
+                          <button
+                            onClick={() => router.push('/list-your-driveway')}
+                            className="w-full bg-accent-500 text-white py-2.5 px-4 rounded-lg hover:bg-accent-600 transition-colors font-medium"
+                          >
+                            List Your Driveway
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-600">Try adjusting your search criteria or location</p>
+                    )}
                   </div>
                 )}
               </>
