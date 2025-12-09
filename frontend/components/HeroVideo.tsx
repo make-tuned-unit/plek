@@ -41,6 +41,13 @@ export default function HeroVideo() {
     }
   }, [isMobile])
 
+  const handleVideoEnd = () => {
+    // Freeze video on last frame by pausing it
+    if (videoRef.current) {
+      videoRef.current.pause()
+    }
+  }
+
   return (
     <video
       ref={videoRef}
@@ -51,7 +58,7 @@ export default function HeroVideo() {
       aria-hidden="true"
       controls={false}
       preload="auto"
-      loop
+      onEnded={handleVideoEnd}
       src={isMobile ? '/plekkdriveway-mobile.mp4' : '/hero-driveway.mp4'}
     />
   )
