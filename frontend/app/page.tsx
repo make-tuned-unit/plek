@@ -21,7 +21,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden min-h-screen">
         <HeroVideo />
         <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/25 backdrop-blur-sm" />
         {/* Header fade for readability over video */}

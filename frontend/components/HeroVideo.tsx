@@ -52,6 +52,9 @@ export default function HeroVideo() {
     <video
       ref={videoRef}
       className="absolute inset-0 h-full w-full object-cover"
+      style={{
+        objectPosition: isMobile ? 'center' : 'center 30%'
+      }}
       autoPlay
       muted
       playsInline
