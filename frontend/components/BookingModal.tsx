@@ -89,9 +89,9 @@ function PaymentForm({
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
-      {/* Step Indicator */}
-      <div className="flex items-center justify-center mb-2">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+      {/* Step Indicator - Full on desktop, simplified on mobile */}
+      <div className="hidden md:flex items-center justify-center mb-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center">
             <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -114,6 +114,10 @@ function PaymentForm({
             <span className="ml-2 text-sm font-medium text-gray-900">Payment</span>
           </div>
         </div>
+      </div>
+      {/* Mobile: Simple step title */}
+      <div className="md:hidden mb-4 px-6 pt-6">
+        <h2 className="text-lg font-semibold text-gray-900">Payment</h2>
       </div>
 
       {/* Success Banner */}
@@ -185,7 +189,7 @@ function PaymentForm({
             type="button"
             onClick={handlePayment}
             disabled={isProcessingPayment || !stripe || !isElementReady}
-            className="flex-1 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40"
+            className="flex-1 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 flex items-center justify-center gap-2"
           >
             {isProcessingPayment ? (
               <span className="flex items-center justify-center">
@@ -196,7 +200,10 @@ function PaymentForm({
                 Processing Payment...
               </span>
             ) : (
-              'Pay Now'
+              <>
+                Pay Now
+                <span className="md:hidden text-sm font-normal opacity-90">(3/3)</span>
+              </>
             )}
           </button>
         </div>
@@ -446,8 +453,8 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full my-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 md:p-4 overflow-y-auto">
+      <div className="bg-white rounded-none md:rounded-2xl max-w-2xl w-full h-full md:h-auto md:my-4 shadow-2xl md:max-h-[90vh] overflow-y-auto">
         {/* Header - Compact */}
         <div className="relative overflow-hidden border-b border-gray-200">
           <button
@@ -473,9 +480,9 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
 
         {/* Content */}
         {step === 'date-time' ? (
-          <div className="p-6 space-y-6">
-          {/* Step Indicator */}
-          <div className="flex items-center justify-center">
+          <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+          {/* Step Indicator - Full on desktop, simplified on mobile */}
+          <div className="hidden md:flex items-center justify-center">
             <div className="flex items-center gap-2">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -498,6 +505,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <span className="ml-2 text-sm text-gray-500">Payment</span>
               </div>
             </div>
+          </div>
+          {/* Mobile: Simple step title */}
+          <div className="md:hidden">
+            <h2 className="text-lg font-semibold text-gray-900">Date and Time</h2>
           </div>
 
           {/* Property Summary - Compact */}
@@ -617,15 +628,16 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
             type="button"
             onClick={handleDateTimeNext}
             disabled={!startDate || !startTime || !endTime || (isMultiDay && !endDate)}
-            className="w-full px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40"
+            className="w-full px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 flex items-center justify-center gap-2"
           >
             Continue
+            <span className="md:hidden text-sm font-normal opacity-90">(1/3)</span>
           </button>
         </div>
         ) : step === 'details' ? (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Step Indicator */}
-          <div className="flex items-center justify-center mb-4">
+          <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 md:space-y-6">
+          {/* Step Indicator - Full on desktop, simplified on mobile */}
+          <div className="hidden md:flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
@@ -648,6 +660,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <span className="ml-2 text-sm text-gray-500">Payment</span>
               </div>
             </div>
+          </div>
+          {/* Mobile: Simple step title */}
+          <div className="md:hidden mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Details</h2>
           </div>
 
           {/* Optional Fields */}
@@ -764,7 +780,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
             <button
               type="submit"
               disabled={isSubmitting || !priceBreakdown}
-              className="flex-1 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40"
+              className="flex-1 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">
@@ -775,7 +791,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   Processing...
                 </span>
               ) : (
-                'Continue to Payment'
+                <>
+                  Continue to Payment
+                  <span className="md:hidden text-sm font-normal opacity-90">(2/3)</span>
+                </>
               )}
             </button>
           </div>
