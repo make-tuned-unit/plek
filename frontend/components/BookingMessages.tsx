@@ -29,6 +29,15 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
   useEffect(() => {
     if (bookingId) {
       fetchMessages()
+      
+      // Set up polling to fetch new messages every 3 seconds
+      const pollInterval = setInterval(() => {
+        fetchMessages(false) // Don't show loading state on polling
+      }, 3000)
+      
+      return () => {
+        clearInterval(pollInterval)
+      }
     }
   }, [bookingId])
 
@@ -40,12 +49,28 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (showLoading = true) => {
     try {
-      setIsLoading(true)
+      if (showLoading) {
+        setIsLoading(true)
+      }
       const response = await apiService.getBookingMessages(bookingId)
       if (response.success && response.data) {
-        setMessages(response.data.messages || [])
+        const newMessages = response.data.messages || []
+        
+        // Only update if messages have changed (to avoid unnecessary re-renders)
+        setMessages((prevMessages) => {
+          const prevIds = new Set(prevMessages.map((m: any) => m.id))
+          const newIds = new Set(newMessages.map((m: any) => m.id))
+          
+          // Check if messages have changed
+          if (prevMessages.length !== newMessages.length || 
+              !Array.from(newIds).every(id => prevIds.has(id))) {
+            return newMessages
+          }
+          return prevMessages
+        })
+        
         // Update otherUser if not provided
         if (!otherUser && response.data.booking) {
           const isRenter = response.data.booking.renterId === user?.id
@@ -53,10 +78,15 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
         }
       }
     } catch (error: any) {
-      console.error('Error fetching messages:', error)
-      toast.error('Failed to load messages')
+      // Only show error toast on initial load, not on polling
+      if (showLoading) {
+        console.error('Error fetching messages:', error)
+        toast.error('Failed to load messages')
+      }
     } finally {
-      setIsLoading(false)
+      if (showLoading) {
+        setIsLoading(false)
+      }
     }
   }
 
