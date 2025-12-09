@@ -25,7 +25,7 @@ dotenv.config();
 initializeSupabase();
 
 const app = express();
-const PORT = process.env['PORT'] || 8000;
+const PORT = parseInt(process.env['PORT'] || '8000', 10);
 
 // Security middleware
 app.use(helmet());
