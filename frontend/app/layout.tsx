@@ -15,6 +15,18 @@ export const metadata: Metadata = {
   authors: [{ name: 'plekk Team' }],
   viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',
+  openGraph: {
+    title: 'plekk - Rent Driveways by the Hour',
+    description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
+    images: ['/logo.png'],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'plekk - Rent Driveways by the Hour',
+    description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
+    images: ['/logo.png'],
+  },
 }
 
 export default function RootLayout({
