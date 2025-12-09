@@ -29,6 +29,8 @@ export default function ConfirmEmailPage() {
           tokenLength: accessToken.length,
           type 
         })
+        // Keep status as loading while processing
+        setStatus('loading')
         // Use the token to log in (works for both signup and email confirmation)
         loginWithToken(accessToken)
           .then((success) => {
@@ -36,12 +38,12 @@ export default function ConfirmEmailPage() {
             if (success) {
               setStatus('success')
               setMessage('Email confirmed! You are now logged in.')
-              // Clear the hash from URL
+              // Clear the hash from URL immediately
               window.history.replaceState(null, '', window.location.pathname)
-              // Redirect to profile after 2 seconds
+              // Redirect to profile after 1.5 seconds
               setTimeout(() => {
                 router.push('/profile')
-              }, 2000)
+              }, 1500)
             } else {
               setStatus('error')
               setMessage('Email confirmed, but login failed. Please try logging in manually.')
@@ -104,13 +106,18 @@ export default function ConfirmEmailPage() {
       } else {
         setMessage('Failed to confirm email. The link may be invalid or expired.')
       }
-    } else {
-      // No token - check if this is coming from Supabase redirect
-      // Supabase might redirect here after verifying, but we need to check backend
-      setStatus('error')
-      setMessage('Invalid confirmation link.')
+    } else if (!hash) {
+      // Only show error if we don't have a hash (hash processing happens above)
+      // Give a small delay to allow hash processing to complete
+      setTimeout(() => {
+        // Check again if status is still loading and no hash
+        if (status === 'loading' && !window.location.hash) {
+          setStatus('error')
+          setMessage('Invalid confirmation link.')
+        }
+      }, 500)
     }
-  }, [searchParams, loginWithToken, router])
+  }, [searchParams, loginWithToken, router, status])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
