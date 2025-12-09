@@ -23,19 +23,29 @@ export default function ConfirmEmailPage() {
       const refreshToken = hashParams.get('refresh_token')
       const type = hashParams.get('type')
       
-      if (accessToken && type === 'signup') {
-        console.log('Found Supabase token in hash, logging in...')
-        // Use the token to log in
+      if (accessToken) {
+        console.log('Found Supabase token in hash, logging in...', { 
+          hasToken: !!accessToken, 
+          tokenLength: accessToken.length,
+          type 
+        })
+        // Use the token to log in (works for both signup and email confirmation)
         loginWithToken(accessToken)
-          .then(() => {
-            setStatus('success')
-            setMessage('Email confirmed! You are now logged in.')
-            // Clear the hash from URL
-            window.history.replaceState(null, '', window.location.pathname)
-            // Redirect to profile after 2 seconds
-            setTimeout(() => {
-              router.push('/profile')
-            }, 2000)
+          .then((success) => {
+            console.log('Login result:', success)
+            if (success) {
+              setStatus('success')
+              setMessage('Email confirmed! You are now logged in.')
+              // Clear the hash from URL
+              window.history.replaceState(null, '', window.location.pathname)
+              // Redirect to profile after 2 seconds
+              setTimeout(() => {
+                router.push('/profile')
+              }, 2000)
+            } else {
+              setStatus('error')
+              setMessage('Email confirmed, but login failed. Please try logging in manually.')
+            }
           })
           .catch((err) => {
             console.error('Login error:', err)

@@ -92,18 +92,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithToken = async (token: string): Promise<boolean> => {
     setIsLoading(true)
     try {
+      console.log('Storing token and fetching user...')
       localStorage.setItem('auth_token', token)
       const response = await apiService.getMe()
-      if (response.data?.user) {
+      console.log('getMe response:', { success: response.success, hasUser: !!response.data?.user })
+      if (response.success && response.data?.user) {
         setUser(response.data.user)
         setIsLoading(false)
+        console.log('Login successful, user set:', response.data.user.email)
         return true
       }
+      console.warn('getMe failed or no user data:', response)
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login with token failed:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      })
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
