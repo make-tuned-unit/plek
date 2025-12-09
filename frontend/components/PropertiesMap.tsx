@@ -448,6 +448,10 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       
       map.current!.setCenter([lng, lat])
       map.current!.setZoom(14)
+    } else if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+      // Fall back to user's GPS location if no properties and no selected location
+      map.current!.setCenter([userLocation.lng, userLocation.lat])
+      map.current!.setZoom(12)
     } else {
       map.current!.setCenter(HALIFAX_CENTER)
       map.current!.setZoom(12)
