@@ -44,10 +44,7 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
         host:users!properties_host_id_fkey(first_name, last_name, rating, review_count),
         photos:property_photos(url, caption, is_primary, order_index)
       `)
-      .eq('status', 'active')
-      .neq('status', 'inactive')
-      .neq('status', 'deleted')
-      .neq('status', 'suspended');
+      .eq('status', 'active');
     
     // Apply filters
     if (city) query = query.eq('city', city as string);
