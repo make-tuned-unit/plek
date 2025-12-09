@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -294,6 +294,13 @@ export default function ProfilePage() {
       setIsLoadingNotifications(false)
     }
   }
+
+  // Memoize filtered notifications to prevent flashing
+  const filteredNotifications = useMemo(() => {
+    return notificationTab === 'inbox'
+      ? notifications.filter((n: any) => !n.is_read)
+      : notifications.filter((n: any) => n.is_read)
+  }, [notifications, notificationTab])
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -626,21 +633,18 @@ export default function ProfilePage() {
     }
   }, [user, fetchUserProperties]);
 
-  // Check Stripe Connect status
+  // Check Stripe Connect status (only once when user is available)
   useEffect(() => {
+    let isMounted = true;
     const checkStripeStatus = async () => {
-      if (user) {
+      if (user && isMounted) {
         try {
           const response = await apiService.getConnectAccountStatus();
-          console.log('[Profile] Stripe status response:', response);
-          if (response.success && response.data) {
-            console.log('[Profile] Setting connected:', response.data.connected, 'status:', response.data.status);
+          if (isMounted && response.success && response.data) {
             setStripeConnected(response.data.connected);
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
-          } else {
-            console.log('[Profile] Response missing data:', response);
           }
         } catch (error) {
           console.error('Error checking Stripe status:', error);
@@ -648,7 +652,10 @@ export default function ProfilePage() {
       }
     };
     checkStripeStatus();
-  }, [user]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // Only depend on user.id to prevent multiple calls
 
   // Handle Stripe Connect onboarding
   const handleConnectStripe = async () => {
@@ -1746,30 +1753,21 @@ export default function ProfilePage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
                     <span className="ml-3 text-gray-600">Loading notifications...</span>
                   </div>
-                ) : (() => {
-                  const filteredNotifications = notificationTab === 'inbox'
-                    ? notifications.filter((n: any) => !n.is_read)
-                    : notifications.filter((n: any) => n.is_read)
-
-                  if (filteredNotifications.length === 0) {
-                    return (
-                      <div className="text-center py-12">
-                        <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">
-                          {notificationTab === 'inbox' ? 'No unread notifications' : 'No notification history'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {notificationTab === 'inbox'
-                            ? 'You\'re all caught up!'
-                            : 'Read notifications will appear here'}
-                        </p>
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <div className="space-y-3">
-                      {filteredNotifications.map((notification: any) => {
+                ) : filteredNotifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">
+                      {notificationTab === 'inbox' ? 'No unread notifications' : 'No notification history'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {notificationTab === 'inbox'
+                        ? 'You\'re all caught up!'
+                        : 'Read notifications will appear here'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredNotifications.map((notification: any) => {
                       const isUnread = !notification.is_read
                       const isReviewReminder = notification.type === 'review_reminder'
                       
@@ -1822,8 +1820,7 @@ export default function ProfilePage() {
                       )
                       })}
                     </div>
-                  )
-                })()}
+                )}
               </div>
             )}
 
