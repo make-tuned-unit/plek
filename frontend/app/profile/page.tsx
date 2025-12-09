@@ -112,6 +112,7 @@ export default function ProfilePage() {
   const [selectedBookingForMessages, setSelectedBookingForMessages] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'inbox' | 'history'>('inbox');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedReviewBooking, setSelectedReviewBooking] = useState<{
     bookingId: string;
@@ -1462,7 +1463,7 @@ export default function ProfilePage() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
-                  {notifications.filter((n: any) => !n.is_read).length > 0 && (
+                  {notificationTab === 'inbox' && notifications.filter((n: any) => !n.is_read).length > 0 && (
                     <button
                       onClick={async () => {
                         try {
@@ -1479,20 +1480,71 @@ export default function ProfilePage() {
                     </button>
                   )}
                 </div>
+
+                {/* Notification Tabs */}
+                <div className="mb-6 border-b border-gray-200">
+                  <nav className="flex space-x-8">
+                    <button
+                      onClick={() => setNotificationTab('inbox')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        notificationTab === 'inbox'
+                          ? 'border-accent-500 text-accent-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Inbox
+                      {notifications.filter((n: any) => !n.is_read).length > 0 && (
+                        <span className="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full">
+                          {notifications.filter((n: any) => !n.is_read).length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setNotificationTab('history')}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        notificationTab === 'history'
+                          ? 'border-accent-500 text-accent-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      History
+                      {notifications.filter((n: any) => n.is_read).length > 0 && (
+                        <span className="ml-2 px-2 py-0.5 bg-gray-400 text-white text-xs rounded-full">
+                          {notifications.filter((n: any) => n.is_read).length}
+                        </span>
+                      )}
+                    </button>
+                  </nav>
+                </div>
                 {isLoadingNotifications ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
                     <span className="ml-3 text-gray-600">Loading notifications...</span>
                   </div>
-                ) : notifications.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">No notifications</p>
-                    <p className="text-sm text-gray-500">You'll see notifications about your bookings and reviews here</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {notifications.map((notification: any) => {
+                ) : (() => {
+                  const filteredNotifications = notificationTab === 'inbox'
+                    ? notifications.filter((n: any) => !n.is_read)
+                    : notifications.filter((n: any) => n.is_read)
+
+                  if (filteredNotifications.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-2">
+                          {notificationTab === 'inbox' ? 'No unread notifications' : 'No notification history'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {notificationTab === 'inbox'
+                            ? 'You\'re all caught up!'
+                            : 'Read notifications will appear here'}
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      {filteredNotifications.map((notification: any) => {
                       const isUnread = !notification.is_read
                       const isReviewReminder = notification.type === 'review_reminder'
                       
@@ -1543,9 +1595,10 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       )
-                    })}
-                  </div>
-                )}
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
