@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,12 +26,16 @@ import {
   Trash2,
   CheckCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MessageSquare,
+  Bell
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
 import toast from 'react-hot-toast'
 import { MapboxAutocomplete } from '../../components/MapboxAutocomplete'
+import { BookingMessages } from '../../components/BookingMessages'
+import { ReviewModal } from '../../components/ReviewModal'
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -104,6 +108,16 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
+  const [selectedBookingForMessages, setSelectedBookingForMessages] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedReviewBooking, setSelectedReviewBooking] = useState<{
+    bookingId: string;
+    propertyTitle?: string;
+    reviewedUserName?: string;
+  } | null>(null);
   const [listingFormData, setListingFormData] = useState({
     title: '',
     address: '',
@@ -176,7 +190,7 @@ export default function ProfilePage() {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
     
-    if (tabParam && ['profile', 'bookings', 'listings', 'payments', 'settings'].includes(tabParam)) {
+    if (tabParam && ['profile', 'bookings', 'notifications', 'listings', 'payments', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
     
@@ -194,6 +208,13 @@ export default function ProfilePage() {
   useEffect(() => {
     if (activeTab === 'bookings' && user) {
       fetchBookings()
+    }
+  }, [activeTab, user])
+
+  // Fetch notifications when notifications tab is active
+  useEffect(() => {
+    if (activeTab === 'notifications' && user) {
+      fetchNotifications()
     }
   }, [activeTab, user])
 
@@ -237,6 +258,51 @@ export default function ProfilePage() {
     } finally {
       setIsLoadingBookings(false)
     }
+  }
+
+  const fetchNotifications = async () => {
+    try {
+      setIsLoadingNotifications(true)
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('No auth token found, skipping notifications fetch')
+        return
+      }
+
+      const response = await apiService.getNotifications()
+      if (response.success && response.data) {
+        setNotifications(response.data || [])
+      } else {
+        setNotifications([])
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+      setNotifications([])
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await apiService.markNotificationAsRead(notificationId)
+      setNotifications(notifications.map(n => 
+        n.id === notificationId ? { ...n, is_read: true } : n
+      ))
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
+  }
+
+  const handleReviewReminderClick = (notification: any) => {
+    const data = notification.data || {}
+    setSelectedReviewBooking({
+      bookingId: data.booking_id || data.bookingId,
+      propertyTitle: data.property_title || data.propertyTitle,
+      reviewedUserName: notification.message?.includes('host') ? 'the host' : 'the renter',
+    })
+    setShowReviewModal(true)
+    handleMarkAsRead(notification.id)
   }
 
   // Resize image to max dimensions while maintaining aspect ratio
@@ -293,6 +359,92 @@ export default function ProfilePage() {
   }
 
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
+  const [showWebcam, setShowWebcam] = useState(false)
+  const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Start webcam
+  const startWebcam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 640 }
+        } 
+      })
+      setWebcamStream(stream)
+      setShowWebcam(true)
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+    } catch (error: any) {
+      console.error('Error accessing webcam:', error)
+      toast.error('Could not access webcam. Please check permissions.')
+    }
+  }
+
+  // Stop webcam
+  const stopWebcam = () => {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(track => track.stop())
+      setWebcamStream(null)
+    }
+    setShowWebcam(false)
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }
+
+  // Capture photo from webcam
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+
+    if (!context) return
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // Convert to blob and create file
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], 'webcam-photo.jpg', { type: 'image/jpeg' })
+        setSelectedAvatarFile(file)
+        
+        // Show preview
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setAvatarPreview(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+        
+        // Stop webcam
+        stopWebcam()
+      }
+    }, 'image/jpeg', 0.9)
+  }
+
+  // Cleanup webcam on unmount or modal close
+  useEffect(() => {
+    return () => {
+      stopWebcam()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showAvatarModal) {
+      stopWebcam()
+    }
+  }, [showAvatarModal])
 
   const handleAvatarFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -527,6 +679,7 @@ export default function ProfilePage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'bookings', label: 'My Bookings', icon: Calendar },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'listings', label: 'My Listings', icon: Car },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -1273,16 +1426,120 @@ export default function ProfilePage() {
                                   {host.first_name && (
                                     <div>
                                       <h4 className="text-sm font-semibold text-gray-700 mb-2">Host Information</h4>
-                                      <p className="text-sm text-gray-900">
+                                      <p className="text-sm text-gray-900 mb-3">
                                         {host.first_name} {host.last_name}
                                         {host.email && ` (${host.email})`}
                                         {host.phone && ` - ${host.phone}`}
                                       </p>
+                                      {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                        <button
+                                          onClick={() => {
+                                            setSelectedBookingForMessages(booking.id)
+                                            setShowMessagesModal(true)
+                                          }}
+                                          className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                        >
+                                          <MessageSquare className="h-4 w-4 mr-2" />
+                                          Message {user?.id === booking.renter_id ? 'Host' : 'Renter'}
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
                               )}
                             </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notifications Tab */}
+            {activeTab === 'notifications' && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
+                  {notifications.filter((n: any) => !n.is_read).length > 0 && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiService.markAllNotificationsAsRead()
+                          setNotifications(notifications.map((n: any) => ({ ...n, is_read: true })))
+                          toast.success('All notifications marked as read')
+                        } catch (error) {
+                          console.error('Error marking all as read:', error)
+                        }
+                      }}
+                      className="text-sm text-accent-600 hover:text-accent-700 font-medium"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                {isLoadingNotifications ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
+                    <span className="ml-3 text-gray-600">Loading notifications...</span>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">No notifications</p>
+                    <p className="text-sm text-gray-500">You'll see notifications about your bookings and reviews here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((notification: any) => {
+                      const isUnread = !notification.is_read
+                      const isReviewReminder = notification.type === 'review_reminder'
+                      
+                      return (
+                        <div
+                          key={notification.id}
+                          className={`border rounded-lg p-4 transition-colors ${
+                            isUnread
+                              ? 'border-accent-200 bg-accent-50'
+                              : 'border-gray-200 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                                {isUnread && (
+                                  <span className="h-2 w-2 bg-accent-500 rounded-full"></span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(notification.created_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                              {isReviewReminder && (
+                                <button
+                                  onClick={() => handleReviewReminderClick(notification)}
+                                  className="mt-3 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                >
+                                  Leave Review
+                                </button>
+                              )}
+                            </div>
+                            {isUnread && (
+                              <button
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                className="ml-4 text-xs text-gray-500 hover:text-gray-700"
+                              >
+                                Mark as read
+                              </button>
+                            )}
                           </div>
                         </div>
                       )
@@ -2042,8 +2299,10 @@ export default function ProfilePage() {
                 <h3 className="text-xl font-semibold text-gray-900">Change Profile Picture</h3>
                 <button
                   onClick={() => {
+                    stopWebcam()
                     setShowAvatarModal(false)
                     setAvatarPreview(null)
+                    setSelectedAvatarFile(null)
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -2051,49 +2310,91 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {/* Preview */}
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Preview"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-accent-500"
+              {/* Webcam View */}
+              {showWebcam ? (
+                <div className="mb-6">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-auto max-h-64 object-cover"
                     />
-                  ) : (
-                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-300">
-                      <User className="h-16 w-16 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* File Input */}
-              <div className="mb-6">
-                <label className="block">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    onChange={handleAvatarFileSelect}
-                    className="hidden"
-                    id="avatar-upload"
-                    disabled={isUploadingAvatar}
-                  />
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-accent-500 transition-colors cursor-pointer">
-                    <Camera className="h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 text-center">
-                      <span className="font-medium text-accent-600">Click to upload</span> or use camera
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                    <canvas ref={canvasRef} className="hidden" />
                   </div>
-                </label>
-              </div>
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={stopWebcam}
+                      className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={capturePhoto}
+                      className="flex-1 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors font-semibold"
+                    >
+                      Capture Photo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Preview */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="relative">
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="Preview"
+                          className="w-32 h-32 rounded-full object-cover border-4 border-accent-500"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-300">
+                          <User className="h-16 w-16 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Upload Options */}
+                  <div className="mb-6 space-y-3">
+                    {/* File Upload */}
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarFileSelect}
+                        className="hidden"
+                        id="avatar-upload"
+                        disabled={isUploadingAvatar}
+                      />
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-accent-500 transition-colors cursor-pointer">
+                        <Camera className="h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600 text-center">
+                          <span className="font-medium text-accent-600">Click to upload</span> from device
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                      </div>
+                    </label>
+
+                    {/* Webcam Button */}
+                    <button
+                      onClick={startWebcam}
+                      disabled={isUploadingAvatar}
+                      className="w-full flex items-center justify-center px-4 py-3 border-2 border-accent-500 text-accent-600 rounded-lg hover:bg-accent-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Camera className="h-5 w-5 mr-2" />
+                      Take Photo with Webcam
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3">
                 <button
                   onClick={() => {
+                    stopWebcam()
                     setShowAvatarModal(false)
                     setAvatarPreview(null)
                     setSelectedAvatarFile(null)
@@ -2126,6 +2427,55 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Messages Modal */}
+      {showMessagesModal && selectedBookingForMessages && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex-1 overflow-hidden p-4">
+              <BookingMessages
+                bookingId={selectedBookingForMessages}
+                onClose={() => {
+                  setShowMessagesModal(false)
+                  setSelectedBookingForMessages(null)
+                }}
+                otherUser={(() => {
+                  const booking = bookings.find((b: any) => b.id === selectedBookingForMessages)
+                  if (!booking) return undefined
+                  const isRenter = user?.id === booking.renter_id
+                  const otherUser = isRenter ? booking.host : booking.renter
+                  return otherUser ? {
+                    id: otherUser.id,
+                    firstName: otherUser.first_name || otherUser.firstName,
+                    lastName: otherUser.last_name || otherUser.lastName,
+                    avatar: otherUser.avatar,
+                  } : undefined
+                })()}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && selectedReviewBooking && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false)
+            setSelectedReviewBooking(null)
+          }}
+          bookingId={selectedReviewBooking.bookingId}
+          propertyTitle={selectedReviewBooking.propertyTitle}
+          reviewedUserName={selectedReviewBooking.reviewedUserName}
+          onReviewSubmitted={() => {
+            // Refresh notifications after review is submitted
+            if (activeTab === 'notifications') {
+              fetchNotifications()
+            }
+          }}
+        />
       )}
     </div>
   )

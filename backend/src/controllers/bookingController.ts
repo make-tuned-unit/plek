@@ -676,6 +676,71 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
         data: { booking_id: id, property_id: existingBooking.property_id },
         is_read: false,
       } as any);
+    } else if (status === 'completed') {
+      // Get property and user details for review reminders
+      const { data: property } = await supabase
+        .from('properties')
+        .select('title')
+        .eq('id', existingBooking.property_id)
+        .single();
+
+      const propertyTitle = property?.title || 'property';
+
+      // Check if reviews already exist for this booking
+      const { data: existingReviews } = await supabase
+        .from('reviews')
+        .select('reviewer_id')
+        .eq('booking_id', id);
+
+      const reviewerIds = (existingReviews || []).map((r: any) => r.reviewer_id);
+
+      // Notify renter to review host (if not already reviewed)
+      if (!reviewerIds.includes(existingBooking.renter_id)) {
+        const { data: hostUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', existingBooking.host_id)
+          .single();
+
+        const hostName = hostUser ? `${hostUser.first_name || ''} ${hostUser.last_name || ''}`.trim() : 'the host';
+
+        await supabase.from('notifications').insert({
+          user_id: existingBooking.renter_id,
+          type: 'review_reminder',
+          title: 'Leave a Review',
+          message: `How was your experience with ${hostName}? Leave a review for ${propertyTitle}`,
+          data: { 
+            booking_id: id, 
+            property_id: existingBooking.property_id,
+            reviewed_user_id: existingBooking.host_id,
+          },
+          is_read: false,
+        } as any);
+      }
+
+      // Notify host to review renter (if not already reviewed)
+      if (!reviewerIds.includes(existingBooking.host_id)) {
+        const { data: renterUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', existingBooking.renter_id)
+          .single();
+
+        const renterName = renterUser ? `${renterUser.first_name || ''} ${renterUser.last_name || ''}`.trim() : 'the renter';
+
+        await supabase.from('notifications').insert({
+          user_id: existingBooking.host_id,
+          type: 'review_reminder',
+          title: 'Leave a Review',
+          message: `How was your experience with ${renterName}? Leave a review for your booking at ${propertyTitle}`,
+          data: { 
+            booking_id: id, 
+            property_id: existingBooking.property_id,
+            reviewed_user_id: existingBooking.renter_id,
+          },
+          is_read: false,
+        } as any);
+      }
     }
     
     res.json({

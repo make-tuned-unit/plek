@@ -261,10 +261,10 @@ export const uploadAvatar = async (req: Request, res: Response): Promise<void> =
 
     // Generate unique filename
     const fileExt = req.file.originalname.split('.').pop() || 'jpg';
-    const fileName = `avatars/${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-    // Upload to Supabase Storage (use property-photos bucket or create avatars bucket)
-    const bucketName = process.env['SUPABASE_STORAGE_BUCKET'] || 'property-photos';
+    // Upload to Supabase Storage - use dedicated avatars bucket
+    const bucketName = process.env['SUPABASE_AVATARS_BUCKET'] || 'user-avatars';
     
     const { error: uploadError } = await supabase.storage
       .from(bucketName)

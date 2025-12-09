@@ -17,7 +17,9 @@ import {
   Calendar,
   Loader2,
   Trash2,
-  List
+  List,
+  TrendingUp,
+  Filter
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -32,6 +34,16 @@ export default function AdminDashboardPage() {
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending')
+  const [stats, setStats] = useState<{
+    bookings: number;
+    users: number;
+    listings: number;
+    totalBookingValue: number;
+    totalServiceFeeRevenue: number;
+  } | null>(null)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   useEffect(() => {
     if (!authLoading) {
@@ -49,8 +61,15 @@ export default function AdminDashboardPage() {
       
       fetchPendingProperties()
       fetchAllProperties()
+      fetchAdminStats()
     }
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+      fetchAdminStats()
+    }
+  }, [startDate, endDate, user])
 
   const fetchPendingProperties = async () => {
     try {
@@ -81,6 +100,46 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchAdminStats = async () => {
+    try {
+      setIsLoadingStats(true)
+      const params: { startDate?: string; endDate?: string } = {}
+      if (startDate) params.startDate = startDate
+      if (endDate) params.endDate = endDate
+
+      const response = await apiService.getAdminStats(params)
+      if (response.success && response.data) {
+        setStats(response.data)
+      }
+    } catch (error: any) {
+      console.error('Error fetching admin stats:', error)
+      toast.error('Failed to load statistics')
+    } finally {
+      setIsLoadingStats(false)
+    }
+  }
+
+  const handleDateRangeChange = (type: 'start' | 'end', value: string) => {
+    if (type === 'start') {
+      setStartDate(value)
+    } else {
+      setEndDate(value)
+    }
+  }
+
+  const clearDateRange = () => {
+    setStartDate('')
+    setEndDate('')
+  }
+
+  const setQuickDateRange = (days: number) => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+    setStartDate(start.toISOString().split('T')[0])
+    setEndDate(end.toISOString().split('T')[0])
   }
 
   const handleApprove = async (propertyId: string) => {
@@ -187,6 +246,134 @@ export default function AdminDashboardPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* KPI Cards */}
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-accent-600" />
+                Key Performance Indicators
+              </h2>
+              <div className="flex items-center gap-3">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                    placeholder="Start Date"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                    placeholder="End Date"
+                  />
+                  {(startDate || endDate) && (
+                    <button
+                      onClick={clearDateRange}
+                      className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-2">
+                  <button
+                    onClick={() => setQuickDateRange(7)}
+                    className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    7d
+                  </button>
+                  <button
+                    onClick={() => setQuickDateRange(30)}
+                    className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    30d
+                  </button>
+                  <button
+                    onClick={() => setQuickDateRange(90)}
+                    className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    90d
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-accent-500" />
+                <span className="ml-3 text-gray-600">Loading statistics...</span>
+              </div>
+            ) : stats ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Total Bookings */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Calendar className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats.bookings.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Bookings</div>
+                </div>
+
+                {/* Total Users */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <User className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats.users.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Users</div>
+                </div>
+
+                {/* Total Listings */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <MapPin className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats.listings.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Listings</div>
+                </div>
+
+                {/* Total Booking Value */}
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-6 border border-yellow-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <DollarSign className="h-8 w-8 text-yellow-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    ${stats.totalBookingValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Booking Value</div>
+                </div>
+
+                {/* Total Service Fee Revenue */}
+                <div className="bg-gradient-to-br from-accent-50 to-accent-100 rounded-lg p-6 border border-accent-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <TrendingUp className="h-8 w-8 text-accent-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    ${stats.totalServiceFeeRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-sm text-gray-600">Service Fee Revenue</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No statistics available
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200">
           <nav className="flex space-x-8">

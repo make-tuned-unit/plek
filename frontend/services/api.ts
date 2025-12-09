@@ -253,11 +253,19 @@ class ApiService {
   }
 
   // Message endpoints
-  async getMessages(): Promise<ApiResponse<{ messages: any[] }>> {
+  async getMessages(): Promise<ApiResponse<{ conversations: any[] }>> {
     return this.request('/messages');
   }
 
-  async sendMessage(messageData: any): Promise<ApiResponse<{ message: any }>> {
+  async getBookingMessages(bookingId: string): Promise<ApiResponse<{ messages: any[]; booking: any }>> {
+    return this.request(`/messages/booking/${bookingId}`);
+  }
+
+  async sendMessage(messageData: {
+    bookingId: string;
+    content: string;
+    messageType?: string;
+  }): Promise<ApiResponse<{ message: any }>> {
     return this.request('/messages', {
       method: 'POST',
       body: JSON.stringify(messageData),
@@ -265,14 +273,61 @@ class ApiService {
   }
 
   // Notification endpoints
-  async getNotifications(): Promise<ApiResponse<{ notifications: any[] }>> {
-    return this.request('/notifications');
+  async getNotifications(params?: { isRead?: boolean; type?: string }): Promise<ApiResponse<any[]>> {
+    const queryParams = new URLSearchParams();
+    if (params?.isRead !== undefined) {
+      queryParams.append('isRead', params.isRead.toString());
+    }
+    if (params?.type) {
+      queryParams.append('type', params.type);
+    }
+    const queryString = queryParams.toString();
+    return this.request(`/notifications${queryString ? `?${queryString}` : ''}`);
   }
 
   async markNotificationAsRead(id: string): Promise<ApiResponse> {
     return this.request(`/notifications/${id}/read`, {
       method: 'PATCH',
     });
+  }
+
+  async markAllNotificationsAsRead(): Promise<ApiResponse> {
+    return this.request('/notifications/read-all', {
+      method: 'PATCH',
+    });
+  }
+
+  async getUnreadNotificationCount(): Promise<ApiResponse<{ count: number }>> {
+    return this.request('/notifications/unread-count');
+  }
+
+  // Review endpoints
+  async createReview(reviewData: {
+    bookingId: string;
+    rating: number;
+    comment?: string;
+    cleanliness?: number;
+    communication?: number;
+    checkIn?: number;
+    accuracy?: number;
+    value?: number;
+  }): Promise<ApiResponse<{ review: any }>> {
+    return this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
+    });
+  }
+
+  async getBookingReviews(bookingId: string): Promise<ApiResponse<any[]>> {
+    return this.request(`/reviews/booking/${bookingId}`);
+  }
+
+  async getUserReviews(userId: string): Promise<ApiResponse<any[]>> {
+    return this.request(`/reviews/user/${userId}`);
+  }
+
+  async checkReviewEligibility(bookingId: string): Promise<ApiResponse<{ canReview: boolean; hasReviewed: boolean }>> {
+    return this.request(`/reviews/check/${bookingId}`);
   }
 
   // Admin endpoints
@@ -297,6 +352,25 @@ class ApiService {
     return this.request(`/properties/${propertyId}/admin`, {
       method: 'DELETE',
     });
+  }
+
+  async getAdminStats(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<{
+    bookings: number;
+    users: number;
+    listings: number;
+    totalBookingValue: number;
+    totalServiceFeeRevenue: number;
+    dateRange: { start: string | null; end: string | null };
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) {
+      queryParams.append('startDate', params.startDate);
+    }
+    if (params?.endDate) {
+      queryParams.append('endDate', params.endDate);
+    }
+    const queryString = queryParams.toString();
+    return this.request(`/admin/stats${queryString ? `?${queryString}` : ''}`);
   }
 
   // Stripe Connect
