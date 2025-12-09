@@ -94,10 +94,11 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env['NODE_ENV']}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`🌐 CORS allowed origins: ${process.env['FRONTEND_URL'] || 'http://localhost:3000'}`);
 });
 
 export default app; 
