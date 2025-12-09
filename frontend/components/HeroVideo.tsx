@@ -26,7 +26,7 @@ export default function HeroVideo() {
       const wasPlaying = !video.paused
       
       video.src = isMobile 
-        ? '/Plekkdriveway mobile.mov' 
+        ? '/Plekkdriveway mobile.mp4' 
         : '/hero-driveway.mp4'
       
       video.load()
@@ -52,7 +52,7 @@ export default function HeroVideo() {
       controls={false}
       preload="auto"
       loop
-      src={isMobile ? '/Plekkdriveway mobile.mov' : '/hero-driveway.mp4'}
+      src={isMobile ? '/Plekkdriveway mobile.mp4' : '/hero-driveway.mp4'}
     />
   )
 }
