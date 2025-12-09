@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation } from 'lucide-react'
+import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation, ChevronDown, ChevronUp } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
 import { PropertiesMap } from '@/components/PropertiesMap'
 import { BookingModal } from '@/components/BookingModal'
@@ -156,6 +156,7 @@ export default function FindParkingPage() {
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false) // Collapsed by default on mobile
 
   const geocodeProperty = useCallback(async (property: any) => {
     if (!mapboxToken || !property?.id) return null
@@ -519,7 +520,8 @@ export default function FindParkingPage() {
               <h1 className="text-3xl font-bold text-gray-900">Find Parking</h1>
               <p className="mt-1 text-gray-600">Discover available parking spots near you</p>
             </div>
-            <div className="flex items-center space-x-3">
+            {/* Map/List View Button - Hidden on mobile, shown in filters section */}
+            <div className="hidden lg:flex items-center space-x-3">
               <button
                 onClick={() => setShowMap(!showMap)}
                 className={`flex items-center px-4 py-2 border rounded-lg transition-colors ${
@@ -544,10 +546,46 @@ export default function FindParkingPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar - Always Visible */}
+          {/* Filters Sidebar - Collapsible on mobile */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Search & Filters</h3>
+            <div className="bg-white rounded-lg shadow-sm sticky top-8">
+              {/* Collapsible Header - Mobile Only */}
+              <button
+                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                className="lg:hidden w-full flex items-center justify-between px-6 py-4 border-b border-gray-200"
+              >
+                <h3 className="text-lg font-semibold text-gray-900">Search & Filters</h3>
+                {isFiltersExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+              
+              {/* Map/List View Button - Mobile Only, Below Header */}
+              <div className="lg:hidden px-6 py-3 border-b border-gray-200">
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className={`w-full flex items-center justify-center px-4 py-2 border rounded-lg transition-colors ${
+                    showMap 
+                      ? 'bg-accent-500 text-white border-accent-500 hover:bg-accent-600' 
+                      : 'border-mist-300 hover:bg-mist-100'
+                  }`}
+                >
+                  {showMap ? (
+                    <Navigation className="h-5 w-5 mr-2 text-white" />
+                  ) : (
+                    <MapIcon className="h-5 w-5 mr-2 text-accent-500" />
+                  )}
+                  <span className={showMap ? 'text-white' : 'text-accent-500'}>
+                    {showMap ? 'List View' : 'Map View'}
+                  </span>
+                </button>
+              </div>
+              
+              {/* Filters Content - Collapsible on mobile */}
+              <div className={`${isFiltersExpanded ? 'block' : 'hidden'} lg:block p-6`}>
+              <h3 className="hidden lg:block text-lg font-semibold text-gray-900 mb-4">Search & Filters</h3>
                 
                 {/* Search */}
                 <div className="mb-6">
