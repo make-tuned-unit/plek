@@ -1796,6 +1796,7 @@ function ProfileContent() {
                     {filteredNotifications.map((notification: any) => {
                       const isUnread = !notification.is_read
                       const isReviewReminder = notification.type === 'review_reminder'
+                      const hasReviewed = notification.has_reviewed || notification.title === 'Review Left'
                       
                       return (
                         <div
@@ -1824,13 +1825,19 @@ function ProfileContent() {
                                   minute: '2-digit',
                                 })}
                               </p>
-                              {isReviewReminder && (
+                              {isReviewReminder && !hasReviewed && (
                                 <button
                                   onClick={() => handleReviewReminderClick(notification)}
                                   className="mt-3 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
                                 >
                                   Leave Review
                                 </button>
+                              )}
+                              {isReviewReminder && hasReviewed && (
+                                <div className="mt-3 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium inline-flex items-center gap-2">
+                                  <span>✓</span>
+                                  <span>Review Left</span>
+                                </div>
                               )}
                             </div>
                             {isUnread && (

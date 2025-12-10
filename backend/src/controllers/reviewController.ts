@@ -139,6 +139,32 @@ export const createReview = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    // Update existing review_reminder notification to mark as reviewed
+    // Find the review_reminder notification for this booking and user
+    const { data: allReviewReminders } = await supabase
+      .from('notifications')
+      .select('id, data')
+      .eq('user_id', userId)
+      .eq('type', 'review_reminder');
+
+    // Filter to find the notification for this specific booking
+    // Check both booking_id and bookingId in case the data structure varies
+    const matchingNotification = allReviewReminders?.find((notif: any) => {
+      const data = notif.data || {};
+      return data.booking_id === bookingId || data.bookingId === bookingId;
+    });
+
+    if (matchingNotification) {
+      // Update the notification title and message to indicate review was left
+      await supabase
+        .from('notifications')
+        .update({
+          title: 'Review Left',
+          message: 'You have left a review for this booking',
+        })
+        .eq('id', matchingNotification.id);
+    }
+
     // Create notification for reviewed user
     const { data: reviewedUser } = await supabase
       .from('users')

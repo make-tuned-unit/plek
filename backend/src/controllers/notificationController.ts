@@ -36,9 +36,33 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
       return;
     }
 
+    // Enrich review_reminder notifications with review status
+    const enrichedNotifications = await Promise.all(
+      (notifications || []).map(async (notification: any) => {
+        if (notification.type === 'review_reminder') {
+          const bookingId = notification.data?.booking_id || notification.data?.bookingId;
+          if (bookingId) {
+            // Check if user has already left a review for this booking
+            const { data: existingReview } = await supabase
+              .from('reviews')
+              .select('id')
+              .eq('booking_id', bookingId)
+              .eq('reviewer_id', userId)
+              .single();
+
+            return {
+              ...notification,
+              has_reviewed: !!existingReview,
+            };
+          }
+        }
+        return notification;
+      })
+    );
+
     res.json({
       success: true,
-      data: notifications || [],
+      data: enrichedNotifications || [],
     });
   } catch (error: any) {
     console.error('Error in getNotifications:', error);
