@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Calendar, Clock, MapPin, DollarSign, ArrowRight, ExternalLink } from 'lucide-react'
 import { apiService } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 
-export default function BookingSuccessPage() {
+function BookingSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -239,6 +239,21 @@ export default function BookingSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BookingSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <BookingSuccessContent />
+    </Suspense>
   )
 }
 

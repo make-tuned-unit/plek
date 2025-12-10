@@ -120,7 +120,8 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Create trigger
 DROP TRIGGER IF EXISTS create_review_reminders_on_booking_complete ON public.bookings;

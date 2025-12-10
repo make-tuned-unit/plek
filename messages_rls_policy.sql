@@ -15,19 +15,19 @@ DROP POLICY IF EXISTS "Users can update messages they received" ON public.messag
 
 CREATE POLICY "Users can update messages they received" ON public.messages
   FOR UPDATE USING (
-    receiver_id = auth.uid() AND
+    receiver_id = (select auth.uid()) AND
     EXISTS (
       SELECT 1 FROM public.bookings 
       WHERE id = messages.booking_id 
-      AND (renter_id = auth.uid() OR host_id = auth.uid())
+      AND (renter_id = (select auth.uid()) OR host_id = (select auth.uid()))
     )
   )
   WITH CHECK (
-    receiver_id = auth.uid() AND
+    receiver_id = (select auth.uid()) AND
     EXISTS (
       SELECT 1 FROM public.bookings 
       WHERE id = messages.booking_id 
-      AND (renter_id = auth.uid() OR host_id = auth.uid())
+      AND (renter_id = (select auth.uid()) OR host_id = (select auth.uid()))
     )
   );
 

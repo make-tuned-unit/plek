@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation, ChevronDown, ChevronUp } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
@@ -129,7 +129,7 @@ interface Place {
   }>
 }
 
-export default function FindParkingPage() {
+function FindParkingContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -1035,5 +1035,20 @@ export default function FindParkingPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function FindParkingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <FindParkingContent />
+    </Suspense>
   )
 } 

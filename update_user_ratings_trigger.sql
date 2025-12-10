@@ -41,7 +41,8 @@ BEGIN
   
   RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Create trigger for INSERT (when review is created)
 DROP TRIGGER IF EXISTS update_user_rating_on_review_insert ON public.reviews;
