@@ -103,6 +103,7 @@ function ProfileContent() {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
+  const [pendingEarnings, setPendingEarnings] = useState<number>(0);
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -676,20 +677,43 @@ function ProfileContent() {
     };
   }, [user?.id]); // Only depend on user.id to prevent multiple calls
 
-  // Handle Stripe Connect onboarding
+  // Handle Stripe Connect onboarding (delayed - only when earnings exist)
   const handleConnectStripe = async () => {
     setIsConnectingStripe(true);
     try {
-      const response = await apiService.createConnectAccount();
+      // Use delayed onboarding endpoint that checks for earnings
+      const response = await apiService.createOnboardingLink();
       if (response.success && response.data?.url) {
+        // Show earnings amount in toast
+        if (response.data.pendingEarnings) {
+          toast.success(`You have $${response.data.pendingEarnings.toFixed(2)} ready to withdraw!`, {
+            duration: 3000,
+          });
+        }
         // Redirect to Stripe onboarding
         window.location.href = response.data.url;
       } else {
-        toast.error('Failed to start Stripe setup');
+        // If no earnings, show helpful message
+        if (response.data?.needsEarnings) {
+          toast('Complete your first booking to set up payouts', {
+            icon: 'ℹ️',
+            duration: 4000,
+          });
+        } else {
+          toast.error(response.error || 'Failed to start payout setup');
+        }
       }
     } catch (error: any) {
       console.error('Error connecting Stripe:', error);
-      toast.error(error.message || 'Failed to connect Stripe account');
+      // Check if error is about no earnings
+      if (error.message?.includes('No earnings available') || error.response?.data?.error?.includes('No earnings')) {
+        toast('Complete your first booking to set up payouts', {
+          icon: 'ℹ️',
+          duration: 4000,
+        });
+      } else {
+        toast.error(error.message || 'Failed to connect payout account');
+      }
     } finally {
       setIsConnectingStripe(false);
     }
@@ -711,6 +735,7 @@ function ProfileContent() {
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
+            setPendingEarnings(response.data.pendingEarnings || 0);
           }
         }).catch(error => {
           console.error('[Profile] Error refreshing status:', error);
@@ -1979,22 +2004,39 @@ function ProfileContent() {
                 
                 {!stripeConnected ? (
                   <div className="text-center py-12">
-                    <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Connect Your Stripe Account</h3>
-                    <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                      To receive payments from bookings, you need to connect your Stripe account. 
-                      This allows us to securely transfer your earnings directly to your bank account.
-                    </p>
-                    <button
-                      onClick={handleConnectStripe}
-                      disabled={isConnectingStripe}
-                      className="px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-                    >
-                      {isConnectingStripe ? 'Connecting...' : 'Connect Stripe Account'}
-                    </button>
-                    <p className="text-xs text-gray-500 mt-4">
-                      You'll be redirected to Stripe to securely set up your account
-                    </p>
+                    {pendingEarnings > 0 ? (
+                      <>
+                        <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          You have ${pendingEarnings.toFixed(2)} ready to withdraw!
+                        </h3>
+                        <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                          Add your payout details to receive your earnings directly to your bank account.
+                        </p>
+                        <button
+                          onClick={handleConnectStripe}
+                          disabled={isConnectingStripe}
+                          className="px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                        >
+                          {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
+                        </button>
+                        <p className="text-xs text-gray-500 mt-4">
+                          Secure setup takes just a few minutes
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
+                        <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                          Set up your payout details after you receive your first booking. 
+                          You can list your driveway right away!
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Complete a booking to enable payouts
+                        </p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-6">

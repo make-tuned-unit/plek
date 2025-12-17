@@ -402,6 +402,12 @@ class ApiService {
     });
   }
 
+  async createOnboardingLink(): Promise<ApiResponse<{ url: string; accountId: string; pendingEarnings: number; message: string }>> {
+    return this.request('/payments/connect/onboarding-link', {
+      method: 'POST',
+    });
+  }
+
   async getConnectAccountStatus(): Promise<ApiResponse<{
     connected: boolean;
     status?: string;

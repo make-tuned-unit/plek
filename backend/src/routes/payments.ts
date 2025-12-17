@@ -3,6 +3,7 @@ import { protect } from '../middleware/auth';
 import {
   createConnectAccount,
   getConnectAccountStatus,
+  createOnboardingLink,
   createPaymentIntent,
   confirmPayment,
   getPaymentHistory,
@@ -13,6 +14,7 @@ const router = Router();
 
 // Stripe Connect routes
 router.post('/connect/create', protect, createConnectAccount);
+router.post('/connect/onboarding-link', protect, createOnboardingLink); // Delayed onboarding (only when earnings exist)
 router.get('/connect/status', protect, getConnectAccountStatus);
 
 // Payment routes
