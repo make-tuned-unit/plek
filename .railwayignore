@@ -1,0 +1,5 @@
+# Ignore root package-lock.json for backend builds
+# Backend doesn't use Next.js, so root lock file shouldn't be scanned
+package-lock.json
+frontend/
+
