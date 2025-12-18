@@ -529,6 +529,11 @@ class ApiService {
     needsVerification?: boolean;
     verificationUrl?: string;
     requirements?: string[];
+    pendingEarnings?: number;
+    hasEarnings?: boolean;
+    needsOnboarding?: boolean;
+    accountId?: string;
+    detailsSubmitted?: boolean;
   }>> {
     return this.request('/payments/connect/status');
   }

@@ -681,6 +681,7 @@ function ProfileContent() {
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
+            setPendingEarnings(response.data.pendingEarnings || 0);
           }
         } catch (error) {
           console.error('Error checking Stripe status:', error);
