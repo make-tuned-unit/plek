@@ -23,7 +23,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           </label>
         )}
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-accent-500 pointer-events-none z-10" />
           <input
             ref={ref}
             type="date"
@@ -32,7 +32,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             min={min}
             required={required}
             placeholder={placeholder}
-            className="w-full pl-12 pr-4 py-2.5 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-colors bg-white text-gray-900"
+            className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 font-medium hover:border-accent-300 text-base"
           />
         </div>
       </div>

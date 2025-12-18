@@ -1,7 +1,8 @@
 'use client'
 
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { forwardRef, useState, useEffect, useRef } from 'react'
+import ReactDatePicker from 'react-datepicker'
 
 interface ModernDatePickerProps {
   value: string
@@ -13,150 +14,58 @@ interface ModernDatePickerProps {
   className?: string
 }
 
-const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const months = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
 export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerProps>(
   ({ value, onChange, min, placeholder, label, required, className = '' }, ref) => {
-    const [isOpen, setIsOpen] = useState(false)
-    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
-    const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+    const [isMobile, setIsMobile] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    const selectedDate = value ? new Date(value) : null
-    const minDate = min ? new Date(min) : null
-
+    // Detect mobile device
     useEffect(() => {
-      if (selectedDate) {
-        setCurrentMonth(selectedDate.getMonth())
-        setCurrentYear(selectedDate.getFullYear())
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
       }
-    }, [selectedDate])
+      checkMobile()
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          setIsOpen(false)
-        }
-      }
+    const selectedDate = value ? new Date(value + 'T00:00:00') : null
+    const minDate = min ? new Date(min + 'T00:00:00') : null
 
-      const handleEsc = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          setIsOpen(false)
-        }
-      }
-
-      if (isOpen) {
-        document.addEventListener('mousedown', handleClickOutside)
-        document.addEventListener('keydown', handleEsc)
-      }
-
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside)
-        document.removeEventListener('keydown', handleEsc)
-      }
-    }, [isOpen])
-
-    const getDaysInMonth = (month: number, year: number) => {
-      return new Date(year, month + 1, 0).getDate()
-    }
-
-    const getFirstDayOfMonth = (month: number, year: number) => {
-      return new Date(year, month, 1).getDay()
-    }
-
-    const formatDisplayValue = (dateString: string) => {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      const today = new Date()
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-
-      if (date.toDateString() === today.toDateString()) {
-        return 'Today'
-      }
-      if (date.toDateString() === tomorrow.toDateString()) {
-        return 'Tomorrow'
-      }
-
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      })
-    }
-
-    const handleDateSelect = (day: number) => {
-      const selected = new Date(currentYear, currentMonth, day)
-      const dateString = selected.toISOString().split('T')[0]
-      
-      if (minDate && selected < minDate) {
-        return
-      }
-      
-      onChange(dateString)
-      setIsOpen(false)
-    }
-
-    const navigateMonth = (direction: 'prev' | 'next') => {
-      if (direction === 'prev') {
-        if (currentMonth === 0) {
-          setCurrentMonth(11)
-          setCurrentYear(currentYear - 1)
-        } else {
-          setCurrentMonth(currentMonth - 1)
-        }
-      } else {
-        if (currentMonth === 11) {
-          setCurrentMonth(0)
-          setCurrentYear(currentYear + 1)
-        } else {
-          setCurrentMonth(currentMonth + 1)
-        }
+    const handleDateChange = (date: Date | null) => {
+      if (date) {
+        const dateString = date.toISOString().split('T')[0]
+        onChange(dateString)
       }
     }
 
-    const daysInMonth = getDaysInMonth(currentMonth, currentYear)
-    const firstDay = getFirstDayOfMonth(currentMonth, currentYear)
-    const days = []
-
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null)
-    }
-
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(day)
-    }
-
-    const isToday = (day: number) => {
-      const today = new Date()
+    // On mobile, use native input for better UX
+    if (isMobile) {
       return (
-        day === today.getDate() &&
-        currentMonth === today.getMonth() &&
-        currentYear === today.getFullYear()
+        <div className={className} ref={containerRef}>
+          {label && (
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {label}
+            </label>
+          )}
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-accent-500 pointer-events-none z-10" />
+            <input
+              ref={ref}
+              type="date"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              min={min}
+              required={required}
+              placeholder={placeholder || 'Select date'}
+              className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 font-medium hover:border-accent-300 text-base"
+            />
+          </div>
+        </div>
       )
     }
 
-    const isSelected = (day: number) => {
-      if (!selectedDate) return false
-      return (
-        day === selectedDate.getDate() &&
-        currentMonth === selectedDate.getMonth() &&
-        currentYear === selectedDate.getFullYear()
-      )
-    }
-
-    const isDisabled = (day: number) => {
-      if (!minDate) return false
-      const date = new Date(currentYear, currentMonth, day)
-      return date < minDate
-    }
-
+    // On desktop, use react-datepicker with custom styling
     return (
       <div className={className} ref={containerRef}>
         {label && (
@@ -166,88 +75,108 @@ export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerPro
         )}
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-accent-500 pointer-events-none z-10" />
-          <input
-            ref={ref}
-            type="text"
-            value={formatDisplayValue(value)}
-            readOnly
-            onClick={() => setIsOpen(!isOpen)}
-            onKeyDown={(e) => {
-              if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault()
-                setIsOpen(!isOpen)
-              }
-            }}
-            placeholder={placeholder || 'Select date'}
+          <ReactDatePicker
+            selected={selectedDate}
+            onChange={handleDateChange}
+            minDate={minDate || undefined}
+            dateFormat="EEE, MMM d"
+            placeholderText={placeholder || 'Select date'}
             required={required}
             className="w-full pl-12 pr-4 py-3 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 cursor-pointer font-medium hover:border-accent-300"
+            wrapperClassName="w-full"
+            calendarClassName="!border-2 !border-gray-200 !rounded-xl !shadow-2xl !p-4"
+            dayClassName={(date) => {
+              const baseClass = '!min-h-[44px] !min-w-[44px] !rounded-lg !transition-all !text-sm !font-medium'
+              const today = new Date()
+              if (date.toDateString() === today.toDateString()) {
+                return `${baseClass} !ring-2 !ring-accent-400`
+              }
+              return baseClass
+            }}
+            popperModifiers={[
+              {
+                name: 'offset',
+                options: {
+                  offset: [0, 8],
+                },
+              },
+            ]}
           />
-          {isOpen && (
-            <div className="absolute left-0 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl z-50 p-4 w-[320px]">
-              {/* Calendar Header */}
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  type="button"
-                  onClick={() => navigateMonth('prev')}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="h-5 w-5 text-gray-600" />
-                </button>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {months[currentMonth]} {currentYear}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => navigateMonth('next')}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-
-              {/* Days of Week Header */}
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {daysOfWeek.map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-xs font-semibold text-gray-500 py-2"
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-1">
-                {days.map((day, index) => {
-                  if (day === null) {
-                    return <div key={`empty-${index}`} className="aspect-square" />
-                  }
-
-                  const todayClass = isToday(day) ? 'ring-2 ring-accent-400' : ''
-                  const selectedClass = isSelected(day)
-                    ? 'bg-accent-500 text-white font-semibold'
-                    : 'hover:bg-accent-50 text-gray-900'
-                  const disabledClass = isDisabled(day) ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
-
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => handleDateSelect(day)}
-                      disabled={isDisabled(day)}
-                      className={`aspect-square rounded-lg transition-all text-sm font-medium ${todayClass} ${selectedClass} ${disabledClass}`}
-                    >
-                      {day}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
+        <style jsx global>{`
+          .react-datepicker {
+            font-family: inherit;
+            border: none;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          }
+          .react-datepicker__header {
+            background-color: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding-top: 0.75rem;
+          }
+          .react-datepicker__current-month {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #111827;
+            margin-bottom: 0.5rem;
+          }
+          .react-datepicker__day-names {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 0.5rem;
+          }
+          .react-datepicker__day-name {
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 0.75rem;
+            width: 44px;
+            line-height: 44px;
+            margin: 0;
+          }
+          .react-datepicker__day {
+            width: 44px;
+            height: 44px;
+            line-height: 44px;
+            margin: 0.125rem;
+            border-radius: 0.5rem;
+            color: #111827;
+            font-weight: 500;
+          }
+          .react-datepicker__day:hover {
+            background-color: #f0f9ff;
+            border-radius: 0.5rem;
+          }
+          .react-datepicker__day--selected,
+          .react-datepicker__day--keyboard-selected {
+            background-color: #0ea5e9 !important;
+            color: white !important;
+            font-weight: 600;
+            border-radius: 0.5rem;
+          }
+          .react-datepicker__day--disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+          }
+          .react-datepicker__day--today {
+            border: 2px solid #0ea5e9;
+            font-weight: 600;
+          }
+          .react-datepicker__navigation {
+            top: 1rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 0.5rem;
+          }
+          .react-datepicker__navigation:hover {
+            background-color: #f3f4f6;
+          }
+          .react-datepicker__navigation-icon::before {
+            border-color: #374151;
+            border-width: 2px 2px 0 0;
+            width: 8px;
+            height: 8px;
+          }
+        `}</style>
       </div>
     )
   }

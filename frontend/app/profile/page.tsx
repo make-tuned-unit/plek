@@ -355,6 +355,76 @@ function ProfileContent() {
     handleMarkAsRead(notification.id)
   }
 
+  // Generate navigation URL based on notification type and data
+  const getNotificationUrl = (notification: any): string | null => {
+    const data = notification.data || {}
+    const bookingId = data.booking_id || data.bookingId
+    const messageId = data.message_id || data.messageId
+    const propertyId = data.property_id || data.propertyId
+
+    switch (notification.type) {
+      case 'review_reminder':
+        // Navigate to bookings tab and expand the booking
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
+      
+      case 'message_received':
+        // Navigate to bookings tab, expand booking, and open messages
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
+      
+      case 'booking_request':
+      case 'booking_confirmed':
+      case 'booking_cancelled':
+        // Navigate to bookings tab and expand the booking
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
+      
+      case 'payment_received':
+        // Navigate to payments tab or bookings tab
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : `/profile?tab=payments`
+      
+      case 'review_received':
+        // Navigate to reviews tab
+        return `/profile?tab=reviews`
+      
+      default:
+        return null
+    }
+  }
+
+  // Handle notification click
+  const handleNotificationClick = async (notification: any) => {
+    // Mark as read if unread
+    if (!notification.is_read) {
+      await handleMarkAsRead(notification.id)
+    }
+
+    // Handle special cases
+    if (notification.type === 'review_reminder' && !notification.has_reviewed) {
+      handleReviewReminderClick(notification)
+      return
+    }
+
+    if (notification.type === 'message_received') {
+      const data = notification.data || {}
+      const bookingId = data.booking_id || data.bookingId
+      if (bookingId) {
+        setActiveTab('bookings')
+        // Small delay to ensure tab is active, then open messages
+        setTimeout(() => {
+          setSelectedBookingForMessages(bookingId)
+          setExpandedBookingId(bookingId)
+          setShowMessagesModal(true)
+        }, 200)
+        return
+      }
+    }
+
+    // Navigate to the appropriate section
+    const url = getNotificationUrl(notification)
+    if (url) {
+      router.push(url)
+    }
+  }
+
   const fetchReviews = async () => {
     try {
       setIsLoadingReviews(true)
@@ -1940,13 +2010,19 @@ function ProfileContent() {
                       const isReviewReminder = notification.type === 'review_reminder'
                       const hasReviewed = notification.has_reviewed || notification.title === 'Review Left'
                       
+                      const hasAction = getNotificationUrl(notification) !== null || 
+                                       (isReviewReminder && !hasReviewed)
+
                       return (
                         <div
                           key={notification.id}
+                          onClick={() => hasAction && handleNotificationClick(notification)}
                           className={`border rounded-lg p-4 transition-colors ${
                             isUnread
                               ? 'border-accent-200 bg-accent-50'
                               : 'border-gray-200 bg-white'
+                          } ${
+                            hasAction ? 'cursor-pointer hover:shadow-md hover:border-accent-300' : ''
                           }`}
                         >
                           <div className="flex items-start justify-between">
@@ -1955,6 +2031,9 @@ function ProfileContent() {
                                 <h3 className="font-semibold text-gray-900">{notification.title}</h3>
                                 {isUnread && (
                                   <span className="h-2 w-2 bg-accent-500 rounded-full"></span>
+                                )}
+                                {hasAction && (
+                                  <span className="text-xs text-accent-600 ml-auto">Click to view →</span>
                                 )}
                               </div>
                               <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
@@ -1969,7 +2048,10 @@ function ProfileContent() {
                               </p>
                               {isReviewReminder && !hasReviewed && (
                                 <button
-                                  onClick={() => handleReviewReminderClick(notification)}
+                                  onClick={(e) => {
+                                    e.stopPropagation() // Prevent triggering notification click
+                                    handleReviewReminderClick(notification)
+                                  }}
                                   className="mt-3 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
                                 >
                                   Leave Review
@@ -1984,7 +2066,10 @@ function ProfileContent() {
                             </div>
                             {isUnread && (
                               <button
-                                onClick={() => handleMarkAsRead(notification.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation() // Prevent triggering notification click
+                                  handleMarkAsRead(notification.id)
+                                }}
                                 className="ml-4 text-xs text-gray-500 hover:text-gray-700"
                               >
                                 Mark as read
