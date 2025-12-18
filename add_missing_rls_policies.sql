@@ -133,3 +133,5 @@ CREATE POLICY "Admins can view all payments" ON public.payments
 --
 -- All policies use optimized (select auth.uid()) syntax for performance.
 
+
+

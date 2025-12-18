@@ -28,7 +28,8 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
-  Bell
+  Bell,
+  Shield
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
@@ -36,6 +37,7 @@ import toast from 'react-hot-toast'
 import { MapboxAutocomplete } from '../../components/MapboxAutocomplete'
 import { BookingMessages } from '../../components/BookingMessages'
 import { ReviewModal } from '../../components/ReviewModal'
+import { VerificationStatus } from '../../components/VerificationStatus'
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -105,7 +107,9 @@ function ProfileContent() {
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
   const [pendingEarnings, setPendingEarnings] = useState<number>(0);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [bookingView, setBookingView] = useState<'renter' | 'host' | 'all'>('all');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -197,7 +201,7 @@ function ProfileContent() {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
     
-    if (tabParam && ['profile', 'bookings', 'reviews', 'notifications', 'listings', 'payments', 'settings'].includes(tabParam)) {
+    if (tabParam && ['profile', 'bookings', 'reviews', 'notifications', 'listings', 'payments', 'settings', 'verification'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
     
@@ -264,15 +268,27 @@ function ProfileContent() {
         return
       }
 
-      const response = await apiService.getUserBookings()
-      if (response.success && response.data) {
-        setBookings(response.data.bookings || [])
+      // Fetch both renter and host bookings
+      const [renterResponse, hostResponse] = await Promise.all([
+        apiService.getUserBookings('renter'),
+        apiService.getUserBookings('host')
+      ])
+
+      if (renterResponse.success && renterResponse.data) {
+        setBookings(renterResponse.data.bookings || [])
       } else {
         setBookings([])
+      }
+
+      if (hostResponse.success && hostResponse.data) {
+        setHostBookings(hostResponse.data.bookings || [])
+      } else {
+        setHostBookings([])
       }
     } catch (error) {
       console.error('Error fetching bookings:', error)
       setBookings([])
+      setHostBookings([])
     } finally {
       setIsLoadingBookings(false)
     }
@@ -794,6 +810,7 @@ function ProfileContent() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'listings', label: 'My Listings', icon: Car },
     { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'verification', label: 'Verification', icon: Shield },
     { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
@@ -1319,27 +1336,90 @@ function ProfileContent() {
             {/* Bookings Tab */}
             {activeTab === 'bookings' && (
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">My Bookings</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Bookings</h2>
+                  {(bookings.length > 0 || hostBookings.length > 0) && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setBookingView('all')}
+                        className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          bookingView === 'all'
+                            ? 'bg-accent-500 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        All ({bookings.length + hostBookings.length})
+                      </button>
+                      {bookings.length > 0 && (
+                        <button
+                          onClick={() => setBookingView('renter')}
+                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                            bookingView === 'renter'
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          My Bookings ({bookings.length})
+                        </button>
+                      )}
+                      {hostBookings.length > 0 && (
+                        <button
+                          onClick={() => setBookingView('host')}
+                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                            bookingView === 'host'
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          At My Listings ({hostBookings.length})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {isLoadingBookings ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
                     <span className="ml-3 text-gray-600">Loading bookings...</span>
                   </div>
-                ) : bookings.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">No bookings yet</p>
-                    <p className="text-sm text-gray-500 mb-6">Start by booking a parking space!</p>
-                    <Link
-                      href="/find-parking"
-                      className="inline-flex items-center px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-semibold"
-                    >
-                      Find Parking
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bookings.map((booking) => {
+                ) : (() => {
+                  const displayBookings = bookingView === 'all' 
+                    ? [...bookings, ...hostBookings].sort((a, b) => 
+                        new Date(b.created_at || b.start_time).getTime() - new Date(a.created_at || a.start_time).getTime()
+                      )
+                    : bookingView === 'renter' 
+                    ? bookings 
+                    : hostBookings;
+
+                  if (displayBookings.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-2">
+                          {bookingView === 'renter' 
+                            ? 'No bookings yet' 
+                            : bookingView === 'host'
+                            ? 'No bookings at your listings yet'
+                            : 'No bookings found'}
+                        </p>
+                        {bookingView === 'renter' && (
+                          <>
+                            <p className="text-sm text-gray-500 mb-6">Start by booking a parking space!</p>
+                            <Link
+                              href="/find-parking"
+                              className="inline-flex items-center px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-semibold"
+                            >
+                              Find Parking
+                            </Link>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {displayBookings.map((booking) => {
                       const property = booking.property || {}
                       const startDate = booking.start_time ? new Date(booking.start_time) : null
                       const endDate = booking.end_time ? new Date(booking.end_time) : null
@@ -1348,7 +1428,9 @@ function ProfileContent() {
                         : null
 
                       const isExpanded = expandedBookingId === booking.id
-                      const host = booking.host || {}
+                      const isHostView = user?.id === booking.host_id
+                      const otherUser = isHostView ? booking.renter : booking.host
+                      const otherUserInfo = otherUser || {}
                       
                       return (
                         <div id={`booking-${booking.id}`} key={booking.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
@@ -1365,8 +1447,20 @@ function ProfileContent() {
                             <div className="flex-1 p-4">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <h3 className="font-medium text-gray-900">{property.title || 'Parking Space'}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-medium text-gray-900">{property.title || 'Parking Space'}</h3>
+                                    {isHostView && (
+                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                                        At My Listing
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-gray-600 text-sm mt-1">{property.address || 'Address not available'}</p>
+                                  {otherUserInfo.first_name && (
+                                    <p className="text-gray-500 text-sm mt-1">
+                                      {isHostView ? 'Booked by' : 'Host'}: {otherUserInfo.first_name} {otherUserInfo.last_name}
+                                    </p>
+                                  )}
                                   <div className="flex items-center mt-3 space-x-4 text-sm text-gray-500">
                                     {startDate && (
                                       <span className="flex items-center">
@@ -1419,23 +1513,37 @@ function ProfileContent() {
                                 </div>
                               </div>
                               
-                              {/* Expand/Collapse Button */}
-                              <button
-                                onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                                className="mt-4 flex items-center text-sm text-accent-600 hover:text-accent-700 font-medium"
-                              >
-                                {isExpanded ? (
-                                  <>
-                                    <ChevronUp className="h-4 w-4 mr-1" />
-                                    Hide Details
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-4 w-4 mr-1" />
-                                    View Details
-                                  </>
+                              {/* Action Buttons */}
+                              <div className="mt-4 flex items-center gap-3">
+                                {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedBookingForMessages(booking.id)
+                                      setShowMessagesModal(true)
+                                    }}
+                                    className="flex items-center px-3 py-1.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                  >
+                                    <MessageSquare className="h-4 w-4 mr-1.5" />
+                                    Message {isHostView ? 'Guest' : 'Host'}
+                                  </button>
                                 )}
-                              </button>
+                                <button
+                                  onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                                  className="flex items-center text-sm text-accent-600 hover:text-accent-700 font-medium"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronUp className="h-4 w-4 mr-1" />
+                                      Hide Details
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="h-4 w-4 mr-1" />
+                                      View Details
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                               
                               {/* Expanded Details */}
                               {isExpanded && (
@@ -1542,26 +1650,33 @@ function ProfileContent() {
                                     </div>
                                   )}
                                   
-                                  {host.first_name && (
+                                  {/* Contact Information */}
+                                  {otherUserInfo.first_name && (
                                     <div>
-                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Host Information</h4>
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                                        {isHostView ? 'Guest Information' : 'Host Information'}
+                                      </h4>
                                       <p className="text-sm text-gray-900 mb-3">
-                                        {host.first_name} {host.last_name}
-                                        {host.email && ` (${host.email})`}
-                                        {host.phone && ` - ${host.phone}`}
+                                        {otherUserInfo.first_name} {otherUserInfo.last_name}
+                                        {otherUserInfo.email && ` (${otherUserInfo.email})`}
+                                        {otherUserInfo.phone && ` - ${otherUserInfo.phone}`}
                                       </p>
-                                      {(booking.status === 'confirmed' || booking.status === 'completed') && (
-                                        <button
-                                          onClick={() => {
-                                            setSelectedBookingForMessages(booking.id)
-                                            setShowMessagesModal(true)
-                                          }}
-                                          className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
-                                        >
-                                          <MessageSquare className="h-4 w-4 mr-2" />
-                                          Message {user?.id === booking.renter_id ? 'Host' : 'Renter'}
-                                        </button>
-                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Message Button - Always visible for confirmed/completed bookings */}
+                                  {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                    <div className="pt-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedBookingForMessages(booking.id)
+                                          setShowMessagesModal(true)
+                                        }}
+                                        className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                      >
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Message {isHostView ? 'Guest' : 'Host'}
+                                      </button>
                                     </div>
                                   )}
                                 </div>
@@ -1571,8 +1686,9 @@ function ProfileContent() {
                         </div>
                       )
                     })}
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -2118,6 +2234,55 @@ function ProfileContent() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Verification Tab */}
+            {activeTab === 'verification' && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Verification Status</h2>
+                
+                <div className="space-y-6">
+                  {/* Host Verification */}
+                  <div className="border border-gray-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Verification</h3>
+                    <VerificationStatus userId={user?.id} showDetails={true} />
+                    
+                    {user && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Identity Verification</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Verify your identity by uploading a government-issued ID. This helps build trust with other users.
+                        </p>
+                        <Link
+                          href="/profile/verification/identity"
+                          className="inline-flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-medium"
+                        >
+                          <Shield className="h-4 w-4 mr-2" />
+                          Submit Identity Verification
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Property Verifications */}
+                  {listings.length > 0 && (
+                    <div className="border border-gray-200 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Verifications</h3>
+                      <div className="space-y-4">
+                        {listings.map((listing) => (
+                          <div key={listing.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <h4 className="font-medium text-gray-900">{listing.title}</h4>
+                              <VerificationStatus propertyId={listing.id} showDetails={false} />
+                            </div>
+                            <VerificationStatus propertyId={listing.id} showDetails={true} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -95,3 +95,5 @@ SUPABASE_AVATARS_BUCKET=user-avatars
 
 **Need help?** Check the Supabase documentation or run into issues? Let me know!
 
+
+

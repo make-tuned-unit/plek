@@ -254,6 +254,48 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       .update({ is_host: true })
       .eq('id', hostId);
     
+    // Auto-verify location if coordinates are provided
+    if (property.id && (latitude || longitude)) {
+      try {
+        const { autoVerifyPropertyLocation } = await import('../services/locationVerificationService');
+        await autoVerifyPropertyLocation(property.id, supabase);
+      } catch (error) {
+        console.error('Error auto-verifying location:', error);
+        // Don't fail property creation if verification fails
+      }
+    }
+
+    // Auto-verify photos if minimum photos uploaded
+    if (property.id && req.body.photos && req.body.photos.length >= 3) {
+      try {
+        await supabase
+          .from('properties')
+          .update({
+            photos_verified_at: new Date().toISOString(),
+          })
+          .eq('id', property.id);
+
+        // Create verification record
+        await supabase.from('verifications').insert({
+          property_id: property.id,
+          verification_type: 'property_photos',
+          status: 'verified',
+          verified_at: new Date().toISOString(),
+          metadata: {
+            photoCount: req.body.photos.length,
+            autoVerified: true,
+          },
+        });
+
+        // Update badge status
+        const { updatePropertyBadgeStatus } = await import('../services/verificationService');
+        await updatePropertyBadgeStatus(property.id, supabase);
+      } catch (error) {
+        console.error('Error auto-verifying photos:', error);
+        // Don't fail property creation if verification fails
+      }
+    }
+    
     res.status(201).json({
       success: true,
       data: { property },
@@ -327,12 +369,19 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     }
     
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
+    let shouldVerifyLocation = false;
     if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {
       updateData.longitude = req.body.coordinates[0]; // Mapbox format: [longitude, latitude]
       updateData.latitude = req.body.coordinates[1];
+      shouldVerifyLocation = true;
       console.log('[updateProperty] Saving coordinates:', { latitude: updateData.latitude, longitude: updateData.longitude, coordinates: req.body.coordinates });
     } else {
       console.log('[updateProperty] No coordinates provided:', { coordinates: req.body.coordinates });
+    }
+
+    // Check if address changed (need to re-verify location)
+    if (req.body.address || req.body.city || req.body.state || req.body.zip_code) {
+      shouldVerifyLocation = true;
     }
     
     const { data: updatedProperty, error: updateError } = await supabase
@@ -343,6 +392,17 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       .single();
     
     if (updateError) throw updateError;
+
+    // Re-verify location if address or coordinates changed
+    if (shouldVerifyLocation && updatedProperty.id) {
+      try {
+        const { autoVerifyPropertyLocation } = await import('../services/locationVerificationService');
+        await autoVerifyPropertyLocation(updatedProperty.id, supabase);
+      } catch (error) {
+        console.error('Error auto-verifying location on update:', error);
+        // Don't fail property update if verification fails
+      }
+    }
     
     res.json({
       success: true,

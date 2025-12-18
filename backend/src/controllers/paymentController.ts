@@ -1322,6 +1322,18 @@ async function handleAccountUpdate(
     ? 'pending'
     : 'pending';
   
+  // Get user ID from account metadata or by account ID
+  const { data: user } = await supabase
+    .from('users')
+    .select('id')
+    .eq('stripe_account_id', account.id)
+    .single();
+
+  if (!user) {
+    console.error(`User not found for Stripe account ${account.id}`);
+    return;
+  }
+
   // Update all account status fields
   const updateData: any = {
     stripe_account_status: status,
@@ -1344,6 +1356,36 @@ async function handleAccountUpdate(
     payouts_enabled: account.payouts_enabled,
     details_submitted: account.details_submitted,
   });
+
+  // If Stripe payout is set up, create verification record and check badge
+  if (account.payouts_enabled && account.details_submitted) {
+    // Check if Stripe payout verification already exists
+    const { data: existingVerification } = await supabase
+      .from('verifications')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('verification_type', 'stripe_payout')
+      .eq('status', 'verified')
+      .single();
+
+    if (!existingVerification) {
+      // Create verification record for Stripe payout
+      await supabase.from('verifications').insert({
+        user_id: user.id,
+        verification_type: 'stripe_payout',
+        status: 'verified',
+        verified_at: new Date().toISOString(),
+        metadata: {
+          stripeAccountId: account.id,
+          autoVerified: true,
+        },
+      });
+    }
+
+    // Update badge status (Stripe payout counts toward badge)
+    const { updateHostBadgeStatus } = await import('../services/verificationService');
+    await updateHostBadgeStatus(user.id, supabase);
+  }
 
   // If account just became active and has pending earnings, process payouts
   if (account.payouts_enabled && account.details_submitted) {

@@ -18,6 +18,7 @@ import { userRoutes } from './routes/users';
 import { notificationRoutes } from './routes/notifications';
 import { reviewRoutes } from './routes/reviews';
 import { adminRoutes } from './routes/admin';
+import { verificationRoutes } from './routes/verification';
 import { initializeSupabase } from './services/supabaseService';
 
 // Load environment variables
@@ -103,6 +104,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error handling middleware

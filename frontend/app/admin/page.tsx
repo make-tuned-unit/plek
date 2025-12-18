@@ -19,7 +19,11 @@ import {
   Trash2,
   List,
   TrendingUp,
-  Filter
+  Filter,
+  FileText,
+  Eye,
+  Check,
+  X
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -33,7 +37,13 @@ export default function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState<{ [key: string]: string }>({})
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'verifications'>('pending')
+  const [pendingVerifications, setPendingVerifications] = useState<any[]>([])
+  const [isLoadingVerifications, setIsLoadingVerifications] = useState(false)
+  const [selectedVerification, setSelectedVerification] = useState<any | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectNotes, setRejectNotes] = useState('')
+  const [approveNotes, setApproveNotes] = useState('')
   const [stats, setStats] = useState<{
     bookings: number;
     users: number;
@@ -68,8 +78,11 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (user && (user.role === 'admin' || user.role === 'super_admin')) {
       fetchAdminStats()
+      if (activeTab === 'verifications') {
+        fetchPendingVerifications()
+      }
     }
-  }, [startDate, endDate, user])
+  }, [startDate, endDate, user, activeTab])
 
   const fetchPendingProperties = async () => {
     try {
@@ -118,6 +131,79 @@ export default function AdminDashboardPage() {
       toast.error('Failed to load statistics')
     } finally {
       setIsLoadingStats(false)
+    }
+  }
+
+  const fetchPendingVerifications = async () => {
+    try {
+      setIsLoadingVerifications(true)
+      const response = await apiService.getPendingVerifications({ type: 'identity' })
+      if (response.success && response.data) {
+        setPendingVerifications(response.data.verifications || [])
+      }
+    } catch (error: any) {
+      console.error('Error fetching pending verifications:', error)
+      toast.error('Failed to load verifications')
+    } finally {
+      setIsLoadingVerifications(false)
+    }
+  }
+
+  const handleViewVerification = async (id: string) => {
+    try {
+      const response = await apiService.getVerificationDetails(id)
+      if (response.success && response.data) {
+        setSelectedVerification(response.data)
+      }
+    } catch (error: any) {
+      console.error('Error fetching verification details:', error)
+      toast.error('Failed to load verification details')
+    }
+  }
+
+  const handleApproveVerification = async (id: string) => {
+    try {
+      setProcessingId(id)
+      const response = await apiService.approveVerification(id, approveNotes || undefined)
+      if (response.success) {
+        toast.success('Verification approved!')
+        setSelectedVerification(null)
+        setApproveNotes('')
+        fetchPendingVerifications()
+      } else {
+        throw new Error(response.error || 'Failed to approve')
+      }
+    } catch (error: any) {
+      console.error('Error approving verification:', error)
+      toast.error(error.message || 'Failed to approve verification')
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
+  const handleRejectVerification = async (id: string) => {
+    if (!rejectReason.trim()) {
+      toast.error('Please provide a rejection reason')
+      return
+    }
+
+    try {
+      setProcessingId(id)
+      const response = await apiService.rejectVerification(id, rejectReason, rejectNotes || undefined)
+      if (response.success) {
+        toast.success('Verification rejected')
+        setSelectedVerification(null)
+        setRejectReason('')
+        setRejectNotes('')
+        fetchPendingVerifications()
+      } else {
+        throw new Error(response.error || 'Failed to reject')
+      }
+    } catch (error: any) {
+      console.error('Error rejecting verification:', error)
+      toast.error(error.message || 'Failed to reject verification')
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -399,6 +485,20 @@ export default function AdminDashboardPage() {
               <List className="h-4 w-4 inline mr-2" />
               All Properties ({allProperties.length})
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('verifications')
+                fetchPendingVerifications()
+              }}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'verifications'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
+              }`}
+            >
+              <FileText className="h-4 w-4 inline mr-2" />
+              Verifications ({pendingVerifications.length})
+            </button>
           </nav>
         </div>
 
@@ -529,6 +629,292 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         )}
+          </>
+        )}
+
+        {/* Verifications Tab */}
+        {activeTab === 'verifications' && (
+          <>
+            {isLoadingVerifications ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-accent-500" />
+                <span className="ml-3 text-gray-600">Loading verifications...</span>
+              </div>
+            ) : pendingVerifications.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No Pending Verifications
+                </h3>
+                <p className="text-gray-600">
+                  All identity verifications have been reviewed.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {pendingVerifications.map((verification) => (
+                  <div
+                    key={verification.id}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Identity Verification
+                            </h3>
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                              Pending Review
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Submitted {new Date(verification.submittedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleViewVerification(verification.id)}
+                          className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Review
+                        </button>
+                      </div>
+
+                      {verification.user && (
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-3">User Information</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-gray-600">Name:</span>
+                              <span className="ml-2 font-medium text-gray-900">{verification.user.name}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Email:</span>
+                              <span className="ml-2 font-medium text-gray-900">{verification.user.email}</span>
+                            </div>
+                            {verification.user.phone && (
+                              <div>
+                                <span className="text-gray-600">Phone:</span>
+                                <span className="ml-2 font-medium text-gray-900">{verification.user.phone}</span>
+                              </div>
+                            )}
+                            {verification.user.address && (
+                              <div className="md:col-span-2">
+                                <span className="text-gray-600">Address:</span>
+                                <span className="ml-2 font-medium text-gray-900">
+                                  {[
+                                    verification.user.address.street,
+                                    verification.user.address.city,
+                                    verification.user.address.state,
+                                    verification.user.address.zipCode,
+                                  ].filter(Boolean).join(', ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {verification.documents && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-2">ID Documents</h4>
+                          <div className="flex gap-4">
+                            {verification.documents.frontImage && (
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Front</p>
+                                <img
+                                  src={verification.documents.frontImage}
+                                  alt="Front of ID"
+                                  className="w-48 h-32 object-contain border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:opacity-80"
+                                  onClick={() => window.open(verification.documents.frontImage, '_blank')}
+                                />
+                              </div>
+                            )}
+                            {verification.documents.backImage && (
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Back</p>
+                                <img
+                                  src={verification.documents.backImage}
+                                  alt="Back of ID"
+                                  className="w-48 h-32 object-contain border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:opacity-80"
+                                  onClick={() => window.open(verification.documents.backImage, '_blank')}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Verification Detail Modal */}
+            {selectedVerification && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-gray-900">Review Identity Verification</h2>
+                      <button
+                        onClick={() => {
+                          setSelectedVerification(null)
+                          setRejectReason('')
+                          setRejectNotes('')
+                          setApproveNotes('')
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-6 w-6" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-6">
+                    {/* User Details for Comparison */}
+                    {selectedVerification.user && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-900 mb-3">User Profile Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-600">Name:</span>
+                            <span className="ml-2 font-medium text-gray-900">{selectedVerification.user.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Email:</span>
+                            <span className="ml-2 font-medium text-gray-900">{selectedVerification.user.email}</span>
+                          </div>
+                          {selectedVerification.user.phone && (
+                            <div>
+                              <span className="text-gray-600">Phone:</span>
+                              <span className="ml-2 font-medium text-gray-900">{selectedVerification.user.phone}</span>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-gray-600">Member Since:</span>
+                            <span className="ml-2 font-medium text-gray-900">
+                              {new Date(selectedVerification.user.memberSince).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {selectedVerification.user.address && (
+                            <div className="md:col-span-2">
+                              <span className="text-gray-600">Address:</span>
+                              <span className="ml-2 font-medium text-gray-900">
+                                {[
+                                  selectedVerification.user.address.street,
+                                  selectedVerification.user.address.city,
+                                  selectedVerification.user.address.state,
+                                  selectedVerification.user.address.zipCode,
+                                  selectedVerification.user.address.country,
+                                ].filter(Boolean).join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ID Documents */}
+                    {selectedVerification.documents && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-3">ID Documents</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedVerification.documents.frontImage && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Front of ID</p>
+                              <img
+                                src={selectedVerification.documents.frontImage}
+                                alt="Front of ID"
+                                className="w-full h-auto border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(selectedVerification.documents.frontImage, '_blank')}
+                              />
+                            </div>
+                          )}
+                          {selectedVerification.documents.backImage && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Back of ID</p>
+                              <img
+                                src={selectedVerification.documents.backImage}
+                                alt="Back of ID"
+                                className="w-full h-auto border border-gray-300 rounded-lg bg-gray-50 cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(selectedVerification.documents.backImage, '_blank')}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {selectedVerification.documents.documentType && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Document Type: <span className="font-medium">{selectedVerification.documents.documentType}</span>
+                          </p>
+                        )}
+                        {selectedVerification.documents.notes && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Notes: {selectedVerification.documents.notes}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="border-t border-gray-200 pt-6 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Approval Notes (Optional)
+                        </label>
+                        <textarea
+                          value={approveNotes}
+                          onChange={(e) => setApproveNotes(e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="Add any notes about this verification..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Rejection Reason (Required if rejecting)
+                        </label>
+                        <textarea
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                          placeholder="Explain why this verification is being rejected..."
+                        />
+                        <textarea
+                          value={rejectNotes}
+                          onChange={(e) => setRejectNotes(e.target.value)}
+                          rows={2}
+                          className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                          placeholder="Additional notes (optional)..."
+                        />
+                      </div>
+
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => handleApproveVerification(selectedVerification.id)}
+                          disabled={processingId === selectedVerification.id}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                        >
+                          <Check className="h-4 w-4" />
+                          {processingId === selectedVerification.id ? 'Approving...' : 'Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleRejectVerification(selectedVerification.id)}
+                          disabled={processingId === selectedVerification.id || !rejectReason.trim()}
+                          className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          {processingId === selectedVerification.id ? 'Rejecting...' : 'Reject'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 

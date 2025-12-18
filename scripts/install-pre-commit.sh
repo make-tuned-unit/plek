@@ -25,3 +25,5 @@ echo ""
 echo "The hook will now scan for secrets before each commit."
 echo "To test, try committing a file with 'sk_test_' in it."
 
+
+

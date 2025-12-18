@@ -312,3 +312,5 @@ NEXT_PUBLIC_MAPBOX_TOKEN=your-mapbox-token
 
 **Need help?** Check the logs in Railway and Vercel dashboards - they usually show what's wrong!
 
+
+

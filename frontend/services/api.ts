@@ -253,8 +253,9 @@ class ApiService {
     });
   }
 
-  async getUserBookings(): Promise<ApiResponse<{ bookings: any[] }>> {
-    return this.request('/bookings');
+  async getUserBookings(role?: 'renter' | 'host'): Promise<ApiResponse<{ bookings: any[] }>> {
+    const params = role ? `?role=${role}` : '';
+    return this.request(`/bookings${params}`);
   }
 
   async cancelBooking(bookingId: string): Promise<ApiResponse> {
@@ -321,6 +322,118 @@ class ApiService {
 
   async getUnreadNotificationCount(): Promise<ApiResponse<{ count: number }>> {
     return this.request('/notifications/unread-count');
+  }
+
+  // Verification endpoints
+  async getVerificationStatus(): Promise<ApiResponse<{
+    host: {
+      emailVerified: boolean;
+      identityVerified: boolean;
+      stripePayoutVerified: boolean;
+      badgeEarned: boolean;
+      verificationStatus: string;
+    };
+    properties: Array<{
+      id: string;
+      photosVerified: boolean;
+      locationVerified: boolean;
+      badgeEarned: boolean;
+      verificationStatus: string;
+    }>;
+  }>> {
+    return this.request('/verification/status');
+  }
+
+  async submitIdentityVerification(data: {
+    documentType: string;
+    frontImageUrl: string;
+    backImageUrl?: string;
+    notes?: string;
+  }): Promise<ApiResponse<{
+    verificationId: string;
+    status: string;
+    message: string;
+  }>> {
+    return this.request('/verification/submit-identity', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVerificationHistory(): Promise<ApiResponse<{
+    verifications: Array<{
+      id: string;
+      verification_type: string;
+      status: string;
+      submitted_at: string;
+      verified_at?: string;
+      rejection_reason?: string;
+    }>;
+  }>> {
+    return this.request('/verification/history');
+  }
+
+  // Admin verification endpoints
+  async getPendingVerifications(params?: { type?: string; limit?: number; offset?: number }): Promise<ApiResponse<{
+    verifications: Array<{
+      id: string;
+      type: string;
+      status: string;
+      submittedAt: string;
+      documents: any;
+      user?: {
+        id: string;
+        name: string;
+        email: string;
+        phone?: string;
+        address: {
+          street?: string;
+          city?: string;
+          state?: string;
+          zipCode?: string;
+          country?: string;
+        };
+      };
+      property?: {
+        id: string;
+        title: string;
+        address: string;
+      };
+    }>;
+    total: number;
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    const queryString = queryParams.toString();
+    return this.request(`/admin/verifications/pending${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getVerificationDetails(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/admin/verifications/${id}`);
+  }
+
+  async approveVerification(id: string, notes?: string): Promise<ApiResponse<{
+    verificationId: string;
+    status: string;
+    badgeUpdated: boolean;
+  }>> {
+    return this.request(`/admin/verifications/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async rejectVerification(id: string, reason: string, notes?: string): Promise<ApiResponse<{
+    verificationId: string;
+    status: string;
+    rejectionReason: string;
+  }>> {
+    return this.request(`/admin/verifications/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, notes }),
+    });
   }
 
   // Review endpoints

@@ -105,3 +105,5 @@ NEXT_PUBLIC_MAPBOX_TOKEN=REPLACE
 4. Update Stripe webhook URL to: `https://your-railway-url.railway.app/api/payments/webhook`
 5. Redeploy both services
 
+
+

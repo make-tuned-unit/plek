@@ -247,3 +247,5 @@ CREATE POLICY "Service role can manage property photos" ON public.property_photo
 -- for proper access control. The performance impact is minimal
 -- compared to the security benefits.
 
+
+
