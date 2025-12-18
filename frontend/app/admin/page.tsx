@@ -41,7 +41,7 @@ export default function AdminDashboardPage() {
   const [pendingVerifications, setPendingVerifications] = useState<any[]>([])
   const [isLoadingVerifications, setIsLoadingVerifications] = useState(false)
   const [selectedVerification, setSelectedVerification] = useState<any | null>(null)
-  const [rejectReason, setRejectReason] = useState('')
+  const [verificationRejectReason, setVerificationRejectReason] = useState('')
   const [rejectNotes, setRejectNotes] = useState('')
   const [approveNotes, setApproveNotes] = useState('')
   const [stats, setStats] = useState<{
@@ -182,18 +182,18 @@ export default function AdminDashboardPage() {
   }
 
   const handleRejectVerification = async (id: string) => {
-    if (!rejectReason.trim()) {
+    if (!verificationRejectReason.trim()) {
       toast.error('Please provide a rejection reason')
       return
     }
 
     try {
       setProcessingId(id)
-      const response = await apiService.rejectVerification(id, rejectReason, rejectNotes || undefined)
+      const response = await apiService.rejectVerification(id, verificationRejectReason, rejectNotes || undefined)
       if (response.success) {
         toast.success('Verification rejected')
         setSelectedVerification(null)
-        setRejectReason('')
+        setVerificationRejectReason('')
         setRejectNotes('')
         fetchPendingVerifications()
       } else {
@@ -761,7 +761,7 @@ export default function AdminDashboardPage() {
                       <button
                         onClick={() => {
                           setSelectedVerification(null)
-                          setRejectReason('')
+                          setVerificationRejectReason('')
                           setRejectNotes('')
                           setApproveNotes('')
                         }}
@@ -877,8 +877,8 @@ export default function AdminDashboardPage() {
                           Rejection Reason (Required if rejecting)
                         </label>
                         <textarea
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
+                          value={verificationRejectReason}
+                          onChange={(e) => setVerificationRejectReason(e.target.value)}
                           rows={2}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-transparent"
                           placeholder="Explain why this verification is being rejected..."
@@ -903,7 +903,7 @@ export default function AdminDashboardPage() {
                         </button>
                         <button
                           onClick={() => handleRejectVerification(selectedVerification.id)}
-                          disabled={processingId === selectedVerification.id || !rejectReason.trim()}
+                          disabled={processingId === selectedVerification.id || !verificationRejectReason.trim()}
                           className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
                         >
                           <X className="h-4 w-4" />
