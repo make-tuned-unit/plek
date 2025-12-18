@@ -515,7 +515,7 @@ class ApiService {
     });
   }
 
-  async createOnboardingLink(): Promise<ApiResponse<{ url: string; accountId: string; pendingEarnings: number; message: string }>> {
+  async createOnboardingLink(): Promise<ApiResponse<{ url?: string; accountId?: string; pendingEarnings: number; message?: string; needsEarnings?: boolean }>> {
     return this.request('/payments/connect/onboarding-link', {
       method: 'POST',
     });
