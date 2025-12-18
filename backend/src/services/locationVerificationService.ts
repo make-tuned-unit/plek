@@ -155,7 +155,17 @@ async function geocodeAddress(
       throw new Error(`Mapbox API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as {
+      features?: Array<{
+        center: [number, number];
+        place_name: string;
+        relevance?: number;
+        place_type?: string[];
+        properties?: {
+          category?: string;
+        };
+      }>;
+    };
 
     if (!data.features || data.features.length === 0) {
       return {
