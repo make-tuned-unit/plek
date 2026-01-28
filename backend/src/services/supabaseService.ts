@@ -154,34 +154,48 @@ export class SupabaseAuthService {
   static async loginUser(email: string, password: string): Promise<{ user: DatabaseUser | null; token: string | null; error: AuthError | null }> {
     try {
       const supabaseUrl = process.env['SUPABASE_URL'];
+      const anonKey = process.env['SUPABASE_ANON_KEY'];
       const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
       
-      if (!supabaseUrl || !serviceKey) {
+      if (!supabaseUrl || !anonKey || !serviceKey) {
+        console.error('[loginUser] Missing Supabase configuration:', {
+          hasUrl: !!supabaseUrl,
+          hasAnonKey: !!anonKey,
+          hasServiceKey: !!serviceKey,
+        });
         return { user: null, token: null, error: { message: 'Supabase configuration missing', name: 'ConfigError', status: 500 } as AuthError };
       }
       
-      const authClient = createClient(supabaseUrl, serviceKey, {
+      // Use anon key for user authentication (proper auth flow)
+      const authClient = createClient(supabaseUrl, anonKey, {
         auth: {
           persistSession: false,
           autoRefreshToken: false,
         },
       });
       
-      // Authenticate with Supabase
+      // Authenticate with Supabase using anon key
       const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
+        console.error('[loginUser] Authentication error:', authError);
         return { user: null, token: null, error: authError };
       }
 
       if (!authData.user) {
+        console.error('[loginUser] No user returned from authentication');
         return { user: null, token: null, error: { message: 'Login failed', name: 'LoginError', status: 500 } as AuthError };
       }
 
-      // Get user profile from our users table
+      if (!authData.session?.access_token) {
+        console.error('[loginUser] No session token returned from authentication');
+        return { user: null, token: null, error: { message: 'Session creation failed', name: 'SessionError', status: 500 } as AuthError };
+      }
+
+      // Get user profile from our users table using service role key (bypasses RLS)
       const adminClient = getSupabaseClient();
       const { data: profileData, error: profileError } = await adminClient
         .from('users')
@@ -190,15 +204,34 @@ export class SupabaseAuthService {
         .single();
 
       if (profileError) {
+        console.error('[loginUser] Profile fetch error:', profileError);
         return { user: null, token: null, error: { message: profileError.message, name: 'ProfileError', status: 500 } as AuthError };
       }
 
-      return { user: profileData, token: authData.session?.access_token || null, error: null };
-    } catch (error) {
+      if (!profileData) {
+        console.error('[loginUser] No profile data found for user:', authData.user.id);
+        return { user: null, token: null, error: { message: 'User profile not found', name: 'ProfileError', status: 404 } as AuthError };
+      }
+
+      return { user: profileData, token: authData.session.access_token, error: null };
+    } catch (error: any) {
+      console.error('[SupabaseAuthService.loginUser] Error:', error);
+      console.error('[SupabaseAuthService.loginUser] Error stack:', error?.stack);
+      console.error('[SupabaseAuthService.loginUser] Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        name: error?.name,
+      });
       return { 
         user: null, 
         token: null, 
-        error: { message: 'Internal server error', name: 'InternalError', status: 500 } as AuthError 
+        error: { 
+          message: error?.message || 'Internal server error', 
+          name: error?.name || 'InternalError', 
+          status: error?.status || 500 
+        } as AuthError 
       };
     }
   }

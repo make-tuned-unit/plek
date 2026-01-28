@@ -161,11 +161,22 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         token: token, // Use the actual JWT token from Supabase
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
+    console.error('Login error stack:', error?.stack);
+    console.error('Login error details:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+    });
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: error?.message || 'Server error',
+      ...(process.env['NODE_ENV'] === 'development' && { 
+        error: error?.message,
+        stack: error?.stack 
+      }),
     });
   }
 };
