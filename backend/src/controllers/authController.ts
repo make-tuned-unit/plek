@@ -127,7 +127,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const { user, token, error } = await SupabaseAuthService.loginUser(email, password);
 
     if (error) {
-      res.status(401).json({
+      // Return appropriate status code based on error type
+      const statusCode = error.status === 500 || error.status === 404 ? error.status : 401;
+      res.status(statusCode).json({
         success: false,
         message: error.message || 'Invalid credentials',
       });
