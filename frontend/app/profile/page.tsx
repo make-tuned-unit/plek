@@ -1127,7 +1127,7 @@ function ProfileContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10 sm:pb-12">
+    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-24 lg:pb-10">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-white/30 sticky top-16 md:top-20 z-20">
         <div className="max-w-7xl mx-auto container-padding py-3 sm:py-4 lg:py-6">
@@ -1183,30 +1183,6 @@ function ProfileContent() {
                   </div>
                 </>
               )}
-            </div>
-            
-            {/* Mobile Tabs - Horizontal Scrollable */}
-            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
-              <nav className="flex space-x-2 min-w-max pb-1">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center justify-center px-3 py-2.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap min-h-[44px] min-w-[44px] touch-target font-medium ${
-                        activeTab === tab.id
-                          ? 'bg-accent-500 text-white shadow-sm'
-                          : 'bg-white/60 text-gray-700 active:bg-white/80 border border-white/30'
-                      }`}
-                      title={tab.label}
-                    >
-                      <Icon className="h-5 w-5 sm:mr-2 flex-shrink-0" />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                  )
-                })}
-              </nav>
             </div>
           </div>
         </div>
@@ -3165,6 +3141,38 @@ function ProfileContent() {
             }
           }}
         />
+      )}
+
+      {/* Mobile Bottom Navigation - Only show when logged in */}
+      {user && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-lg">
+          <nav className="flex items-center justify-around px-2 py-2 safe-area-inset-bottom">
+            {tabs.slice(0, 5).map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id)
+                    // Scroll to top when switching tabs
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg transition-colors min-h-[60px] min-w-[60px] touch-target ${
+                    activeTab === tab.id
+                      ? 'text-accent-500'
+                      : 'text-gray-600'
+                  }`}
+                  title={tab.label}
+                >
+                  <Icon className={`h-6 w-6 mb-1 ${activeTab === tab.id ? 'text-accent-500' : 'text-gray-600'}`} />
+                  <span className={`text-[10px] font-medium ${activeTab === tab.id ? 'text-accent-500' : 'text-gray-600'}`}>
+                    {tab.label.split(' ')[0]}
+                  </span>
+                </button>
+              )
+            })}
+          </nav>
+        </div>
       )}
     </div>
   )
