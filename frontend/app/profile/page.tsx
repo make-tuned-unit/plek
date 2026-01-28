@@ -372,10 +372,6 @@ function ProfileContent() {
         // Navigate to bookings tab, expand booking, and open messages
         return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
       
-      default:
-        // For other notification types, stay on profile tab
-        return null
-      
       case 'booking_request':
       case 'booking_confirmed':
       case 'booking_cancelled':
@@ -1141,27 +1137,25 @@ function ProfileContent() {
         <div className="lg:hidden mb-6 sticky top-[calc(4rem+3.25rem)] z-20">
           <div className="bg-white/80 backdrop-blur-xl rounded-xl shadow-md border border-white/30 p-4">
             {/* User Info - Mobile */}
-            <div className="flex items-center space-x-4 mb-4 pb-4 border-b border-mist-200">
+            <div className="flex flex-col items-center mb-4 pb-4 border-b border-mist-200">
               {!user ? (
-                <div className="animate-pulse flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-24"></div>
-                  </div>
+                <div className="animate-pulse flex flex-col items-center">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-24"></div>
                 </div>
               ) : (
                 <>
-                  <div className="relative">
+                  <div className="relative mb-3">
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
                         alt="Profile"
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-24 h-24 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="h-6 w-6 text-gray-400" />
+                      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="h-12 w-12 text-gray-400" />
                       </div>
                     )}
                     <button 
@@ -1172,11 +1166,11 @@ function ProfileContent() {
                       <Camera className="h-2.5 w-2.5" />
                     </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-semibold text-gray-900 truncate">
+                  <div className="text-center">
+                    <h2 className="text-base font-semibold text-gray-900">
                       {user?.firstName} {user?.lastName}
                     </h2>
-                    <div className="flex items-center mt-0.5">
+                    <div className="flex items-center justify-center mt-0.5">
                       <Star className="h-3 w-3 text-yellow-400 fill-current" />
                       <span className="ml-1 text-xs text-gray-600">{user?.rating || 0}</span>
                       <span className="ml-1 text-xs text-gray-500">({user?.reviewCount || 0})</span>
@@ -3142,7 +3136,7 @@ function ProfileContent() {
                 >
                   <Icon className={`h-6 w-6 mb-1 ${activeTab === tab.id ? 'text-accent-500' : 'text-gray-600'}`} />
                   <span className={`text-[10px] font-medium ${activeTab === tab.id ? 'text-accent-500' : 'text-gray-600'}`}>
-                    {tab.label.split(' ')[0]}
+                    {tab.label.replace(/^My /, '')}
                   </span>
                 </button>
               )
