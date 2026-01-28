@@ -1165,10 +1165,10 @@ function ProfileContent() {
                     )}
                     <button 
                       onClick={() => setShowAvatarModal(true)}
-                      className="absolute bottom-0 right-0 bg-accent-500 text-white rounded-full p-1.5 hover:bg-accent-600 transition-all shadow-lg border-2 border-white touch-target"
+                      className="absolute bottom-0 right-0 bg-accent-500 text-white rounded-full p-1 hover:bg-accent-600 transition-all shadow-md border-2 border-white touch-target w-5 h-5 flex items-center justify-center"
                       title="Change profile picture"
                     >
-                      <Camera className="h-3.5 w-3.5" />
+                      <Camera className="h-2.5 w-2.5" />
                     </button>
                   </div>
                   <div className="flex-1 min-w-0">
