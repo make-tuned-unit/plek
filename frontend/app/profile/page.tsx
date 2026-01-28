@@ -201,7 +201,7 @@ function ProfileContent() {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
     
-    if (tabParam && ['profile', 'bookings', 'reviews', 'listings'].includes(tabParam)) {
+    if (tabParam && ['profile', 'bookings', 'reviews', 'payments', 'listings'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
     
@@ -379,8 +379,8 @@ function ProfileContent() {
         return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
       
       case 'payment_received':
-        // Navigate to profile tab (payments section) or bookings tab
-        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : `/profile?tab=profile`
+        // Navigate to payments tab or bookings tab
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : `/profile?tab=payments`
       
       case 'review_received':
         // Navigate to reviews tab
@@ -873,6 +873,7 @@ function ProfileContent() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'bookings', label: 'My Bookings', icon: Calendar },
     { id: 'reviews', label: 'Reviews', icon: Star },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'listings', label: 'My Listings', icon: Car },
   ]
 
@@ -1599,107 +1600,6 @@ function ProfileContent() {
                   )}
                 </div>
 
-                {/* Payments Section */}
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-5 sm:mb-6 flex items-center">
-                    <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
-                    Payout Account
-                  </h2>
-                  
-                  {!stripeConnected ? (
-                    <div className="text-center py-12">
-                      {pendingEarnings > 0 ? (
-                        <>
-                          <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            You have ${pendingEarnings.toFixed(2)} ready to withdraw!
-                          </h3>
-                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                            Add your payout details to receive your earnings directly to your bank account.
-                          </p>
-                          <button
-                            onClick={handleConnectStripe}
-                            disabled={isConnectingStripe}
-                            className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
-                          >
-                            {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
-                          </button>
-                          <p className="text-xs text-gray-500 mt-4">
-                            Secure setup takes just a few minutes
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
-                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                            Set up your payout details after you receive your first booking. 
-                            You can list your driveway right away!
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Complete a booking to enable payouts
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className={`border rounded-lg p-4 ${
-                        stripeStatus === 'active' 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-yellow-50 border-yellow-200'
-                      }`}>
-                        <div className="flex items-start">
-                          <CheckCircle className={`h-5 w-5 mr-3 mt-0.5 ${
-                            stripeStatus === 'active' ? 'text-green-600' : 'text-yellow-600'
-                          }`} />
-                          <div className="flex-1">
-                            <h3 className={`font-semibold mb-1 ${
-                              stripeStatus === 'active' ? 'text-green-900' : 'text-yellow-900'
-                            }`}>
-                              {stripeStatus === 'active' 
-                                ? 'Stripe Account Connected' 
-                                : 'Stripe Account Pending'}
-                            </h3>
-                            <p className={`text-sm ${
-                              stripeStatus === 'active' ? 'text-green-800' : 'text-yellow-800'
-                            }`}>
-                              {stripeStatus === 'active'
-                                ? 'Your account is set up and ready to receive payouts. Earnings will be automatically transferred to your bank account.'
-                                : 'Your Stripe account is being set up. Please complete the onboarding process to start receiving payouts.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {stripeStatus === 'pending' && (
-                        <div className="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                          <p className="text-sm text-accent-800 mb-3">
-                            <strong>Action Required:</strong> {
-                              stripeNeedsVerification 
-                                ? 'Your Stripe account needs identity verification. Please upload the required documents to enable payouts.'
-                                : 'Please complete your Stripe account setup to receive payouts.'
-                            }
-                          </p>
-                          <button
-                            onClick={() => {
-                              if (stripeVerificationUrl) {
-                                window.location.href = stripeVerificationUrl;
-                              } else {
-                                handleConnectStripe();
-                              }
-                            }}
-                            disabled={isConnectingStripe}
-                            className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold min-h-[44px]"
-                          >
-                            {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 {/* Verification Section */}
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
@@ -2289,7 +2189,146 @@ function ProfileContent() {
               </div>
             )}
 
-            {/* Notifications Tab */}
+            {/* Payments Tab */}
+            {activeTab === 'payments' && (
+              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6 space-y-8">
+                {/* Payment method for reservations */}
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
+                    Payment method for reservations
+                  </h2>
+                  <div className="border border-mist-200 rounded-lg p-4 sm:p-6 bg-mist-50/50">
+                    <p className="text-gray-600 text-sm sm:text-base mb-4">
+                      Add a card to pay for parking reservations quickly. Your payment method is securely stored and charged when you book a space.
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      When you complete a booking, you can save your card for future reservations. You can also add or update your payment method at checkout.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payout Account (for hosts) */}
+                <div className="pt-6 border-t border-gray-200">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-5 sm:mb-6 flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
+                    Payout account
+                  </h2>
+                  
+                  {!stripeConnected ? (
+                    <div className="text-center py-12">
+                      {pendingEarnings > 0 ? (
+                        <>
+                          <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            You have ${pendingEarnings.toFixed(2)} ready to withdraw!
+                          </h3>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            Add your payout details to receive your earnings directly to your bank account.
+                          </p>
+                          <button
+                            onClick={handleConnectStripe}
+                            disabled={isConnectingStripe}
+                            className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
+                          >
+                            {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
+                          </button>
+                          <p className="text-xs text-gray-500 mt-4">
+                            Secure setup takes just a few minutes
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            Set up your payout details after you receive your first booking. 
+                            You can list your driveway right away!
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Complete a booking to enable payouts
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className={`border rounded-lg p-4 ${
+                        stripeStatus === 'active' 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        <div className="flex items-start">
+                          <CheckCircle className={`h-5 w-5 mr-3 mt-0.5 ${
+                            stripeStatus === 'active' ? 'text-green-600' : 'text-yellow-600'
+                          }`} />
+                          <div className="flex-1">
+                            <h3 className={`font-semibold mb-1 ${
+                              stripeStatus === 'active' ? 'text-green-900' : 'text-yellow-900'
+                            }`}>
+                              {stripeStatus === 'active' 
+                                ? 'Stripe Account Connected' 
+                                : 'Stripe Account Pending'}
+                            </h3>
+                            <p className={`text-sm ${
+                              stripeStatus === 'active' ? 'text-green-800' : 'text-yellow-800'
+                            }`}>
+                              {stripeStatus === 'active'
+                                ? 'Your account is set up and ready to receive payouts. Earnings will be automatically transferred to your bank account.'
+                                : 'Your Stripe account is being set up. Please complete the onboarding process to start receiving payouts.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {stripeStatus === 'pending' && (
+                        <div className="bg-accent-50 border border-accent-200 rounded-lg p-4">
+                          <p className="text-sm text-accent-800 mb-3">
+                            <strong>Action Required:</strong> {
+                              stripeNeedsVerification 
+                                ? 'Your Stripe account needs identity verification. Please upload the required documents to enable payouts.'
+                                : 'Please complete your Stripe account setup to receive payouts.'
+                            }
+                          </p>
+                          <button
+                            onClick={() => {
+                              if (stripeVerificationUrl) {
+                                window.location.href = stripeVerificationUrl;
+                              } else {
+                                handleConnectStripe();
+                              }
+                            }}
+                            disabled={isConnectingStripe}
+                            className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold min-h-[44px]"
+                          >
+                            {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="border-t border-gray-200 pt-6">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">How payouts work</h3>
+                        <div className="space-y-3 text-sm text-gray-600">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">1</div>
+                            <p>When a renter books your parking space, they pay through our platform</p>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">2</div>
+                            <p>We transfer your earnings (minus platform fee) to your Stripe account</p>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">3</div>
+                            <p>Stripe deposits funds to your bank account (typically daily)</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Listings Tab */}
             {activeTab === 'listings' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
