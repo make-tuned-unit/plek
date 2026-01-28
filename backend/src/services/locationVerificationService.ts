@@ -268,9 +268,9 @@ export async function autoVerifyPropertyLocation(
         },
       });
 
-      // Update badge status
-      const { updatePropertyBadgeStatus } = await import('./verificationService');
-      await updatePropertyBadgeStatus(propertyId, supabase);
+      // Update badge status (verification service removed - badge functionality disabled)
+      // const { updatePropertyBadgeStatus } = await import('./verificationService');
+      // await updatePropertyBadgeStatus(propertyId, supabase);
     } else {
       // Create pending verification record for manual review
       await supabase.from('verifications').insert({
