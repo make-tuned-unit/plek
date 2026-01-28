@@ -1165,10 +1165,10 @@ function ProfileContent() {
                     )}
                     <button 
                       onClick={() => setShowAvatarModal(true)}
-                      className="absolute -bottom-1 -right-1 bg-accent-500/90 text-white rounded-full p-2 hover:bg-accent-600 transition-all shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                      className="absolute bottom-0 right-0 bg-accent-500 text-white rounded-full p-1.5 hover:bg-accent-600 transition-all shadow-lg border-2 border-white touch-target"
                       title="Change profile picture"
                     >
-                      <Camera className="h-3 w-3" />
+                      <Camera className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1194,15 +1194,15 @@ function ProfileContent() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-3 py-2.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap min-h-[44px] touch-target font-medium ${
+                      className={`flex items-center justify-center px-3 py-2.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap min-h-[44px] min-w-[44px] touch-target font-medium ${
                         activeTab === tab.id
                           ? 'bg-accent-500 text-white shadow-sm'
                           : 'bg-white/60 text-gray-700 active:bg-white/80 border border-white/30'
                       }`}
+                      title={tab.label}
                     >
-                      <Icon className="h-4 w-4 sm:mr-2 flex-shrink-0" />
+                      <Icon className="h-5 w-5 sm:mr-2 flex-shrink-0" />
                       <span className="hidden sm:inline">{tab.label}</span>
-                      <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
                     </button>
                   )
                 })}
@@ -1239,7 +1239,7 @@ function ProfileContent() {
                       )}
                       <button 
                         onClick={() => setShowAvatarModal(true)}
-                        className="absolute bottom-4 right-0 bg-accent-500 text-white rounded-full p-2 hover:bg-accent-600 transition-colors shadow-lg"
+                        className="absolute bottom-2 right-2 bg-accent-500 text-white rounded-full p-2 hover:bg-accent-600 transition-colors shadow-lg border-2 border-white"
                         title="Change profile picture"
                       >
                         <Camera className="h-4 w-4" />
@@ -1499,7 +1499,9 @@ function ProfileContent() {
                               : 'bg-gray-100 text-gray-700 active:bg-gray-200'
                           }`}
                         >
-                          My Bookings ({bookings.length})
+                          <span className="hidden sm:inline">My Bookings</span>
+                          <span className="sm:hidden">Bookings</span>
+                          <span className="ml-1">({bookings.length})</span>
                         </button>
                       )}
                       {hostBookings.length > 0 && (
@@ -1511,7 +1513,9 @@ function ProfileContent() {
                               : 'bg-gray-100 text-gray-700 active:bg-gray-200'
                           }`}
                         >
-                          At My Listings ({hostBookings.length})
+                          <span className="hidden sm:inline">At My Listings</span>
+                          <span className="sm:hidden">Listings</span>
+                          <span className="ml-1">({hostBookings.length})</span>
                         </button>
                       )}
                     </div>
