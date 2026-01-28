@@ -72,7 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
     try {
       const response = await apiService.login({ email, password })
@@ -80,15 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('auth_token', response.data.token)
         setUser(response.data.user)
         setIsLoading(false)
-        return true
+        return { success: true }
       }
       setIsLoading(false)
-      return false
-    } catch (error) {
+      return { success: false, error: response.message || 'Login failed' }
+    } catch (error: any) {
       console.error('Login failed:', error)
       localStorage.removeItem('auth_token')
       setIsLoading(false)
-      return false
+      const errorMessage =
+        error?.response?.data?.message || error?.message || 'An error occurred during login'
+      return { success: false, error: errorMessage }
     }
   }
 

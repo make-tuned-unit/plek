@@ -9,12 +9,22 @@ interface ApiResponse<T = any> {
 
 class ApiService {
   private getBaseURL(): string {
-    // Always use relative URL in browser to work with Next.js rewrites
+    // Prefer explicit backend URL when provided (staging/production).
+    // This avoids relying on Next.js rewrites that depend on BACKEND_URL.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (apiUrl && (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))) {
+      // Remove trailing /api if present, we'll add it back
+      const baseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+      return `${baseUrl}/api`;
+    }
+
+    // Fallback for local development: use relative URL and Next.js rewrites.
     if (typeof window !== 'undefined') {
       return '/api';
     }
-    // Server-side: use full URL
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+    // Server-side fallback.
+    return 'http://localhost:8000/api';
   }
 
   private async request<T>(
