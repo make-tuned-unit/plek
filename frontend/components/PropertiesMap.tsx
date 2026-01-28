@@ -492,8 +492,8 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
   }
 
   return (
-    <div className={`relative ${className}`}>
-      <div ref={mapContainer} className="w-full h-full min-h-[400px] rounded-lg" />
+    <div className={`relative w-full h-full ${className}`}>
+      <div ref={mapContainer} className="w-full h-full rounded-lg" />
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
           <div className="text-gray-500">Loading map...</div>

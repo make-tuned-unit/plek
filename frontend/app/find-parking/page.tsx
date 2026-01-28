@@ -721,13 +721,13 @@ function FindParkingContent() {
           <div className="lg:col-span-3">
             {showMap ? (
               /* Map View */
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-250px)] min-h-[600px]">
                 <PropertiesMap
                   properties={filteredProperties}
                   userLocation={userLocation}
                   selectedLocation={selectedLocation ? { lat: selectedLocation.center[1], lng: selectedLocation.center[0] } : undefined}
                   onPropertyClick={handleOpenBooking}
-                  className="h-[calc(100vh-250px)] min-h-[600px]"
+                  className="w-full h-full"
                 />
               </div>
             ) : (
