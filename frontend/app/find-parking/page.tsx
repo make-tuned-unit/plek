@@ -536,7 +536,7 @@ function FindParkingContent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Filters Sidebar - Always Visible */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-24 border border-mist-200">
@@ -718,7 +718,7 @@ function FindParkingContent() {
           </div>
 
           {/* Main Content Area - Map or List View */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             {showMap ? (
               /* Map View */
               <div className="bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-250px)] min-h-[600px]">
