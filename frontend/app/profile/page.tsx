@@ -383,8 +383,8 @@ function ProfileContent() {
         return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
       
       case 'payment_received':
-        // Navigate to payments tab or bookings tab
-        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : `/profile?tab=payments`
+        // Navigate to profile tab (payments section) or bookings tab
+        return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : `/profile?tab=profile`
       
       case 'review_received':
         // Navigate to reviews tab
