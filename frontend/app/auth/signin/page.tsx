@@ -32,16 +32,17 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInForm) => {
     try {
-      const success = await login(data.email, data.password)
-      if (success) {
+      const result = await login(data.email, data.password)
+      if (result.success) {
         toast.success('Successfully signed in!')
         router.push('/profile')
       } else {
-        toast.error('Invalid email or password')
+        // Show the actual error message from the backend
+        toast.error(result.error || 'Invalid email or password')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error)
-      toast.error('An error occurred during sign in')
+      toast.error(error?.message || 'An error occurred during sign in')
     }
   }
 
