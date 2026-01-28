@@ -9,15 +9,7 @@ interface ApiResponse<T = any> {
 
 class ApiService {
   private getBaseURL(): string {
-    // Use full backend URL if available (for production/staging)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (apiUrl && (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))) {
-      // Remove trailing /api if present, we'll add it back
-      const baseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
-      return `${baseUrl}/api`;
-    }
-    
-    // Fallback to relative URL for local development with rewrites
+    // Always use relative URL in browser to work with Next.js rewrites
     if (typeof window !== 'undefined') {
       return '/api';
     }
@@ -51,26 +43,14 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Handle non-JSON responses (like 404 or HTML error pages)
+      // Handle non-JSON responses (like 404)
       let data;
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        try {
-          const text = await response.text();
-          // Try to parse JSON, handle malformed JSON
-          if (text.trim().startsWith('"') && !text.trim().startsWith('{"')) {
-            // Response might be a quoted string instead of JSON object
-            throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
-          }
-          data = JSON.parse(text);
-        } catch (parseError: any) {
-          // If JSON parsing fails, try to extract error message
-          const text = await response.text().catch(() => 'Unknown error');
-          throw new Error(`Invalid response format: ${text.substring(0, 200)}`);
-        }
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
       } else {
         // If response is not JSON, create a generic error
-        const text = await response.text().catch(() => response.statusText);
+        const text = await response.text();
         throw new Error(`HTTP error! status: ${response.status} - ${text || response.statusText}`);
       }
 
@@ -153,54 +133,6 @@ class ApiService {
     });
   }
 
-  async uploadAvatar(file: File): Promise<ApiResponse<{ avatar: string }>> {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    
-    const url = `${this.getBaseURL()}/auth/avatar`;
-    const token = localStorage.getItem('auth_token');
-    
-    if (!token) {
-      throw new Error('No authentication token found. Please sign in again.');
-    }
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        // Don't set Content-Type - browser will set it with boundary for FormData
-      },
-      body: formData,
-    });
-    
-    const contentType = response.headers.get('content-type') || '';
-    let data;
-    if (contentType.includes('application/json')) {
-      try {
-        const text = await response.text();
-        data = JSON.parse(text);
-      } catch (parseError: any) {
-        throw new Error(`Invalid JSON response: ${parseError.message}`);
-      }
-    } else {
-      const text = await response.text();
-      throw new Error(`Invalid response format: ${text.substring(0, 200)}`);
-    }
-    
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('auth_token');
-        const errorMessage = data?.message || data?.error || 'Authentication failed. Please sign in again.';
-        throw new Error(errorMessage);
-      }
-      const error: any = new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
-      error.response = { data, status: response.status };
-      throw error;
-    }
-    
-    return data;
-  }
-
   // Property endpoints
   async getProperties(filters?: any): Promise<ApiResponse<{ properties: any[] }>> {
     const queryParams = filters ? `?${new URLSearchParams(filters).toString()}` : '';
@@ -253,9 +185,8 @@ class ApiService {
     });
   }
 
-  async getUserBookings(role?: 'renter' | 'host'): Promise<ApiResponse<{ bookings: any[] }>> {
-    const params = role ? `?role=${role}` : '';
-    return this.request(`/bookings${params}`);
+  async getUserBookings(): Promise<ApiResponse<{ bookings: any[] }>> {
+    return this.request('/bookings');
   }
 
   async cancelBooking(bookingId: string): Promise<ApiResponse> {
@@ -264,31 +195,20 @@ class ApiService {
     });
   }
 
-  async generateReviewReminders(bookingId?: string): Promise<ApiResponse<{
-    processed: number;
-    created: number;
-    message: string;
-  }>> {
-    return this.request('/bookings/generate-review-reminders', {
-      method: 'POST',
-      body: JSON.stringify({ bookingId }),
-    });
+  async checkAvailability(propertyId: string, startTime: string, endTime: string): Promise<ApiResponse<{ isAvailable: boolean; hasConflict?: boolean }>> {
+    return this.request(`/properties/${propertyId}/availability?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`);
   }
 
   // Message endpoints
-  async getMessages(): Promise<ApiResponse<{ conversations: any[] }>> {
+  async getMessages(): Promise<ApiResponse<{ messages: any[] }>> {
     return this.request('/messages');
   }
 
-  async getBookingMessages(bookingId: string): Promise<ApiResponse<{ messages: any[]; booking: any }>> {
-    return this.request(`/messages/booking/${bookingId}`);
+  async getBookingMessages(bookingId: string): Promise<ApiResponse<{ messages: any[]; booking?: any }>> {
+    return this.request(`/messages?bookingId=${bookingId}`);
   }
 
-  async sendMessage(messageData: {
-    bookingId: string;
-    content: string;
-    messageType?: string;
-  }): Promise<ApiResponse<{ message: any }>> {
+  async sendMessage(messageData: any): Promise<ApiResponse<{ message: any }>> {
     return this.request('/messages', {
       method: 'POST',
       body: JSON.stringify(messageData),
@@ -296,173 +216,14 @@ class ApiService {
   }
 
   // Notification endpoints
-  async getNotifications(params?: { isRead?: boolean; type?: string }): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams();
-    if (params?.isRead !== undefined) {
-      queryParams.append('isRead', params.isRead.toString());
-    }
-    if (params?.type) {
-      queryParams.append('type', params.type);
-    }
-    const queryString = queryParams.toString();
-    return this.request(`/notifications${queryString ? `?${queryString}` : ''}`);
+  async getNotifications(): Promise<ApiResponse<{ notifications: any[] }>> {
+    return this.request('/notifications');
   }
 
   async markNotificationAsRead(id: string): Promise<ApiResponse> {
     return this.request(`/notifications/${id}/read`, {
       method: 'PATCH',
     });
-  }
-
-  async markAllNotificationsAsRead(): Promise<ApiResponse> {
-    return this.request('/notifications/read-all', {
-      method: 'PATCH',
-    });
-  }
-
-  async getUnreadNotificationCount(): Promise<ApiResponse<{ count: number }>> {
-    return this.request('/notifications/unread-count');
-  }
-
-  // Verification endpoints
-  async getVerificationStatus(): Promise<ApiResponse<{
-    host: {
-      emailVerified: boolean;
-      identityVerified: boolean;
-      stripePayoutVerified: boolean;
-      badgeEarned: boolean;
-      verificationStatus: string;
-    };
-    properties: Array<{
-      id: string;
-      photosVerified: boolean;
-      locationVerified: boolean;
-      badgeEarned: boolean;
-      verificationStatus: string;
-    }>;
-  }>> {
-    return this.request('/verification/status');
-  }
-
-  async submitIdentityVerification(data: {
-    documentType: string;
-    frontImageUrl: string;
-    backImageUrl?: string;
-    notes?: string;
-  }): Promise<ApiResponse<{
-    verificationId: string;
-    status: string;
-    message: string;
-  }>> {
-    return this.request('/verification/submit-identity', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async getVerificationHistory(): Promise<ApiResponse<{
-    verifications: Array<{
-      id: string;
-      verification_type: string;
-      status: string;
-      submitted_at: string;
-      verified_at?: string;
-      rejection_reason?: string;
-    }>;
-  }>> {
-    return this.request('/verification/history');
-  }
-
-  // Admin verification endpoints
-  async getPendingVerifications(params?: { type?: string; limit?: number; offset?: number }): Promise<ApiResponse<{
-    verifications: Array<{
-      id: string;
-      type: string;
-      status: string;
-      submittedAt: string;
-      documents: any;
-      user?: {
-        id: string;
-        name: string;
-        email: string;
-        phone?: string;
-        address: {
-          street?: string;
-          city?: string;
-          state?: string;
-          zipCode?: string;
-          country?: string;
-        };
-      };
-      property?: {
-        id: string;
-        title: string;
-        address: string;
-      };
-    }>;
-    total: number;
-  }>> {
-    const queryParams = new URLSearchParams();
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.offset) queryParams.append('offset', params.offset.toString());
-    const queryString = queryParams.toString();
-    return this.request(`/admin/verifications/pending${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async getVerificationDetails(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/admin/verifications/${id}`);
-  }
-
-  async approveVerification(id: string, notes?: string): Promise<ApiResponse<{
-    verificationId: string;
-    status: string;
-    badgeUpdated: boolean;
-  }>> {
-    return this.request(`/admin/verifications/${id}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({ notes }),
-    });
-  }
-
-  async rejectVerification(id: string, reason: string, notes?: string): Promise<ApiResponse<{
-    verificationId: string;
-    status: string;
-    rejectionReason: string;
-  }>> {
-    return this.request(`/admin/verifications/${id}/reject`, {
-      method: 'POST',
-      body: JSON.stringify({ reason, notes }),
-    });
-  }
-
-  // Review endpoints
-  async createReview(reviewData: {
-    bookingId: string;
-    rating: number;
-    comment?: string;
-    cleanliness?: number;
-    communication?: number;
-    checkIn?: number;
-    accuracy?: number;
-    value?: number;
-  }): Promise<ApiResponse<{ review: any }>> {
-    return this.request('/reviews', {
-      method: 'POST',
-      body: JSON.stringify(reviewData),
-    });
-  }
-
-  async getBookingReviews(bookingId: string): Promise<ApiResponse<any[]>> {
-    return this.request(`/reviews/booking/${bookingId}`);
-  }
-
-  async getUserReviews(userId: string): Promise<ApiResponse<any[]>> {
-    return this.request(`/reviews/user/${userId}`);
-  }
-
-  async checkReviewEligibility(bookingId: string): Promise<ApiResponse<{ canReview: boolean; hasReviewed: boolean }>> {
-    return this.request(`/reviews/check/${bookingId}`);
   }
 
   // Admin endpoints
@@ -489,34 +250,9 @@ class ApiService {
     });
   }
 
-  async getAdminStats(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<{
-    bookings: number;
-    users: number;
-    listings: number;
-    totalBookingValue: number;
-    totalServiceFeeRevenue: number;
-    dateRange: { start: string | null; end: string | null };
-  }>> {
-    const queryParams = new URLSearchParams();
-    if (params?.startDate) {
-      queryParams.append('startDate', params.startDate);
-    }
-    if (params?.endDate) {
-      queryParams.append('endDate', params.endDate);
-    }
-    const queryString = queryParams.toString();
-    return this.request(`/admin/stats${queryString ? `?${queryString}` : ''}`);
-  }
-
   // Stripe Connect
   async createConnectAccount(): Promise<ApiResponse<{ url: string; accountId: string }>> {
     return this.request('/payments/connect/create', {
-      method: 'POST',
-    });
-  }
-
-  async createOnboardingLink(): Promise<ApiResponse<{ url?: string; accountId?: string; pendingEarnings: number; message?: string; needsEarnings?: boolean }>> {
-    return this.request('/payments/connect/onboarding-link', {
       method: 'POST',
     });
   }
@@ -529,25 +265,18 @@ class ApiService {
     needsVerification?: boolean;
     verificationUrl?: string;
     requirements?: string[];
-    pendingEarnings?: number;
-    hasEarnings?: boolean;
-    needsOnboarding?: boolean;
-    accountId?: string;
-    detailsSubmitted?: boolean;
   }>> {
     return this.request('/payments/connect/status');
   }
 
   // Payments
-  async createPaymentIntent(
-    bookingIdOrPayload: string | {
-      propertyId: string;
-      startTime: string;
-      endTime: string;
-      vehicleInfo?: any;
-      specialRequests?: string;
-    }
-  ): Promise<ApiResponse<{
+  async createPaymentIntent(payload: {
+    propertyId: string;
+    startTime: string;
+    endTime: string;
+    vehicleInfo?: any;
+    specialRequests?: string;
+  }): Promise<ApiResponse<{
     clientSecret: string;
     paymentIntentId: string;
     pricing?: {
@@ -557,11 +286,6 @@ class ApiService {
       hostServiceFee: number;
     };
   }>> {
-    // If it's a string, treat it as bookingId
-    const payload = typeof bookingIdOrPayload === 'string' 
-      ? { bookingId: bookingIdOrPayload }
-      : bookingIdOrPayload;
-    
     return this.request('/payments', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -582,17 +306,30 @@ class ApiService {
     return this.request('/payments');
   }
 
-  async checkAvailability(propertyId: string, startTime: string, endTime: string): Promise<ApiResponse<{
-    isAvailable: boolean;
-    hasConflict?: boolean;
-    conflictingBookings?: any[];
-  }>> {
-    const params = new URLSearchParams({
-      startTime,
-      endTime,
+  // Review endpoints
+  async createReview(reviewData: {
+    bookingId: string;
+    rating: number;
+    comment?: string;
+    reviewedUserId?: string;
+    cleanliness?: number;
+    communication?: number;
+    checkIn?: number;
+    accuracy?: number;
+    value?: number;
+  }): Promise<ApiResponse<{ review: any }>> {
+    return this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
     });
+  }
 
-    return this.request(`/bookings/availability/${propertyId}?${params.toString()}`);
+  async getReviews(userId?: string, propertyId?: string): Promise<ApiResponse<{ reviews: any[] }>> {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (propertyId) params.append('propertyId', propertyId);
+    const query = params.toString();
+    return this.request(`/reviews${query ? `?${query}` : ''}`);
   }
 }
 

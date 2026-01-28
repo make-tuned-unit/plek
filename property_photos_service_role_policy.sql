@@ -4,8 +4,8 @@ DROP POLICY IF EXISTS "Service role can manage property photos" ON public.proper
 
 CREATE POLICY "Service role can manage property photos" ON public.property_photos
   FOR ALL
-  USING ((select auth.role()) = 'service_role')
-  WITH CHECK ((select auth.role()) = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 
 

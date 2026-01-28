@@ -55,118 +55,118 @@ export function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-lg border-b border-white/20 transition-all duration-300">
+      <div className="max-w-7xl mx-auto container-padding">
+        <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center group transition-transform duration-200 hover:scale-105">
             <img 
               src="/logo.png?v=2" 
               alt="plekk logo" 
-              className="flex-shrink-0 h-12 w-auto object-contain"
+              className="flex-shrink-0 h-10 md:h-12 w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
               style={{ maxHeight: '48px', maxWidth: '300px' }}
             />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-1">
             <Link 
               href="/find-parking" 
-              className="text-gray-600 hover:text-gray-900 flex items-center"
+              className="px-4 py-2 text-charcoal-700 hover:text-accent-600 flex items-center gap-2 rounded-lg transition-all duration-200 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 font-medium text-sm"
             >
-              <MapPin className="h-4 w-4 mr-1" />
+              <MapPin className="h-4 w-4" />
               Find Parking
             </Link>
             <Link 
               href="/list-your-driveway" 
               onClick={handleListDrivewayClick}
-              className="text-gray-600 hover:text-gray-900"
+              className="px-4 py-2 text-charcoal-700 hover:text-accent-600 rounded-lg transition-all duration-200 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 font-medium text-sm"
             >
               List Your Driveway
             </Link>
           </div>
 
           {/* Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
             {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
+                  className="flex items-center space-x-2 px-3 py-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-white/60 backdrop-blur-sm rounded-lg border border-transparent hover:border-white/30 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center space-x-2">
                     {user.avatar && (
                       <img 
                         src={user.avatar} 
                         alt={user.name}
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full ring-2 ring-accent-200 hover:ring-accent-400 transition-all duration-200"
                       />
                     )}
-                    <span className="text-sm font-medium">{user.name}</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    <span className="text-sm font-semibold">{user.name}</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </div>
                 </button>
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                  <div className="absolute right-0 mt-2 w-56 bg-white/90 backdrop-blur-xl rounded-xl shadow-2xl py-2 z-50 border border-white/30 animate-scale-in overflow-hidden">
                     <Link
                       href="/profile"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
                     >
-                      <User className="h-4 w-4 mr-3" />
+                      <User className="h-4 w-4 mr-3 text-mist-600" />
                       Profile
                     </Link>
                     <Link
                       href="/profile?tab=bookings"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
                     >
-                      <Calendar className="h-4 w-4 mr-3" />
+                      <Calendar className="h-4 w-4 mr-3 text-mist-600" />
                       My Bookings
                     </Link>
                     <Link
                       href="/profile?tab=listings"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
                     >
-                      <Car className="h-4 w-4 mr-3" />
+                      <Car className="h-4 w-4 mr-3 text-mist-600" />
                       My Listings
                     </Link>
                     <Link
                       href="/profile?tab=payments"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
                     >
-                      <CreditCard className="h-4 w-4 mr-3" />
+                      <CreditCard className="h-4 w-4 mr-3 text-mist-600" />
                       Payments
                     </Link>
                     <Link
                       href="/profile?tab=settings"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
                     >
-                      <Settings className="h-4 w-4 mr-3" />
+                      <Settings className="h-4 w-4 mr-3 text-mist-600" />
                       Settings
                     </Link>
                     {(user?.role === 'admin' || user?.role === 'super_admin') && (
                       <>
-                        <div className="border-t border-gray-100 my-1"></div>
+                        <div className="border-t border-mist-200 my-1"></div>
                         <Link
                           href="/admin"
                           onClick={handleProfileClick}
-                          className="flex items-center px-4 py-2 text-sm text-accent-700 hover:bg-mist-100 font-medium"
+                          className="flex items-center px-4 py-2.5 text-sm text-accent-700 hover:bg-accent-500/10 font-semibold backdrop-blur-sm transition-colors duration-150"
                         >
-                          <Shield className="h-4 w-4 mr-3" />
+                          <Shield className="h-4 w-4 mr-3 text-accent-600" />
                           Admin Dashboard
                         </Link>
                       </>
                     )}
-                    <div className="border-t border-gray-100 my-1"></div>
+                    <div className="border-t border-mist-200 my-1"></div>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-500/10 backdrop-blur-sm transition-colors duration-150"
                     >
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out
@@ -178,13 +178,13 @@ export function Navigation() {
               <>
                 <Link 
                   href="/auth/signin" 
-                  className="text-gray-600 hover:text-gray-900"
+                  className="px-4 py-2 text-charcoal-700 hover:text-charcoal-900 font-medium text-sm transition-colors duration-200"
                 >
                   Sign In
                 </Link>
                 <Link 
                   href="/auth/signup" 
-                  className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600"
+                  className="btn-primary px-6 py-2.5 text-sm shadow-lg"
                 >
                   Sign Up
                 </Link>
@@ -196,7 +196,8 @@ export function Navigation() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-600 hover:text-gray-900"
+              className="p-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-mist-100 rounded-lg transition-colors duration-200 touch-target focus-ring"
+              aria-label="Toggle menu"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -205,108 +206,108 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t">
-            <div className="space-y-4">
+          <div className="md:hidden py-4 border-t border-mist-200 animate-slide-down">
+            <div className="space-y-1">
               <Link 
                 href="/find-parking" 
-                className="block text-gray-600 hover:text-gray-900 flex items-center"
+                className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <MapPin className="h-4 w-4 mr-2" />
+                <MapPin className="h-5 w-5" />
                 Find Parking
               </Link>
               <button 
                 type="button"
                 onClick={handleListDrivewayClick}
-                className="block text-left w-full text-gray-600 hover:text-gray-900"
+                className="block text-left w-full px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 rounded-lg transition-all duration-150 font-medium"
               >
                 List Your Driveway
               </button>
               {user && (
                 <>
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center space-x-2 mb-4">
+                  <div className="pt-4 border-t border-mist-200">
+                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/60 backdrop-blur-sm border border-white/30 rounded-lg shadow-sm">
                       {user.avatar && (
                         <img 
                           src={user.avatar} 
                           alt={user.name}
-                          className="w-8 h-8 rounded-full"
+                          className="w-10 h-10 rounded-full ring-2 ring-accent-200"
                         />
                       )}
-                      <span className="text-sm text-gray-700 font-medium">{user.name}</span>
+                      <span className="text-sm text-charcoal-800 font-semibold">{user.name}</span>
                     </div>
                     <Link
                       href="/profile"
-                      className="block text-gray-600 hover:text-gray-900 flex items-center mb-2"
+                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <User className="h-4 w-4 mr-2" />
+                      <User className="h-5 w-5" />
                       Profile
                     </Link>
                     <Link
                       href="/profile?tab=bookings"
-                      className="block text-gray-600 hover:text-gray-900 flex items-center mb-2"
+                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <Calendar className="h-4 w-4 mr-2" />
+                      <Calendar className="h-5 w-5" />
                       My Bookings
                     </Link>
                     <Link
                       href="/profile?tab=listings"
-                      className="block text-gray-600 hover:text-gray-900 flex items-center mb-2"
+                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <Car className="h-4 w-4 mr-2" />
+                      <Car className="h-5 w-5" />
                       My Listings
                     </Link>
                     <Link
                       href="/profile?tab=payments"
-                      className="block text-gray-600 hover:text-gray-900 flex items-center mb-2"
+                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <CreditCard className="h-4 w-4 mr-2" />
+                      <CreditCard className="h-5 w-5" />
                       Payments
                     </Link>
                     <Link
                       href="/profile?tab=settings"
-                      className="block text-gray-600 hover:text-gray-900 flex items-center mb-2"
+                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <Settings className="h-4 w-4 mr-2" />
+                      <Settings className="h-5 w-5" />
                       Settings
                     </Link>
                     {(user?.role === 'admin' || user?.role === 'super_admin') && (
                       <Link
                         href="/admin"
-                        className="block text-accent-600 hover:text-accent-700 flex items-center mb-2 font-medium"
+                        className="block px-4 py-3 text-accent-700 hover:text-accent-800 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150 font-semibold"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Shield className="h-4 w-4 mr-2" />
+                        <Shield className="h-5 w-5" />
                         Admin Dashboard
                       </Link>
                     )}
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left text-red-600 hover:text-red-700 flex items-center"
+                      className="w-full text-left px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-500/10 backdrop-blur-sm border border-transparent hover:border-red-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
                     >
-                      <LogOut className="h-4 w-4 mr-2" />
+                      <LogOut className="h-5 w-5" />
                       Sign Out
                     </button>
                   </div>
                 </>
               )}
               {!user && (
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t border-mist-200 space-y-2">
                   <Link 
                     href="/auth/signin" 
-                    className="block text-gray-600 hover:text-gray-900 mb-2"
+                    className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 rounded-lg transition-all duration-150 font-medium text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign In
                   </Link>
                   <Link 
                     href="/auth/signup" 
-                    className="block bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 text-center"
+                    className="block btn-primary text-center shadow-lg"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up

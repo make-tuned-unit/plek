@@ -14,50 +14,6 @@ function ConfirmEmailContent() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    // Check for Supabase redirect with hash fragment (e.g., #access_token=...)
-    const hash = window.location.hash
-    if (hash) {
-      const hashParams = new URLSearchParams(hash.substring(1)) // Remove the #
-      const accessToken = hashParams.get('access_token')
-      const expiresAt = hashParams.get('expires_at')
-      const refreshToken = hashParams.get('refresh_token')
-      const type = hashParams.get('type')
-      
-      if (accessToken) {
-        console.log('Found Supabase token in hash, logging in...', { 
-          hasToken: !!accessToken, 
-          tokenLength: accessToken.length,
-          type 
-        })
-        // Keep status as loading while processing
-        setStatus('loading')
-        // Use the token to log in (works for both signup and email confirmation)
-        loginWithToken(accessToken)
-          .then((success) => {
-            console.log('Login result:', success)
-            if (success) {
-              setStatus('success')
-              setMessage('Email confirmed! You are now logged in.')
-              // Clear the hash from URL immediately
-              window.history.replaceState(null, '', window.location.pathname)
-              // Redirect to profile after 1.5 seconds
-              setTimeout(() => {
-                router.push('/profile')
-              }, 1500)
-            } else {
-              setStatus('error')
-              setMessage('Email confirmed, but login failed. Please try logging in manually.')
-            }
-          })
-          .catch((err) => {
-            console.error('Login error:', err)
-            setStatus('error')
-            setMessage('Email confirmed, but login failed. Please try logging in manually.')
-          })
-        return
-      }
-    }
-
     const token = searchParams.get('token')
     const success = searchParams.get('success')
     const error = searchParams.get('error')
@@ -106,18 +62,13 @@ function ConfirmEmailContent() {
       } else {
         setMessage('Failed to confirm email. The link may be invalid or expired.')
       }
-    } else if (!hash) {
-      // Only show error if we don't have a hash (hash processing happens above)
-      // Give a small delay to allow hash processing to complete
-      setTimeout(() => {
-        // Check again if status is still loading and no hash
-        if (status === 'loading' && !window.location.hash) {
-          setStatus('error')
-          setMessage('Invalid confirmation link.')
-        }
-      }, 500)
+    } else {
+      // No token - check if this is coming from Supabase redirect
+      // Supabase might redirect here after verifying, but we need to check backend
+      setStatus('error')
+      setMessage('Invalid confirmation link.')
     }
-  }, [searchParams, loginWithToken, router, status])
+  }, [searchParams, loginWithToken, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
@@ -168,10 +119,10 @@ function ConfirmEmailContent() {
 export default function ConfirmEmailPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <Loader2 className="h-16 w-16 text-accent-500 mx-auto mb-6 animate-spin" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading...</h1>
         </div>
       </div>
     }>

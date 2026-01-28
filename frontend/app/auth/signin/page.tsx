@@ -55,7 +55,7 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 animate-scale-in">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -67,7 +67,7 @@ export default function SignInPage() {
                   {...register('email')}
                   type="email"
                   id="email"
-                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10"
                   placeholder="Enter your email"
                 />
               </div>
@@ -86,7 +86,7 @@ export default function SignInPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10 pr-12"
                   placeholder="Enter your password"
                 />
                 <button
@@ -125,7 +125,7 @@ export default function SignInPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-accent-500 text-white py-3 px-4 rounded-lg hover:bg-accent-600 focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full btn-primary py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>

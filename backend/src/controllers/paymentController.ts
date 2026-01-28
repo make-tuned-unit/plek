@@ -157,15 +157,13 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
     }
     
     // Create new Express account
-    // Only request transfers capability (not card_payments) to minimize KYC requirements
-    // Default to CA (Canada) for easier onboarding, but allow override from user profile
     console.log('[Stripe Connect] Creating new Express account for user:', userId);
     const account = await getStripe().accounts.create({
       type: 'express',
-      country: existingUser?.country || 'CA', // Default to Canada for easier onboarding
+      country: existingUser?.country || 'US',
       email: existingUser?.email,
       capabilities: {
-        // Only request transfers - we use destination charges, so hosts don't need card_payments
+        card_payments: { requested: true },
         transfers: { requested: true },
       },
       metadata: {
@@ -238,33 +236,19 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
     
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('stripe_account_id, pending_earnings, payouts_enabled, details_submitted')
+      .select('stripe_account_id')
       .eq('id', userId)
       .single();
     
     console.log('[Stripe Status] User query result:', { user, error: userError });
     
-    // Get pending earnings from bookings if not in user record
-    const { data: eligibleBookings } = await supabase
-      .from('bookings')
-      .select('host_net_amount')
-      .eq('host_id', userId)
-      .in('payout_status', ['pending', 'eligible_for_payout'])
-      .gt('host_net_amount', 0);
-
-    const totalEligible = eligibleBookings?.reduce((sum: number, b: any) => 
-      sum + parseFloat(b.host_net_amount || 0), 0) || 0;
-    const pendingEarnings = Math.max(parseFloat(user?.pending_earnings || '0'), totalEligible);
-
     if (!user?.stripe_account_id) {
       console.log('[Stripe Status] No account ID found for user:', userId);
       res.json({ 
         success: true,
         data: {
           connected: false,
-          needsOnboarding: true,
-          pendingEarnings: pendingEarnings,
-          hasEarnings: pendingEarnings > 0,
+          needsOnboarding: true 
         }
       });
       return;
@@ -329,14 +313,12 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
         connected: true,
         accountId: account.id,
         status: status,
-        payoutsEnabled: account.payouts_enabled || false,
-        chargesEnabled: account.charges_enabled || false,
-        detailsSubmitted: account.details_submitted || false,
+        payoutsEnabled: account.payouts_enabled,
+        chargesEnabled: account.charges_enabled,
+        detailsSubmitted: account.details_submitted,
         needsVerification: hasPendingRequirements,
         verificationUrl: verificationUrl,
         requirements: account.requirements?.currently_due || [],
-        pendingEarnings: pendingEarnings,
-        hasEarnings: pendingEarnings > 0,
       }
     });
   } catch (error: any) {
@@ -344,117 +326,6 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
     res.status(500).json({
       success: false,
       error: 'Failed to get account status',
-      message: error.message,
-    });
-  }
-};
-
-// @desc    Create onboarding link (delayed onboarding - only when earnings exist)
-// @route   POST /api/payments/connect/onboarding-link
-// @access  Private
-export const createOnboardingLink = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = (req as any).user.id;
-    const supabase = getSupabaseClient();
-    
-    // Get user with pending earnings
-    const { data: user } = await supabase
-      .from('users')
-      .select('stripe_account_id, email, first_name, last_name, country, pending_earnings')
-      .eq('id', userId)
-      .single();
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-      return;
-    }
-
-    // Check if user has pending earnings
-    const pendingEarnings = parseFloat(user.pending_earnings || '0');
-    const hasEarnings = pendingEarnings > 0;
-
-    // Also check for bookings eligible for payout
-    const { data: eligibleBookings } = await supabase
-      .from('bookings')
-      .select('id, host_net_amount')
-      .eq('host_id', userId)
-      .in('payout_status', ['pending', 'eligible_for_payout'])
-      .gt('host_net_amount', 0);
-
-    const totalEligible = eligibleBookings?.reduce((sum: number, b: any) => 
-      sum + parseFloat(b.host_net_amount || 0), 0) || 0;
-
-    const totalEarnings = Math.max(pendingEarnings, totalEligible);
-
-    // If no earnings, return error (onboarding should only be prompted when money is waiting)
-    if (totalEarnings <= 0) {
-      res.status(400).json({
-        success: false,
-        error: 'No earnings available. Set up payouts when you have earnings from bookings.',
-        data: {
-          pendingEarnings: 0,
-          needsEarnings: true,
-        },
-      });
-      return;
-    }
-
-    let accountId = user.stripe_account_id;
-    let accountLink;
-
-    if (!accountId) {
-      // Create new Express account
-      console.log('[Delayed Onboarding] Creating new Express account for user with earnings:', userId);
-      const account = await getStripe().accounts.create({
-        type: 'express',
-        country: user.country || 'CA', // Default to Canada
-        email: user.email,
-        capabilities: {
-          transfers: { requested: true }, // Only transfers, not card_payments
-        },
-        metadata: {
-          user_id: userId,
-          platform: 'plekk',
-        },
-      });
-
-      accountId = account.id;
-
-      // Save account ID to user
-      await supabase
-        .from('users')
-        .update({
-          stripe_account_id: account.id,
-          stripe_account_status: 'pending',
-        })
-        .eq('id', userId);
-    }
-
-    // Create account link for onboarding
-    accountLink = await getStripe().accountLinks.create({
-      account: accountId,
-      refresh_url: `${process.env['FRONTEND_URL']}/profile?tab=payments&stripe_refresh=true`,
-      return_url: `${process.env['FRONTEND_URL']}/profile?tab=payments&stripe_success=true`,
-      type: 'account_onboarding',
-    });
-
-    res.json({
-      success: true,
-      data: {
-        url: accountLink.url,
-        accountId: accountId,
-        pendingEarnings: totalEarnings,
-        message: `You have $${totalEarnings.toFixed(2)} ready to withdraw. Complete setup to get paid.`,
-      },
-    });
-  } catch (error: any) {
-    console.error('Error creating onboarding link:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create onboarding link',
       message: error.message,
     });
   }
@@ -481,8 +352,6 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
 
-    // Booking is created only after payment succeeds
-    // Payment intent is created directly from booking details
     if (!propertyId || !startTime || !endTime) {
       res.status(400).json({
         success: false,
@@ -594,65 +463,56 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // Allow bookings even if host hasn't set up Stripe account yet
-    // Earnings will be tracked and host can set up payouts later
-    // This enables Airbnb-style delayed onboarding
+    if (!property.host?.stripe_account_id) {
+      res.status(400).json({
+        success: false,
+        error: 'Host has not set up payment account. Please contact support.',
+      });
+      return;
+    }
+
+    if (property.host?.stripe_account_status !== 'active') {
+      res.status(400).json({
+        success: false,
+        error: 'Host payment account is not yet active. Please try again later.',
+      });
+      return;
+    }
 
     const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } =
       calculateBookingPriceForProperty(property, startDate, endDate);
 
     const applicationFee = bookerServiceFee + hostServiceFee;
-    const hostNetAmount = baseAmount - hostServiceFee; // Amount host should receive
 
-    // Build payment intent metadata
-    const metadata: Record<string, string> = {
-      renter_id: renterId,
-      property_id: propertyId,
-      host_id: property.host_id,
-      property_title: serializeMetadataValue(property.title),
-      property_address: serializeMetadataValue(property.address),
-      start_time: startDate.toISOString(),
-      end_time: endDate.toISOString(),
-      total_hours: serializeMetadataValue(totalHours),
-      base_amount: serializeMetadataValue(baseAmount),
-      booker_service_fee: serializeMetadataValue(bookerServiceFee),
-      host_service_fee: serializeMetadataValue(hostServiceFee),
-      host_net_amount: serializeMetadataValue(hostNetAmount),
-      platform_fee: serializeMetadataValue(applicationFee),
-      total_amount: serializeMetadataValue(totalAmount),
-      vehicle_info: serializeMetadataValue(vehicleInfo),
-      special_requests: serializeMetadataValue(specialRequests),
-      instant_booking: serializeMetadataValue(property.instant_booking),
-      platform: 'plekk',
-    };
-
-    // If host has active Stripe account, use destination charge (automatic transfer)
-    // Otherwise, charge to platform and track earnings for later payout
-    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
+    const paymentIntent = await getStripe().paymentIntents.create({
       amount: Math.round(totalAmount * 100), // Convert to cents
       currency: 'usd',
-      metadata,
+      application_fee_amount: Math.round(applicationFee * 100), // Platform share from booker + host fees
+      transfer_data: {
+        destination: property.host.stripe_account_id,
+      },
+      metadata: {
+        renter_id: renterId,
+        property_id: propertyId,
+        host_id: property.host_id,
+        property_title: serializeMetadataValue(property.title),
+        property_address: serializeMetadataValue(property.address),
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        total_hours: serializeMetadataValue(totalHours),
+        base_amount: serializeMetadataValue(baseAmount),
+        booker_service_fee: serializeMetadataValue(bookerServiceFee),
+        host_service_fee: serializeMetadataValue(hostServiceFee),
+        total_amount: serializeMetadataValue(totalAmount),
+        vehicle_info: serializeMetadataValue(vehicleInfo),
+        special_requests: serializeMetadataValue(specialRequests),
+        instant_booking: serializeMetadataValue(property.instant_booking),
+        platform: 'plekk',
+      },
       automatic_payment_methods: {
         enabled: true,
       },
-    };
-
-    if (property.host?.stripe_account_id && property.host?.stripe_account_status === 'active') {
-      // Host has active account: use destination charge with automatic transfer
-      paymentIntentParams.application_fee_amount = Math.round(applicationFee * 100);
-      paymentIntentParams.on_behalf_of = property.host.stripe_account_id;
-      paymentIntentParams.transfer_data = {
-        destination: property.host.stripe_account_id,
-      };
-      metadata.payout_method = 'destination_charge';
-    } else {
-      // Host doesn't have account yet: charge to platform, track earnings
-      // No transfer_data - we'll handle payout later when account is set up
-      metadata.payout_method = 'delayed_transfer';
-      metadata.host_stripe_account_id = property.host?.stripe_account_id || 'none';
-    }
-
-    const paymentIntent = await getStripe().paymentIntents.create(paymentIntentParams);
+    });
 
     res.json({
       success: true,
@@ -715,15 +575,6 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
 
     const existingBookingId = paymentIntent.metadata['booking_id'];
     if (existingBookingId) {
-      // Update existing booking to confirmed status after successful payment
-      await supabase
-        .from('bookings')
-        .update({ 
-          status: 'confirmed',
-          payment_status: 'completed' 
-        })
-        .eq('id', existingBookingId);
-      
       const { data: existingBooking } = await supabase
         .from('bookings')
         .select(`
@@ -825,7 +676,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         total_hours: totalHours,
         total_amount: totalAmount,
         service_fee: bookerServiceFee,
-        status: 'confirmed', // Always confirmed after successful payment
+        status: instantBooking ? 'confirmed' : 'pending',
         payment_status: 'completed',
         special_requests: specialRequestsMetadata || null,
         vehicle_info: vehicleInfoMetadata ? { note: vehicleInfoMetadata } : null,
@@ -871,9 +722,11 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
 
     await supabase.from('notifications').insert({
       user_id: property.host_id,
-      type: 'booking_confirmed',
-      title: 'New Booking Confirmed',
-      message: `A driver just booked ${property.title}`,
+      type: instantBooking ? 'booking_confirmed' : 'booking_request',
+      title: instantBooking ? 'New Booking Confirmed' : 'New Booking Request',
+      message: instantBooking
+        ? `A driver just booked ${property.title}`
+        : `You have a new booking request for ${property.title}`,
       data: { booking_id: booking.id, property_id: propertyId },
       is_read: false,
     } as any);
@@ -933,8 +786,19 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       });
     }
 
-    // Payment receipt email is sent from Stripe webhook handler to avoid duplicates
-    // Removed from here to prevent duplicate emails
+    if (booking.renter?.email) {
+      sendPaymentReceiptEmail({
+        bookingId: booking.id,
+        userName: `${booking.renter.first_name} ${booking.renter.last_name}`,
+        userEmail: booking.renter.email,
+        propertyTitle: booking.property?.title || 'Parking Space',
+        amount: paymentIntent.amount / 100,
+        paymentDate: new Date().toISOString(),
+        transactionId: paymentIntent.id,
+      }).catch((error) => {
+        console.error('Failed to send payment receipt email:', error);
+      });
+    }
 
     res.json({
       success: true,
@@ -1050,211 +914,24 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// Helper function to create booking from payment intent metadata
-async function createBookingFromPaymentIntent(
-  paymentIntent: Stripe.PaymentIntent,
-  supabase: any
-): Promise<any> {
-  const propertyId = paymentIntent.metadata['property_id'];
-  const startTime = paymentIntent.metadata['start_time'];
-  const endTime = paymentIntent.metadata['end_time'];
-  const renterId = paymentIntent.metadata['renter_id'];
-
-  if (!propertyId || !startTime || !endTime || !renterId) {
-    throw new Error('Payment metadata incomplete');
-  }
-
-  const startDate = new Date(startTime);
-  const endDate = new Date(endTime);
-
-  const { data: property, error: propertyError } = await supabase
-    .from('properties')
-    .select(`
-      *,
-      host:users!properties_host_id_fkey(
-        id,
-        email,
-        first_name,
-        last_name,
-        phone,
-        stripe_account_id,
-        stripe_account_status
-      )
-    `)
-    .eq('id', propertyId)
-    .single();
-
-  if (propertyError || !property) {
-    throw new Error('Property no longer available');
-  }
-
-  const conflictExists = await checkBookingConflictsForRange(
-    supabase,
-    propertyId,
-    startDate,
-    endDate
-  );
-
-  if (conflictExists) {
-    throw new Error('Time slot was just taken by another driver');
-  }
-
-  const { baseAmount, totalAmount, bookerServiceFee } = {
-    baseAmount: parseFloat(paymentIntent.metadata['base_amount'] || '0'),
-    totalAmount: parseFloat(paymentIntent.metadata['total_amount'] || '0'),
-    bookerServiceFee: parseFloat(paymentIntent.metadata['booker_service_fee'] || '0'),
-  };
-
-  const hostServiceFee = parseFloat(paymentIntent.metadata['host_service_fee'] || '0');
-  const platformFee = parseFloat(paymentIntent.metadata['platform_fee'] || '0');
-  const hostNetAmount = parseFloat(paymentIntent.metadata['host_net_amount'] || (baseAmount - hostServiceFee).toString());
-  const vehicleInfoMetadata = paymentIntent.metadata['vehicle_info'];
-  const specialRequestsMetadata = paymentIntent.metadata['special_requests'];
-  const totalHours = calculateTotalHours(startDate, endDate);
-  const payoutMethod = paymentIntent.metadata['payout_method'] || 'delayed_transfer';
-
-  const { data: booking, error: bookingError } = await supabase
-    .from('bookings')
-    .insert({
-      property_id: propertyId,
-      renter_id: renterId,
-      host_id: property.host_id,
-      start_time: startDate.toISOString(),
-      end_time: endDate.toISOString(),
-      total_hours: totalHours,
-      total_amount: totalAmount,
-      service_fee: bookerServiceFee,
-      host_net_amount: hostNetAmount,
-      platform_fee: platformFee,
-      payout_status: payoutMethod === 'destination_charge' ? 'paid_out' : 'eligible_for_payout',
-      payout_date: payoutMethod === 'destination_charge' ? new Date().toISOString() : null,
-      status: 'confirmed', // Always confirmed after successful payment
-      payment_status: 'completed',
-      special_requests: specialRequestsMetadata || null,
-      vehicle_info: vehicleInfoMetadata ? { note: vehicleInfoMetadata } : null,
-    } as any)
-    .select(`
-      *,
-      property:properties(*),
-      renter:users!bookings_renter_id_fkey(id, first_name, last_name, email),
-      host:users!bookings_host_id_fkey(id, first_name, last_name, email)
-    `)
-    .single();
-
-  if (bookingError || !booking) {
-    throw new Error('Failed to create booking');
-  }
-
-  // Update payment intent metadata with booking_id
-  await getStripe().paymentIntents.update(paymentIntent.id, {
-    metadata: {
-      ...paymentIntent.metadata,
-      booking_id: booking.id,
-    },
-  });
-
-  return booking;
-}
-
 // Helper function to handle successful payment
 async function handlePaymentSuccess(
   paymentIntent: Stripe.PaymentIntent,
   supabase: any
 ): Promise<void> {
-  let bookingId = paymentIntent.metadata['booking_id'];
-  let booking: any = null;
-
-  // If booking doesn't exist, create it
+  const bookingId = paymentIntent.metadata['booking_id'];
+  
   if (!bookingId) {
-    try {
-      booking = await createBookingFromPaymentIntent(paymentIntent, supabase);
-      bookingId = booking.id;
-    } catch (error: any) {
-      console.error('[Webhook] Failed to create booking after payment:', error);
-      // Payment succeeded but booking creation failed - this is critical
-      // In production, you might want to alert admins here
-      return;
-    }
-  } else {
-    // Update existing booking status to confirmed and payment status to completed
-    await supabase
-      .from('bookings')
-      .update({ 
-        status: 'confirmed',
-        payment_status: 'completed' 
-      })
-      .eq('id', bookingId);
-    
-    // Get booking details
-    const { data: bookingData } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        property:properties(title, address),
-        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email)
-      `)
-      .eq('id', bookingId)
-      .single();
-    
-    booking = bookingData;
+    console.error('No booking_id in payment intent metadata');
+    return;
   }
   
-  // Calculate earnings from payment intent metadata
-  const baseAmount = parseFloat(paymentIntent.metadata['base_amount'] || '0');
-  const hostServiceFee = parseFloat(paymentIntent.metadata['host_service_fee'] || '0');
-  const platformFee = parseFloat(paymentIntent.metadata['platform_fee'] || '0');
-  const hostNetAmount = baseAmount - hostServiceFee; // Amount host should receive
-  const payoutMethod = paymentIntent.metadata['payout_method'] || 'delayed_transfer';
-  const hostId = paymentIntent.metadata['host_id'];
-
-  // Update booking with earnings information
-  const bookingUpdateData: any = {
-    host_net_amount: hostNetAmount,
-    platform_fee: platformFee,
-  };
-
-  // If destination charge was used, transfer already happened automatically
-  // Otherwise, mark as eligible for payout when account is set up
-  if (payoutMethod === 'destination_charge') {
-    bookingUpdateData.payout_status = 'paid_out';
-    bookingUpdateData.payout_date = new Date().toISOString();
-  } else {
-    // Delayed transfer: mark as eligible for payout
-    bookingUpdateData.payout_status = 'eligible_for_payout';
-    
-    // Increment host's pending earnings
-    if (hostId) {
-      const { data: host } = await supabase
-        .from('users')
-        .select('pending_earnings, stripe_account_id, payouts_enabled')
-        .eq('id', hostId)
-        .single();
-
-      if (host) {
-        const newPendingEarnings = (parseFloat(host.pending_earnings || 0) + hostNetAmount).toFixed(2);
-        await supabase
-          .from('users')
-          .update({ pending_earnings: parseFloat(newPendingEarnings) })
-          .eq('id', hostId);
-
-        // If host has active account, process payout immediately
-        if (host.stripe_account_id && host.payouts_enabled) {
-          console.log(`Host has active account, processing immediate payout for booking ${bookingId}`);
-          // Transfer will be handled by processPendingPayouts
-          await processPendingPayouts(host.stripe_account_id, supabase);
-        } else {
-          console.log(`Host earnings tracked: $${hostNetAmount} (pending account setup)`);
-        }
-      }
-    }
-  }
-
-  // Update booking with earnings data
+  // Update booking status
   await supabase
     .from('bookings')
-    .update(bookingUpdateData)
+    .update({ payment_status: 'completed' })
     .eq('id', bookingId);
-
+  
   // Create or update payment record
   const { data: existingPayment } = await supabase
     .from('payments')
@@ -1275,14 +952,25 @@ async function handlePaymentSuccess(
     });
   }
   
+  // Get booking details for email
+  const { data: bookingData } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      property:properties(title, address),
+      renter:users!bookings_renter_id_fkey(id, first_name, last_name, email)
+    `)
+    .eq('id', bookingId)
+    .single();
+  
   // Send payment receipt email (don't wait - fire and forget)
-  if (booking && booking.renter) {
+  if (bookingData && bookingData.renter) {
     const { sendPaymentReceiptEmail } = await import('../services/emailService');
     sendPaymentReceiptEmail({
       bookingId: bookingId,
-      userName: `${booking.renter.first_name} ${booking.renter.last_name}`,
-      userEmail: booking.renter.email,
-      propertyTitle: booking.property?.title || 'Parking Space',
+      userName: `${bookingData.renter.first_name} ${bookingData.renter.last_name}`,
+      userEmail: bookingData.renter.email,
+      propertyTitle: bookingData.property?.title || 'Parking Space',
       amount: paymentIntent.amount / 100,
       paymentDate: new Date().toISOString(),
       transactionId: paymentIntent.id,
@@ -1291,7 +979,7 @@ async function handlePaymentSuccess(
     });
   }
   
-  console.log(`Payment succeeded for booking ${bookingId}, host net: $${hostNetAmount}, payout method: ${payoutMethod}`);
+  console.log(`Payment succeeded for booking ${bookingId}`);
 }
 
 // Helper function to handle failed payment
@@ -1322,151 +1010,11 @@ async function handleAccountUpdate(
     ? 'pending'
     : 'pending';
   
-  // Get user ID from account metadata or by account ID
-  const { data: user } = await supabase
-    .from('users')
-    .select('id')
-    .eq('stripe_account_id', account.id)
-    .single();
-
-  if (!user) {
-    console.error(`User not found for Stripe account ${account.id}`);
-    return;
-  }
-
-  // Update all account status fields
-  const updateData: any = {
-    stripe_account_status: status,
-    payouts_enabled: account.payouts_enabled || false,
-    details_submitted: account.details_submitted || false,
-  };
-
-  // Store requirements if available
-  if (account.requirements) {
-    updateData.requirements_due = account.requirements.currently_due || [];
-  }
-
   await supabase
     .from('users')
-    .update(updateData)
+    .update({ stripe_account_status: status })
     .eq('stripe_account_id', account.id);
   
-  console.log(`Account ${account.id} status updated:`, {
-    status,
-    payouts_enabled: account.payouts_enabled,
-    details_submitted: account.details_submitted,
-  });
-
-  // If Stripe payout is set up, create verification record and check badge
-  if (account.payouts_enabled && account.details_submitted) {
-    // Check if Stripe payout verification already exists
-    const { data: existingVerification } = await supabase
-      .from('verifications')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('verification_type', 'stripe_payout')
-      .eq('status', 'verified')
-      .single();
-
-    if (!existingVerification) {
-      // Create verification record for Stripe payout
-      await supabase.from('verifications').insert({
-        user_id: user.id,
-        verification_type: 'stripe_payout',
-        status: 'verified',
-        verified_at: new Date().toISOString(),
-        metadata: {
-          stripeAccountId: account.id,
-          autoVerified: true,
-        },
-      });
-    }
-
-    // Update badge status (Stripe payout counts toward badge)
-    const { updateHostBadgeStatus } = await import('../services/verificationService');
-    await updateHostBadgeStatus(user.id, supabase);
-  }
-
-  // If account just became active and has pending earnings, process payouts
-  if (account.payouts_enabled && account.details_submitted) {
-    await processPendingPayouts(account.id, supabase);
-  }
-}
-
-// Helper function to process pending payouts for a host
-async function processPendingPayouts(
-  stripeAccountId: string,
-  supabase: any
-): Promise<void> {
-  try {
-    // Get user with this Stripe account
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, pending_earnings')
-      .eq('stripe_account_id', stripeAccountId)
-      .single();
-
-    if (!user || !user.pending_earnings || user.pending_earnings <= 0) {
-      console.log(`No pending earnings for account ${stripeAccountId}`);
-      return;
-    }
-
-    // Get all bookings eligible for payout
-    const { data: bookings } = await supabase
-      .from('bookings')
-      .select('id, host_net_amount, payout_status')
-      .eq('host_id', user.id)
-      .in('payout_status', ['pending', 'eligible_for_payout'])
-      .gt('host_net_amount', 0);
-
-    if (!bookings || bookings.length === 0) {
-      console.log(`No bookings eligible for payout for account ${stripeAccountId}`);
-      return;
-    }
-
-    // Calculate total to transfer
-    const totalAmount = bookings.reduce((sum: number, b: any) => sum + parseFloat(b.host_net_amount || 0), 0);
-    const totalCents = Math.round(totalAmount * 100);
-
-    if (totalCents <= 0) {
-      return;
-    }
-
-    console.log(`Processing payout for account ${stripeAccountId}: $${totalAmount} (${bookings.length} bookings)`);
-
-    // Create transfer to host
-    const transfer = await getStripe().transfers.create({
-      amount: totalCents,
-      currency: 'usd',
-      destination: stripeAccountId,
-      metadata: {
-        user_id: user.id,
-        booking_count: String(bookings.length),
-        platform: 'plekk',
-      },
-    });
-
-    // Update bookings to mark as paid
-    const bookingIds = bookings.map((b: any) => b.id);
-    await supabase
-      .from('bookings')
-      .update({
-        payout_status: 'paid_out',
-        payout_date: new Date().toISOString(),
-        stripe_transfer_id: transfer.id,
-      })
-      .in('id', bookingIds);
-
-    // Update user's pending earnings
-    await supabase
-      .from('users')
-      .update({ pending_earnings: 0 })
-      .eq('id', user.id);
-
-    console.log(`Payout processed: Transfer ${transfer.id} for $${totalAmount}`);
-  } catch (error: any) {
-    console.error(`Error processing pending payouts for account ${stripeAccountId}:`, error);
-    // Don't throw - we'll retry on next account update
-  }
+  console.log(`Account ${account.id} status updated to ${status}`);
 }
 

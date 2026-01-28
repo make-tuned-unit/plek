@@ -143,7 +143,7 @@ function SignUpContent() {
 
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 animate-scale-in">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -156,7 +156,7 @@ function SignUpContent() {
                     {...register('firstName')}
                     type="text"
                     id="firstName"
-                    className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                    className="input pl-10"
                     placeholder="John"
                   />
                 </div>
@@ -175,7 +175,7 @@ function SignUpContent() {
                     {...register('lastName')}
                     type="text"
                     id="lastName"
-                    className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                    className="input pl-10"
                     placeholder="Doe"
                   />
                 </div>
@@ -195,7 +195,7 @@ function SignUpContent() {
                   {...register('email')}
                   type="email"
                   id="email"
-                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10"
                   placeholder="john@example.com"
                 />
               </div>
@@ -214,7 +214,7 @@ function SignUpContent() {
                   {...register('phone')}
                   type="tel"
                   id="phone"
-                  className="w-full pl-10 pr-4 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10"
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -252,7 +252,7 @@ function SignUpContent() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10 pr-12"
                   placeholder="Create a strong password"
                 />
                 <button
@@ -278,7 +278,7 @@ function SignUpContent() {
                   {...register('confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
-                  className="w-full pl-10 pr-12 py-3 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  className="input pl-10 pr-12"
                   placeholder="Confirm your password"
                 />
                 <button
@@ -323,7 +323,7 @@ function SignUpContent() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-accent-500 text-white py-3 px-4 rounded-lg hover:bg-accent-600 focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full btn-primary py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
@@ -383,10 +383,10 @@ function SignUpContent() {
 export default function SignUpPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-mist-200 p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading...</h1>
         </div>
       </div>
     }>

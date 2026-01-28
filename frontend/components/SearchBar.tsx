@@ -21,7 +21,7 @@ export function SearchBar() {
 
   return (
     <form onSubmit={handleSearch} className="w-full max-w-2xl mx-auto">
-      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-lg shadow-lg">
+      <div className="flex flex-col sm:flex-row gap-3 p-4 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-mist-200 hover:shadow-2xl transition-all duration-300">
         <div className="flex-1 relative">
           <MapboxAutocomplete
             value={location}
@@ -38,7 +38,7 @@ export function SearchBar() {
         
         <button
           type="submit"
-          className="btn-primary px-8 py-3 flex items-center justify-center gap-2"
+          className="btn-primary px-8 py-3 flex items-center justify-center gap-2 font-semibold"
         >
           <Search className="w-5 h-5" />
           Search

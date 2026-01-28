@@ -97,8 +97,12 @@ module.exports = {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
-        'fade-in': 'fadeIn 0.5s ease-in-out',
-        'slide-up': 'slideUp 0.3s ease-out',
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'slide-up': 'slideUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'slide-down': 'slideDown 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'scale-in': 'scaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'shimmer': 'shimmer 2s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         fadeIn: {
@@ -106,9 +110,38 @@ module.exports = {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        slideDown: {
+          '0%': { transform: 'translateY(-20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        scaleIn: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-1000px 0' },
+          '100%': { backgroundPosition: '1000px 0' },
+        },
+      },
+      boxShadow: {
+        'accent': '0 10px 25px -5px rgba(61, 187, 133, 0.3)',
+        'accent-lg': '0 20px 40px -10px rgba(61, 187, 133, 0.4)',
+        'glow-accent': '0 0 20px rgba(61, 187, 133, 0.3)',
+        'glow-primary': '0 0 20px rgba(107, 125, 151, 0.2)',
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #4d637f 0%, #2e4057 100%)',
+        'gradient-accent': 'linear-gradient(135deg, #3dbb85 0%, #298b5f 100%)',
+        'gradient-warm': 'linear-gradient(135deg, #f9f5f2 0%, #f5f7f9 100%)',
+        'gradient-hero': 'linear-gradient(135deg, #242f3f 0%, #364b67 50%, #1f714c 100%)',
+        'gradient-card': 'linear-gradient(135deg, #ffffff 0%, #fbfcfd 100%)',
+        'gradient-subtle': 'linear-gradient(135deg, #fbfcfd 0%, #f9f5f2 100%)',
+      },
+      transitionTimingFunction: {
+        'smooth': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
       },
     },
   },

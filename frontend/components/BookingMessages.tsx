@@ -155,11 +155,11 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center">
-          <MessageSquare className="h-5 w-5 text-accent-500 mr-2" />
-          <div>
-            <h3 className="font-semibold text-gray-900">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="flex items-center min-w-0 flex-1">
+          <MessageSquare className="h-5 w-5 text-accent-500 mr-2 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
               {displayOtherUser 
                 ? `${displayOtherUser.first_name || displayOtherUser.firstName} ${displayOtherUser.last_name || displayOtherUser.lastName}`
                 : 'Messages'}
@@ -170,9 +170,10 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-2 p-1 -mr-1 touch-target"
+            aria-label="Close messages"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         )}
       </div>
@@ -180,8 +181,11 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
-        style={{ maxHeight: '400px' }}
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50"
+        style={{ 
+          maxHeight: 'calc(100vh - 200px)',
+          minHeight: '300px'
+        }}
       >
         {messages.length === 0 ? (
           <div className="text-center py-8">
@@ -221,12 +225,12 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
                   )}
 
                   {/* Message bubble */}
-                  <div className={`rounded-lg px-4 py-2 ${isOwnMessage ? 'bg-accent-500 text-white' : 'bg-white text-gray-900 border border-gray-200'}`}>
+                  <div className={`rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 max-w-full ${isOwnMessage ? 'bg-accent-500 text-white' : 'bg-white text-gray-900 border border-gray-200 shadow-sm'}`}>
                     {!isOwnMessage && (
-                      <p className="text-xs font-medium mb-1 opacity-75">{senderName}</p>
+                      <p className="text-xs font-medium mb-1 opacity-75 truncate">{senderName}</p>
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-accent-100' : 'text-gray-400'}`}>
+                    <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
+                    <p className={`text-xs mt-1.5 ${isOwnMessage ? 'text-accent-100' : 'text-gray-400'}`}>
                       {formatTime(message.created_at || message.createdAt)}
                     </p>
                   </div>
@@ -239,8 +243,8 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
-        <div className="flex items-end space-x-2">
+      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0">
+        <div className="flex items-end space-x-2 sm:space-x-3">
           <textarea
             value={messageContent}
             onChange={(e) => setMessageContent(e.target.value)}
@@ -252,13 +256,14 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
             }}
             placeholder="Type your message..."
             rows={2}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent resize-none"
+            className="flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent resize-none min-h-[44px]"
             disabled={isSending}
           />
           <button
             type="submit"
             disabled={!messageContent.trim() || isSending}
-            className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            className="px-3 py-2.5 sm:px-4 sm:py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] touch-target"
+            aria-label="Send message"
           >
             {isSending ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

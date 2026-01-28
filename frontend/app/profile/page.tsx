@@ -37,7 +37,7 @@ import toast from 'react-hot-toast'
 import { MapboxAutocomplete } from '../../components/MapboxAutocomplete'
 import { BookingMessages } from '../../components/BookingMessages'
 import { ReviewModal } from '../../components/ReviewModal'
-import { VerificationStatus } from '../../components/VerificationStatus'
+// VerificationStatus component removed - verification system was removed
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -268,21 +268,18 @@ function ProfileContent() {
         return
       }
 
-      // Fetch both renter and host bookings
-      const [renterResponse, hostResponse] = await Promise.all([
-        apiService.getUserBookings('renter'),
-        apiService.getUserBookings('host')
-      ])
+      // Fetch all bookings (both renter and host)
+      const response = await apiService.getUserBookings()
 
-      if (renterResponse.success && renterResponse.data) {
-        setBookings(renterResponse.data.bookings || [])
+      if (response.success && response.data) {
+        const allBookings = response.data.bookings || []
+        // Separate into renter and host bookings based on user role
+        const renterBookings = allBookings.filter((b: any) => b.user_id === user?.id)
+        const hostBookings = allBookings.filter((b: any) => b.host_id === user?.id)
+        setBookings(renterBookings)
+        setHostBookings(hostBookings)
       } else {
         setBookings([])
-      }
-
-      if (hostResponse.success && hostResponse.data) {
-        setHostBookings(hostResponse.data.bookings || [])
-      } else {
         setHostBookings([])
       }
     } catch (error) {
@@ -308,7 +305,8 @@ function ProfileContent() {
 
       const response = await apiService.getNotifications()
       if (response.success && response.data) {
-        setNotifications(response.data || [])
+        // API returns { notifications: [...] }
+        setNotifications(response.data.notifications || [])
       } else {
         setNotifications([])
       }
@@ -430,12 +428,9 @@ function ProfileContent() {
       setIsLoadingReviews(true)
       if (!user?.id) return
 
-      const response = await apiService.getUserReviews(user.id)
-      if (response.success && response.data) {
-        setReviews(response.data || [])
-      } else {
-        setReviews([])
-      }
+      // Reviews API endpoint not yet implemented
+      // TODO: Add getUserReviews to apiService when backend endpoint is ready
+      setReviews([])
     } catch (error) {
       console.error('Error fetching reviews:', error)
       setReviews([])
@@ -643,12 +638,16 @@ function ProfileContent() {
       const resizedBlob = await resizeImage(fileToUpload, 800, 800)
       const resizedFile = new File([resizedBlob], fileToUpload.name, { type: fileToUpload.type })
       
-      const response = await apiService.uploadAvatar(resizedFile)
-      
-      if (response.success && response.data?.avatar) {
-        // Update user profile with new avatar
+      // TODO: Implement avatar upload endpoint
+      // For now, create a data URL and update profile directly
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64String = reader.result as string
+        if (!base64String) {
+          throw new Error('Failed to read image file')
+        }
         try {
-          const updateResponse = await updateProfile({ avatar: response.data.avatar })
+          const updateResponse = await updateProfile({ avatar: base64String })
           if (updateResponse) {
             toast.success('Profile picture updated successfully!')
             setShowAvatarModal(false)
@@ -673,9 +672,11 @@ function ProfileContent() {
           setAvatarPreview(null)
           setSelectedAvatarFile(null)
         }
-      } else {
-        throw new Error('Upload response invalid')
       }
+      reader.onerror = () => {
+        throw new Error('Failed to read image file')
+      }
+      reader.readAsDataURL(resizedFile)
     } catch (error: any) {
       console.error('Error uploading avatar:', error)
       toast.error(error.message || 'Failed to upload profile picture')
@@ -751,7 +752,8 @@ function ProfileContent() {
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
-            setPendingEarnings(response.data.pendingEarnings || 0);
+            // pendingEarnings not available in current API response
+            setPendingEarnings(0);
           }
         } catch (error) {
           console.error('Error checking Stripe status:', error);
@@ -768,27 +770,16 @@ function ProfileContent() {
   const handleConnectStripe = async () => {
     setIsConnectingStripe(true);
     try {
-      // Use delayed onboarding endpoint that checks for earnings
-      const response = await apiService.createOnboardingLink();
+      // Use connect account creation endpoint
+      const response = await apiService.createConnectAccount();
       if (response.success && response.data?.url) {
-        // Show earnings amount in toast
-        if (response.data.pendingEarnings) {
-          toast.success(`You have $${response.data.pendingEarnings.toFixed(2)} ready to withdraw!`, {
-            duration: 3000,
-          });
-        }
+        // Show earnings amount in toast if available
+        // Note: needsEarnings and pendingEarnings not in current API response
         // Redirect to Stripe onboarding
         window.location.href = response.data.url;
       } else {
-        // If no earnings, show helpful message
-        if (response.data?.needsEarnings) {
-          toast('Complete your first booking to set up payouts', {
-            icon: 'ℹ️',
-            duration: 4000,
-          });
-        } else {
-          toast.error(response.error || 'Failed to start payout setup');
-        }
+        // If no URL, show error
+        toast.error(response.error || 'Failed to start payout setup');
       }
     } catch (error: any) {
       console.error('Error connecting Stripe:', error);
@@ -822,7 +813,8 @@ function ProfileContent() {
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
-            setPendingEarnings(response.data.pendingEarnings || 0);
+            // pendingEarnings not available in current API response
+            setPendingEarnings(0);
           }
         }).catch(error => {
           console.error('[Profile] Error refreshing status:', error);
@@ -1133,19 +1125,94 @@ function ProfileContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-10 sm:pb-12">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+      <div className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-white/30 sticky top-16 md:top-20 z-20">
+        <div className="max-w-7xl mx-auto container-padding py-3 sm:py-4 lg:py-6">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">My Profile</h1>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="max-w-7xl mx-auto container-padding py-4 sm:py-6 lg:py-8">
+        {/* Mobile Tab Navigation */}
+        <div className="lg:hidden mb-6 sticky top-[calc(4rem+3.25rem)] z-20">
+          <div className="bg-white/80 backdrop-blur-xl rounded-xl shadow-md border border-white/30 p-4">
+            {/* User Info - Mobile */}
+            <div className="flex items-center space-x-4 mb-4 pb-4 border-b border-mist-200">
+              {!user ? (
+                <div className="animate-pulse flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="Profile"
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => setShowAvatarModal(true)}
+                      className="absolute -bottom-1 -right-1 bg-accent-500/90 text-white rounded-full p-2 hover:bg-accent-600 transition-all shadow-lg backdrop-blur-sm border border-white/20 touch-target"
+                      title="Change profile picture"
+                    >
+                      <Camera className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base font-semibold text-gray-900 truncate">
+                      {user?.firstName} {user?.lastName}
+                    </h2>
+                    <div className="flex items-center mt-0.5">
+                      <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                      <span className="ml-1 text-xs text-gray-600">{user?.rating || 0}</span>
+                      <span className="ml-1 text-xs text-gray-500">({user?.reviewCount || 0})</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Mobile Tabs - Horizontal Scrollable */}
+            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+              <nav className="flex space-x-2 min-w-max pb-1">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center px-3 py-2.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap min-h-[44px] touch-target font-medium ${
+                        activeTab === tab.id
+                          ? 'bg-accent-500 text-white shadow-sm'
+                          : 'bg-white/60 text-gray-700 active:bg-white/80 border border-white/30'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 sm:mr-2 flex-shrink-0" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+          {/* Sidebar - Desktop Only */}
+          <div className="hidden lg:block lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
               {/* User Info */}
               <div className="text-center mb-6">
                 {!user ? (
@@ -1179,7 +1246,7 @@ function ProfileContent() {
                     <h2 className="text-xl font-semibold text-gray-900">
                       {user?.firstName} {user?.lastName}
                     </h2>
-                    <p className="text-gray-600">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</p>
+                    <p className="text-gray-600 text-sm">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}</p>
                     <div className="flex items-center justify-center mt-2">
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
                       <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
@@ -1237,22 +1304,22 @@ function ProfileContent() {
           <div className="lg:col-span-3">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Personal Information</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Personal Information</h2>
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center px-4 py-2 text-sm text-accent-600 border border-accent-400 rounded-lg hover:bg-accent-50"
+                      className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
                     </button>
                   ) : (
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
                       <button
                         onClick={handleCancelEdit}
-                        className="flex items-center px-4 py-2 text-sm text-gray-600 border border-mist-300 rounded-lg hover:bg-mist-100"
+                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -1260,7 +1327,7 @@ function ProfileContent() {
                       <button
                         onClick={handleSubmit(onSubmit)}
                         disabled={isLoading}
-                        className="flex items-center px-4 py-2 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50"
+                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
                       >
                         <Save className="h-4 w-4 mr-2" />
                         {isLoading ? 'Saving...' : 'Save Changes'}
@@ -1279,7 +1346,7 @@ function ProfileContent() {
                         {...register('firstName')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
+                        className="input disabled:bg-gray-50"
                       />
                       {errors.firstName && (
                         <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
@@ -1294,7 +1361,7 @@ function ProfileContent() {
                         {...register('lastName')}
                         type="text"
                         disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
+                        className="input disabled:bg-gray-50"
                       />
                       {errors.lastName && (
                         <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
@@ -1310,7 +1377,7 @@ function ProfileContent() {
                       {...register('email')}
                       type="email"
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
+                      className="input disabled:bg-gray-50"
                     />
                     {errors.email && (
                       <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -1325,7 +1392,7 @@ function ProfileContent() {
                       {...register('phone')}
                       type="tel"
                       disabled={!isEditing}
-                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
+                      className="input disabled:bg-gray-50"
                     />
                     {errors.phone && (
                       <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
@@ -1406,17 +1473,17 @@ function ProfileContent() {
 
             {/* Bookings Tab */}
             {activeTab === 'bookings' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Bookings</h2>
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">Bookings</h2>
                   {(bookings.length > 0 || hostBookings.length > 0) && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 sm:pb-0 scrollbar-hide">
                       <button
                         onClick={() => setBookingView('all')}
-                        className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] flex items-center justify-center touch-target ${
                           bookingView === 'all'
-                            ? 'bg-accent-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-accent-500 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-700 active:bg-gray-200'
                         }`}
                       >
                         All ({bookings.length + hostBookings.length})
@@ -1424,10 +1491,10 @@ function ProfileContent() {
                       {bookings.length > 0 && (
                         <button
                           onClick={() => setBookingView('renter')}
-                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] flex items-center justify-center touch-target ${
                             bookingView === 'renter'
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              ? 'bg-accent-500 text-white shadow-sm'
+                              : 'bg-gray-100 text-gray-700 active:bg-gray-200'
                           }`}
                         >
                           My Bookings ({bookings.length})
@@ -1436,10 +1503,10 @@ function ProfileContent() {
                       {hostBookings.length > 0 && (
                         <button
                           onClick={() => setBookingView('host')}
-                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] flex items-center justify-center touch-target ${
                             bookingView === 'host'
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              ? 'bg-accent-500 text-white shadow-sm'
+                              : 'bg-gray-100 text-gray-700 active:bg-gray-200'
                           }`}
                         >
                           At My Listings ({hostBookings.length})
@@ -1504,10 +1571,10 @@ function ProfileContent() {
                       const otherUserInfo = otherUser || {}
                       
                       return (
-                        <div id={`booking-${booking.id}`} key={booking.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                          <div className="flex">
+                        <div id={`booking-${booking.id}`} key={booking.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-white">
+                          <div className="flex flex-col sm:flex-row">
                             {coverPhoto && (
-                              <div className="w-32 h-32 flex-shrink-0">
+                              <div className="w-full h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 flex-shrink-0">
                                 <img
                                   src={coverPhoto}
                                   alt={property.title || 'Property'}
@@ -1515,38 +1582,38 @@ function ProfileContent() {
                                 />
                               </div>
                             )}
-                            <div className="flex-1 p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-gray-900">{property.title || 'Parking Space'}</h3>
+                            <div className="flex-1 p-4 sm:p-5">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                    <h3 className="font-semibold text-base sm:text-lg text-gray-900 break-words">{property.title || 'Parking Space'}</h3>
                                     {isHostView && (
-                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-medium whitespace-nowrap flex-shrink-0">
                                         At My Listing
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-gray-600 text-sm mt-1">{property.address || 'Address not available'}</p>
+                                  <p className="text-gray-600 text-sm sm:text-base mt-1.5 break-words leading-relaxed">{property.address || 'Address not available'}</p>
                                   {otherUserInfo.first_name && (
-                                    <p className="text-gray-500 text-sm mt-1">
-                                      {isHostView ? 'Booked by' : 'Host'}: {otherUserInfo.first_name} {otherUserInfo.last_name}
+                                    <p className="text-gray-500 text-sm mt-2 sm:mt-1.5">
+                                      <span className="font-medium">{isHostView ? 'Booked by' : 'Host'}:</span> {otherUserInfo.first_name} {otherUserInfo.last_name}
                                     </p>
                                   )}
-                                  <div className="flex items-center mt-3 space-x-4 text-sm text-gray-500">
+                                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center mt-3 sm:mt-4 gap-2 sm:gap-3 sm:gap-4 text-sm text-gray-600">
                                     {startDate && (
                                       <span className="flex items-center">
-                                        <Calendar className="h-4 w-4 mr-1" />
-                                        {startDate.toLocaleDateString('en-US', { 
+                                        <Calendar className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                                        <span className="whitespace-nowrap font-medium">{startDate.toLocaleDateString('en-US', { 
                                           month: 'short', 
                                           day: 'numeric',
                                           year: 'numeric'
-                                        })}
+                                        })}</span>
                                       </span>
                                     )}
                                     {startDate && endDate && (
                                       <span className="flex items-center">
-                                        <Clock className="h-4 w-4 mr-1" />
-                                        {startDate.toLocaleTimeString('en-US', { 
+                                        <Clock className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                                        <span className="whitespace-nowrap">{startDate.toLocaleTimeString('en-US', { 
                                           hour: 'numeric', 
                                           minute: '2-digit',
                                           hour12: true 
@@ -1554,19 +1621,19 @@ function ProfileContent() {
                                           hour: 'numeric', 
                                           minute: '2-digit',
                                           hour12: true 
-                                        })}
+                                        })}</span>
                                       </span>
                                     )}
                                     {booking.total_hours && (
-                                      <span>{booking.total_hours} {booking.total_hours === 1 ? 'hour' : 'hours'}</span>
+                                      <span className="whitespace-nowrap text-gray-500">• {booking.total_hours} {booking.total_hours === 1 ? 'hour' : 'hours'}</span>
                                     )}
                                   </div>
                                 </div>
-                                <div className="text-right ml-4">
+                                <div className="flex items-center justify-between sm:flex-col sm:items-end sm:text-right sm:ml-4 gap-3 sm:gap-2 mt-2 sm:mt-0">
                                   {booking.total_amount && (
-                                    <p className="font-medium text-gray-900">${booking.total_amount.toFixed(2)}</p>
+                                    <p className="font-bold text-xl sm:text-lg text-gray-900">${booking.total_amount.toFixed(2)}</p>
                                   )}
-                                  <span className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
+                                  <span className={`inline-block px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap ${
                                     booking.status === 'confirmed' 
                                       ? 'bg-green-100 text-green-800' 
                                       : booking.status === 'completed'
@@ -1585,32 +1652,32 @@ function ProfileContent() {
                               </div>
                               
                               {/* Action Buttons */}
-                              <div className="mt-4 flex items-center gap-3">
+                              <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
                                 {(booking.status === 'confirmed' || booking.status === 'completed') && (
                                   <button
                                     onClick={() => {
                                       setSelectedBookingForMessages(booking.id)
                                       setShowMessagesModal(true)
                                     }}
-                                    className="flex items-center px-3 py-1.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                    className="flex items-center justify-center px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 active:bg-accent-700 transition-colors text-sm font-medium min-h-[44px] touch-target shadow-sm"
                                   >
-                                    <MessageSquare className="h-4 w-4 mr-1.5" />
-                                    Message {isHostView ? 'Guest' : 'Host'}
+                                    <MessageSquare className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                                    <span>Message {isHostView ? 'Guest' : 'Host'}</span>
                                   </button>
                                 )}
                                 <button
                                   onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
-                                  className="flex items-center text-sm text-accent-600 hover:text-accent-700 font-medium"
+                                  className="flex items-center justify-center text-sm text-accent-600 hover:text-accent-700 active:text-accent-800 font-medium min-h-[44px] px-3 py-2 touch-target"
                                 >
                                   {isExpanded ? (
                                     <>
-                                      <ChevronUp className="h-4 w-4 mr-1" />
-                                      Hide Details
+                                      <ChevronUp className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                                      <span>Hide Details</span>
                                     </>
                                   ) : (
                                     <>
-                                      <ChevronDown className="h-4 w-4 mr-1" />
-                                      View Details
+                                      <ChevronDown className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                                      <span>View Details</span>
                                     </>
                                   )}
                                 </button>
@@ -1618,19 +1685,19 @@ function ProfileContent() {
                               
                               {/* Expanded Details */}
                               {isExpanded && (
-                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="mt-4 pt-4 border-t border-gray-200 space-y-4 sm:space-y-5">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
                                     <div>
-                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Booking Information</h4>
-                                      <div className="space-y-2 text-sm">
-                                        <div>
-                                          <span className="text-gray-500">Booking ID:</span>
-                                          <span className="ml-2 font-mono text-gray-900">{booking.id}</span>
+                                      <h4 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-2">Booking Information</h4>
+                                      <div className="space-y-2.5 sm:space-y-2 text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:items-center">
+                                          <span className="text-gray-500 font-medium sm:font-normal mb-0.5 sm:mb-0">Booking ID:</span>
+                                          <span className="ml-0 sm:ml-2 font-mono text-gray-900 break-all sm:break-normal">{booking.id}</span>
                                         </div>
                                         {startDate && (
-                                          <div>
-                                            <span className="text-gray-500">Start:</span>
-                                            <span className="ml-2 text-gray-900">
+                                          <div className="flex flex-col sm:flex-row sm:items-start">
+                                            <span className="text-gray-500 font-medium sm:font-normal mb-0.5 sm:mb-0">Start:</span>
+                                            <span className="ml-0 sm:ml-2 text-gray-900 break-words">
                                               {startDate.toLocaleString('en-US', {
                                                 weekday: 'long',
                                                 year: 'numeric',
@@ -1644,9 +1711,9 @@ function ProfileContent() {
                                           </div>
                                         )}
                                         {endDate && (
-                                          <div>
-                                            <span className="text-gray-500">End:</span>
-                                            <span className="ml-2 text-gray-900">
+                                          <div className="flex flex-col sm:flex-row sm:items-start">
+                                            <span className="text-gray-500 font-medium sm:font-normal mb-0.5 sm:mb-0">End:</span>
+                                            <span className="ml-0 sm:ml-2 text-gray-900 break-words">
                                               {endDate.toLocaleString('en-US', {
                                                 weekday: 'long',
                                                 year: 'numeric',
@@ -1660,9 +1727,9 @@ function ProfileContent() {
                                           </div>
                                         )}
                                         {booking.total_hours && (
-                                          <div>
-                                            <span className="text-gray-500">Duration:</span>
-                                            <span className="ml-2 text-gray-900">
+                                          <div className="flex flex-col sm:flex-row sm:items-center">
+                                            <span className="text-gray-500 font-medium sm:font-normal mb-0.5 sm:mb-0">Duration:</span>
+                                            <span className="ml-0 sm:ml-2 text-gray-900">
                                               {booking.total_hours} {booking.total_hours === 1 ? 'hour' : 'hours'}
                                             </span>
                                           </div>
@@ -1671,24 +1738,24 @@ function ProfileContent() {
                                     </div>
                                     
                                     <div>
-                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Payment Details</h4>
-                                      <div className="space-y-2 text-sm">
+                                      <h4 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-2">Payment Details</h4>
+                                      <div className="space-y-2.5 sm:space-y-2 text-sm">
                                         {booking.total_amount && (
-                                          <div className="flex justify-between">
-                                            <span className="text-gray-500">Total Amount:</span>
-                                            <span className="font-semibold text-gray-900">${booking.total_amount.toFixed(2)}</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium sm:font-normal">Total Amount:</span>
+                                            <span className="font-bold text-lg sm:text-base text-gray-900">${booking.total_amount.toFixed(2)}</span>
                                           </div>
                                         )}
                                         {booking.service_fee && (
-                                          <div className="flex justify-between">
-                                            <span className="text-gray-500">Service Fee:</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium sm:font-normal">Service Fee:</span>
                                             <span className="text-gray-900">${booking.service_fee.toFixed(2)}</span>
                                           </div>
                                         )}
                                         {booking.payment_status && (
-                                          <div>
-                                            <span className="text-gray-500">Payment Status:</span>
-                                            <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                                            <span className="text-gray-500 font-medium sm:font-normal">Payment Status:</span>
+                                            <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${
                                               booking.payment_status === 'completed'
                                                 ? 'bg-green-100 text-green-800'
                                                 : booking.payment_status === 'pending'
@@ -1737,16 +1804,16 @@ function ProfileContent() {
 
                                   {/* Message Button - Always visible for confirmed/completed bookings */}
                                   {(booking.status === 'confirmed' || booking.status === 'completed') && (
-                                    <div className="pt-2">
+                                    <div className="pt-2 sm:pt-3">
                                       <button
                                         onClick={() => {
                                           setSelectedBookingForMessages(booking.id)
                                           setShowMessagesModal(true)
                                         }}
-                                        className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                        className="flex items-center justify-center w-full sm:w-auto px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 active:bg-accent-700 transition-colors text-sm font-medium min-h-[44px] touch-target shadow-sm"
                                       >
-                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                        Message {isHostView ? 'Guest' : 'Host'}
+                                        <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        <span>Message {isHostView ? 'Guest' : 'Host'}</span>
                                       </button>
                                     </div>
                                   )}
@@ -1937,7 +2004,13 @@ function ProfileContent() {
                     <button
                       onClick={async () => {
                         try {
-                          await apiService.markAllNotificationsAsRead()
+                          // TODO: Implement markAllNotificationsAsRead endpoint
+                          // For now, mark each notification individually
+                          await Promise.all(
+                            notifications
+                              .filter((n: any) => !n.is_read)
+                              .map((n: any) => apiService.markNotificationAsRead(n.id))
+                          )
                           setNotifications(notifications.map((n: any) => ({ ...n, is_read: true })))
                           toast.success('All notifications marked as read')
                         } catch (error) {
@@ -2086,13 +2159,13 @@ function ProfileContent() {
 
             {/* Listings Tab */}
             {activeTab === 'listings' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">My Listings</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">My Listings</h2>
                   <button
                     onClick={() => setShowAddListingModal(true)}
                     disabled={isLoadingListings}
-                    className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] font-semibold"
                   >
                     {isLoadingListings ? 'Loading...' : 'Add New Listing'}
                   </button>
@@ -2109,7 +2182,7 @@ function ProfileContent() {
                   </div>
                 ) : (
                   listings.map((listing) => (
-                    <div key={listing.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div key={listing.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                       {/* Photo Section */}
                       {listing.photos && listing.photos.length > 0 && listing.photos[0]?.url ? (
                         <div className="relative h-48 bg-gray-200">
@@ -2151,18 +2224,18 @@ function ProfileContent() {
                       )}
                       
                       {/* Listing Details */}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between">
+                      <div className="p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <h3 className="font-medium text-gray-900">{listing.title}</h3>
                             <p className="text-gray-600 text-sm mt-1">{listing.address}</p>
                             {listing.description && (
                               <p className="text-gray-600 text-sm mt-2 line-clamp-2">{listing.description}</p>
                             )}
-                            <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                              <span>${listing.hourly_rate || listing.price}/hr</span>
-                              <span>{listing.total_bookings || 0} bookings</span>
-                              <span>${listing.total_earnings || 0} earned</span>
+                            <div className="flex flex-wrap items-center mt-2 gap-x-4 gap-y-1 text-sm text-gray-500">
+                              <span className="whitespace-nowrap">${listing.hourly_rate || listing.price}/hr</span>
+                              <span className="whitespace-nowrap">{listing.total_bookings || 0} bookings</span>
+                              <span className="whitespace-nowrap">${listing.total_earnings || 0} earned</span>
                             </div>
                             <div className="flex items-center mt-2">
                               <span className={`px-2 py-1 text-xs rounded-full ${
@@ -2175,17 +2248,17 @@ function ProfileContent() {
                               </span>
                             </div>
                           </div>
-                          <div className="flex space-x-2 ml-4">
+                          <div className="flex flex-col sm:flex-row gap-2 ml-0 sm:ml-4">
                             <button
                               onClick={() => handleEditListing(listing)}
-                              className="p-2 text-gray-400 hover:text-accent-600 hover:bg-accent-50 rounded transition-colors"
+                              className="p-2.5 text-gray-500 hover:text-accent-700 hover:bg-accent-500/10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
                               title="Edit listing"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(listing.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-2.5 text-gray-500 hover:text-red-600 hover:bg-red-500/10 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
                               title="Delete listing"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -2201,8 +2274,9 @@ function ProfileContent() {
 
             {/* Payments Tab */}
             {activeTab === 'payments' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Payout Account</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-5 sm:mb-6">Payout Account</h2
+                >
                 
                 {!stripeConnected ? (
                   <div className="text-center py-12">
@@ -2218,7 +2292,7 @@ function ProfileContent() {
                         <button
                           onClick={handleConnectStripe}
                           disabled={isConnectingStripe}
-                          className="px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                          className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
                         >
                           {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
                         </button>
@@ -2288,7 +2362,7 @@ function ProfileContent() {
                             }
                           }}
                           disabled={isConnectingStripe}
-                          className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold"
+                          className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold min-h-[44px]"
                         >
                           {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
                         </button>
@@ -2329,45 +2403,7 @@ function ProfileContent() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Verification Status</h2>
                 
                 <div className="space-y-6">
-                  {/* Host Verification */}
-                  <div className="border border-gray-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Host Verification</h3>
-                    <VerificationStatus userId={user?.id} showDetails={true} />
-                    
-                    {user && (
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Identity Verification</h4>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Verify your identity by uploading a government-issued ID. This helps build trust with other users.
-                        </p>
-                        <Link
-                          href="/profile/verification/identity"
-                          className="inline-flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-medium"
-                        >
-                          <Shield className="h-4 w-4 mr-2" />
-                          Submit Identity Verification
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Property Verifications */}
-                  {listings.length > 0 && (
-                    <div className="border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Verifications</h3>
-                      <div className="space-y-4">
-                        {listings.map((listing) => (
-                          <div key={listing.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <h4 className="font-medium text-gray-900">{listing.title}</h4>
-                              <VerificationStatus propertyId={listing.id} showDetails={false} />
-                            </div>
-                            <VerificationStatus propertyId={listing.id} showDetails={true} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Verification system removed - section hidden */}
                 </div>
               </div>
             )}
@@ -3078,9 +3114,9 @@ function ProfileContent() {
 
       {/* Messages Modal */}
       {showMessagesModal && selectedBookingForMessages && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex-1 overflow-hidden p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-none sm:rounded-2xl max-w-2xl w-full h-full sm:h-auto shadow-2xl max-h-full sm:max-h-[90vh] flex flex-col">
+            <div className="flex-1 overflow-hidden p-0 sm:p-4 min-h-0">
               <BookingMessages
                 bookingId={selectedBookingForMessages}
                 onClose={() => {

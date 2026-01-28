@@ -42,51 +42,51 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Link 
                 href="/find-parking" 
-                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-[#18A46C] text-slate-50 border border-[#0F7F52] shadow-xl shadow-[#18A46C]/30 hover:bg-[#14935F] hover:shadow-[#14935F]/40 transition-all duration-200 transform hover:-translate-y-0.5"
+                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-bold bg-gradient-accent text-white shadow-xl shadow-accent-500/40 hover:shadow-accent-lg hover:-translate-y-1 transition-all duration-300"
               >
                 Find Parking
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
               </Link>
               <Link 
                 href="/list-your-driveway" 
-                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold bg-white text-slate-900 border border-[#CBD5E1] shadow-lg hover:bg-slate-50 transition-all duration-200 transform hover:-translate-y-0.5"
+                className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-bold bg-white text-charcoal-900 border-2 border-mist-300 shadow-lg hover:bg-mist-50 hover:border-accent-300 hover:text-accent-700 hover:-translate-y-1 transition-all duration-300"
               >
                 List Your Driveway
-                <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
+                <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
               </Link>
             </div>
 
             {/* Branding Banner */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <div className="flex items-center gap-3 px-6 py-3 bg-primary-900/90 backdrop-blur-sm rounded-full shadow-lg">
-                <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-accent-500 text-charcoal-900 font-semibold shadow-lg shadow-accent-500/30 overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 animate-fade-in">
+              <div className="flex items-center gap-3 px-6 py-3 bg-primary-900/95 backdrop-blur-md rounded-full shadow-xl border border-white/10 hover:shadow-2xl transition-all duration-300">
+                <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-accent text-charcoal-900 font-semibold shadow-lg shadow-accent-500/40 overflow-hidden">
                   <img 
                     src="/HeroIcon.png" 
                     alt="plekk icon" 
                     className="h-full w-full object-contain p-1.5"
                   />
                 </span>
-                <p className="font-medium tracking-wide text-white text-sm sm:text-base">
+                <p className="font-semibold tracking-wide text-white text-sm sm:text-base">
                   plekk — parking marketplace powered by local driveways
                 </p>
               </div>
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-900">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
-                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
-                <span className="font-medium">Secure & Verified</span>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm animate-fade-in stagger-1">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-md shadow-md border border-white/20 hover:shadow-lg transition-all duration-200">
+                <CheckCircle2 className="w-5 h-5 text-accent-600" />
+                <span className="font-semibold text-charcoal-800">Secure & Verified</span>
               </div>
-              <div className="hidden sm:block h-4 w-px bg-gray-300" />
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
-                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
-                <span className="font-medium">Instant Booking</span>
+              <div className="hidden sm:block h-6 w-px bg-white/30" />
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-md shadow-md border border-white/20 hover:shadow-lg transition-all duration-200">
+                <CheckCircle2 className="w-5 h-5 text-accent-600" />
+                <span className="font-semibold text-charcoal-800">Instant Booking</span>
               </div>
-              <div className="hidden sm:block h-4 w-px bg-gray-300" />
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm shadow-sm">
-                <CheckCircle2 className="w-5 h-5 text-[#0F7F52]" />
-                <span className="font-medium">Protected Payments</span>
+              <div className="hidden sm:block h-6 w-px bg-white/30" />
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-md shadow-md border border-white/20 hover:shadow-lg transition-all duration-200">
+                <CheckCircle2 className="w-5 h-5 text-accent-600" />
+                <span className="font-semibold text-charcoal-800">Protected Payments</span>
               </div>
             </div>
           </div>
@@ -110,33 +110,33 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-8 rounded-2xl bg-red-50/50 border border-red-100">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center p-8 rounded-2xl bg-red-50/60 border border-red-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 text-red-600 mb-6 shadow-md">
                 <Clock className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Wasted Time</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Wasted Time</h3>
+              <p className="text-gray-600 leading-relaxed">
                 Drivers spend an average of 17 minutes searching for parking in busy areas
               </p>
             </div>
 
-            <div className="text-center p-8 rounded-2xl bg-orange-50/50 border border-orange-100">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 text-orange-600 mb-6">
+            <div className="text-center p-8 rounded-2xl bg-orange-50/60 border border-orange-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 mb-6 shadow-md">
                 <TrendingUp className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Increased Traffic</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Increased Traffic</h3>
+              <p className="text-gray-600 leading-relaxed">
                 Up to 30% of urban traffic is caused by drivers searching for parking spaces
               </p>
             </div>
 
-            <div className="text-center p-8 rounded-2xl bg-amber-50/50 border border-amber-100">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-600 mb-6">
+            <div className="text-center p-8 rounded-2xl bg-amber-50/60 border border-amber-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 mb-6 shadow-md">
                 <Leaf className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Unnecessary Emissions</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Unnecessary Emissions</h3>
+              <p className="text-gray-600 leading-relaxed">
                 All that circling creates millions of tons of CO₂ emissions every year
               </p>
             </div>
@@ -163,11 +163,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             {/* For Drivers */}
-            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-mist-200">
+            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-mist-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-accent-500 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center shadow-lg shadow-accent-500/30">
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">For Drivers</h3>
@@ -205,9 +205,9 @@ export default function HomePage() {
             </div>
 
             {/* For Homeowners */}
-            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-mist-200">
+            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-mist-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg shadow-primary-600/30">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">For Homeowners</h3>
@@ -351,17 +351,17 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
             <Link 
               href="/find-parking" 
-              className="group inline-flex items-center justify-center px-10 py-5 rounded-xl text-lg font-semibold bg-accent-500 text-white shadow-xl shadow-accent-500/30 hover:bg-accent-600 hover:shadow-accent-600/40 transition-all duration-200 transform hover:-translate-y-0.5"
+              className="group inline-flex items-center justify-center px-10 py-5 rounded-xl text-lg font-bold bg-gradient-accent text-white shadow-xl shadow-accent-500/40 hover:shadow-accent-lg hover:-translate-y-1 transition-all duration-300"
             >
               Find Parking
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Link>
             <Link 
               href="/list-your-driveway" 
-              className="group inline-flex items-center justify-center px-10 py-5 rounded-xl text-lg font-semibold bg-white text-primary-900 shadow-xl hover:bg-primary-50 transition-all duration-200 transform hover:-translate-y-0.5"
+              className="group inline-flex items-center justify-center px-10 py-5 rounded-xl text-lg font-bold bg-white text-primary-900 border-2 border-mist-300 shadow-xl hover:bg-mist-50 hover:border-accent-300 hover:text-accent-700 hover:-translate-y-1 transition-all duration-300"
             >
               List Your Driveway
-              <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
+              <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
             </Link>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-primary-200 text-sm">

@@ -20,7 +20,7 @@ CREATE POLICY "Hosts can insert photos for their properties" ON public.property_
     EXISTS (
       SELECT 1 FROM public.properties
       WHERE id = property_photos.property_id
-      AND host_id = (select auth.uid())
+      AND host_id = auth.uid()
     )
   );
 
@@ -31,14 +31,14 @@ CREATE POLICY "Hosts can update photos for their properties" ON public.property_
     EXISTS (
       SELECT 1 FROM public.properties
       WHERE id = property_photos.property_id
-      AND host_id = (select auth.uid())
+      AND host_id = auth.uid()
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.properties
       WHERE id = property_photos.property_id
-      AND host_id = (select auth.uid())
+      AND host_id = auth.uid()
     )
   );
 
@@ -49,7 +49,7 @@ CREATE POLICY "Hosts can delete photos for their properties" ON public.property_
     EXISTS (
       SELECT 1 FROM public.properties
       WHERE id = property_photos.property_id
-      AND host_id = (select auth.uid())
+      AND host_id = auth.uid()
     )
   );
 
@@ -59,14 +59,14 @@ CREATE POLICY "Admins can manage all property photos" ON public.property_photos
   USING (
     EXISTS (
       SELECT 1 FROM public.users
-      WHERE id = (select auth.uid())
+      WHERE id = auth.uid()
       AND role IN ('admin', 'super_admin')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.users
-      WHERE id = (select auth.uid())
+      WHERE id = auth.uid()
       AND role IN ('admin', 'super_admin')
     )
   );

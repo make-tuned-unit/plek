@@ -430,18 +430,18 @@ ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 -- Users table policies
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
 CREATE POLICY "Users can view their own profile" ON public.users
-  FOR SELECT USING ((select auth.uid()) = id);
+  FOR SELECT USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile" ON public.users
-  FOR UPDATE USING ((select auth.uid()) = id);
+  FOR UPDATE USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Admins can view all users" ON public.users;
 CREATE POLICY "Admins can view all users" ON public.users
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
+      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
     )
   );
 
@@ -452,44 +452,44 @@ CREATE POLICY "Anyone can view active properties" ON public.properties
 
 DROP POLICY IF EXISTS "Hosts can view their own properties" ON public.properties;
 CREATE POLICY "Hosts can view their own properties" ON public.properties
-  FOR SELECT USING (host_id = (select auth.uid()));
+  FOR SELECT USING (host_id = auth.uid());
 
 DROP POLICY IF EXISTS "Hosts can insert their own properties" ON public.properties;
 CREATE POLICY "Hosts can insert their own properties" ON public.properties
-  FOR INSERT WITH CHECK (host_id = (select auth.uid()));
+  FOR INSERT WITH CHECK (host_id = auth.uid());
 
 DROP POLICY IF EXISTS "Hosts can update their own properties" ON public.properties;
 CREATE POLICY "Hosts can update their own properties" ON public.properties
-  FOR UPDATE USING (host_id = (select auth.uid()));
+  FOR UPDATE USING (host_id = auth.uid());
 
 DROP POLICY IF EXISTS "Admins can manage all properties" ON public.properties;
 CREATE POLICY "Admins can manage all properties" ON public.properties
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
+      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
     )
   );
 
 -- Bookings table policies
 DROP POLICY IF EXISTS "Users can view their own bookings" ON public.bookings;
 CREATE POLICY "Users can view their own bookings" ON public.bookings
-  FOR SELECT USING (renter_id = (select auth.uid()) OR host_id = (select auth.uid()));
+  FOR SELECT USING (renter_id = auth.uid() OR host_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can create bookings" ON public.bookings;
 CREATE POLICY "Users can create bookings" ON public.bookings
-  FOR INSERT WITH CHECK (renter_id = (select auth.uid()));
+  FOR INSERT WITH CHECK (renter_id = auth.uid());
 
 DROP POLICY IF EXISTS "Hosts can update their property bookings" ON public.bookings;
 CREATE POLICY "Hosts can update their property bookings" ON public.bookings
-  FOR UPDATE USING (host_id = (select auth.uid()));
+  FOR UPDATE USING (host_id = auth.uid());
 
 DROP POLICY IF EXISTS "Admins can manage all bookings" ON public.bookings;
 CREATE POLICY "Admins can manage all bookings" ON public.bookings
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
+      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
     )
   );
 
@@ -500,7 +500,7 @@ CREATE POLICY "Users can view messages from their bookings" ON public.messages
     EXISTS (
       SELECT 1 FROM public.bookings 
       WHERE id = messages.booking_id 
-      AND (renter_id = (select auth.uid()) OR host_id = (select auth.uid()))
+      AND (renter_id = auth.uid() OR host_id = auth.uid())
     )
   );
 
@@ -510,7 +510,7 @@ CREATE POLICY "Users can send messages to their bookings" ON public.messages
     EXISTS (
       SELECT 1 FROM public.bookings 
       WHERE id = messages.booking_id 
-      AND (renter_id = (select auth.uid()) OR host_id = (select auth.uid()))
+      AND (renter_id = auth.uid() OR host_id = auth.uid())
     )
   );
 
@@ -525,7 +525,7 @@ CREATE POLICY "Users can create reviews for their completed bookings" ON public.
     EXISTS (
       SELECT 1 FROM public.bookings 
       WHERE id = reviews.booking_id 
-      AND renter_id = (select auth.uid()) 
+      AND renter_id = auth.uid() 
       AND status = 'completed'
     )
   );
@@ -533,11 +533,11 @@ CREATE POLICY "Users can create reviews for their completed bookings" ON public.
 -- Notifications table policies
 DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
 CREATE POLICY "Users can view their own notifications" ON public.notifications
-  FOR SELECT USING (user_id = (select auth.uid()));
+  FOR SELECT USING (user_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
 CREATE POLICY "Users can update their own notifications" ON public.notifications
-  FOR UPDATE USING (user_id = (select auth.uid()));
+  FOR UPDATE USING (user_id = auth.uid());
 
 -- Admin logs table policies
 DROP POLICY IF EXISTS "Only admins can view admin logs" ON public.admin_logs;
@@ -545,7 +545,7 @@ CREATE POLICY "Only admins can view admin logs" ON public.admin_logs
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
+      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
     )
   );
 
@@ -555,101 +555,7 @@ CREATE POLICY "Only admins can manage system settings" ON public.system_settings
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  );
-
--- Host profiles table policies
-DROP POLICY IF EXISTS "Users can manage their own host profile" ON public.host_profiles;
-CREATE POLICY "Users can manage their own host profile" ON public.host_profiles
-  FOR ALL USING (user_id = (select auth.uid()))
-  WITH CHECK (user_id = (select auth.uid()));
-
-DROP POLICY IF EXISTS "Admins can view all host profiles" ON public.host_profiles;
-CREATE POLICY "Admins can view all host profiles" ON public.host_profiles
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  );
-
--- Availability table policies
-DROP POLICY IF EXISTS "Anyone can view availability" ON public.availability;
-CREATE POLICY "Anyone can view availability" ON public.availability
-  FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Hosts can manage availability for their properties" ON public.availability;
-CREATE POLICY "Hosts can manage availability for their properties" ON public.availability
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.properties
-      WHERE id = availability.property_id
-      AND host_id = (select auth.uid())
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.properties
-      WHERE id = availability.property_id
-      AND host_id = (select auth.uid())
-    )
-  );
-
-DROP POLICY IF EXISTS "Admins can manage all availability" ON public.availability;
-CREATE POLICY "Admins can manage all availability" ON public.availability
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  );
-
--- Payments table policies
-DROP POLICY IF EXISTS "Users can view their own payments" ON public.payments;
-CREATE POLICY "Users can view their own payments" ON public.payments
-  FOR SELECT USING (
-    user_id = (select auth.uid())
-    OR EXISTS (
-      SELECT 1 FROM public.bookings
-      WHERE id = payments.booking_id
-      AND (renter_id = (select auth.uid()) OR host_id = (select auth.uid()))
-    )
-  );
-
-DROP POLICY IF EXISTS "Service role and admins can manage payments" ON public.payments;
-CREATE POLICY "Service role and admins can manage payments" ON public.payments
-  FOR INSERT WITH CHECK (
-    (select auth.role()) = 'service_role'
-    OR EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  );
-
-DROP POLICY IF EXISTS "Service role and admins can update payments" ON public.payments;
-CREATE POLICY "Service role and admins can update payments" ON public.payments
-  FOR UPDATE USING (
-    (select auth.role()) = 'service_role'
-    OR EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  )
-  WITH CHECK (
-    (select auth.role()) = 'service_role'
-    OR EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
-    )
-  );
-
-DROP POLICY IF EXISTS "Admins can view all payments" ON public.payments;
-CREATE POLICY "Admins can view all payments" ON public.payments
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = (select auth.uid()) AND role IN ('admin', 'super_admin')
+      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
     )
   );
 
@@ -664,8 +570,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ language 'plpgsql';
 
 -- Apply updated_at trigger to all tables
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
@@ -720,8 +625,7 @@ BEGIN
   
   RETURN COALESCE(avg_rating, 0.00);
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ LANGUAGE plpgsql;
 
 -- Function to calculate user rating
 CREATE OR REPLACE FUNCTION calculate_user_rating(user_uuid UUID)
@@ -735,8 +639,7 @@ BEGIN
   
   RETURN COALESCE(avg_rating, 0.00);
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ LANGUAGE plpgsql;
 
 -- Function to update user stats after booking completion
 CREATE OR REPLACE FUNCTION update_user_stats_after_booking()
@@ -756,8 +659,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ LANGUAGE plpgsql;
 
 -- Apply booking stats trigger
 DROP TRIGGER IF EXISTS update_user_stats_after_booking_trigger ON public.bookings;
@@ -783,8 +685,7 @@ BEGIN
   
   RETURN notification_id;
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ LANGUAGE plpgsql;
 
 -- Function to log admin actions
 CREATE OR REPLACE FUNCTION log_admin_action(
@@ -805,8 +706,7 @@ BEGIN
   
   RETURN log_id;
 END;
-$$ LANGUAGE plpgsql
-SET search_path = public;
+$$ LANGUAGE plpgsql;
 
 -- =====================================================
 -- INITIAL DATA
@@ -829,9 +729,8 @@ SET value = EXCLUDED.value,
 -- VIEWS FOR COMMON QUERIES
 -- =====================================================
 
-CREATE OR REPLACE VIEW property_search_results
-SECURITY INVOKER
-AS
+-- View for property search results
+CREATE OR REPLACE VIEW property_search_results AS
 SELECT 
   p.id,
   p.title,
@@ -870,9 +769,8 @@ LEFT JOIN (
 ) avg_reviews ON p.id = avg_reviews.property_id
 WHERE p.status = 'active' AND p.is_available = true;
 
-CREATE OR REPLACE VIEW user_dashboard_stats
-SECURITY INVOKER
-AS
+-- View for user dashboard stats
+CREATE OR REPLACE VIEW user_dashboard_stats AS
 SELECT 
   u.id,
   u.first_name,
@@ -892,9 +790,8 @@ LEFT JOIN public.properties p ON u.id = p.host_id AND p.status = 'active'
 LEFT JOIN public.bookings b ON u.id = b.renter_id
 GROUP BY u.id, u.first_name, u.last_name, u.email, u.is_host, u.total_bookings, u.total_earnings, u.rating, u.review_count;
 
-CREATE OR REPLACE VIEW admin_dashboard
-SECURITY INVOKER
-AS
+-- View for admin dashboard
+CREATE OR REPLACE VIEW admin_dashboard AS
 SELECT 
   COUNT(*) as total_users,
   COUNT(CASE WHEN is_host = true THEN 1 END) as total_hosts,

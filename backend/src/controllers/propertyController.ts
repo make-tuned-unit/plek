@@ -37,13 +37,11 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
     // Get query parameters for filtering
     const { city, state, min_price, max_price, property_type, lat, lng, radius } = req.query;
     
+    // Get properties - simplified query to avoid foreign key relationship issues
+    // Only filter by active status (other statuses are excluded by the eq filter)
     let query = supabase
       .from('properties')
-      .select(`
-        *,
-        host:users!properties_host_id_fkey(first_name, last_name, rating, review_count),
-        photos:property_photos(url, caption, is_primary, order_index)
-      `)
+      .select('*')
       .eq('status', 'active');
     
     // Apply filters
@@ -55,21 +53,46 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
     
     const { data: properties, error } = await query.order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching properties from database:', error);
+      throw error;
+    }
     
-    // Sort photos for each property (primary first, then by order_index)
-    const propertiesWithSortedPhotos = properties?.map((property: any) => {
-      if (property.photos && Array.isArray(property.photos)) {
-        property.photos.sort((a: any, b: any) => {
-          // Primary photos first
-          if (a.is_primary && !b.is_primary) return -1;
-          if (!a.is_primary && b.is_primary) return 1;
-          // Then by order_index
-          return (a.order_index || 0) - (b.order_index || 0);
+    // Fetch photos for all properties in batch
+    const propertyIds = (properties || []).map((p: any) => p.id);
+    let photosMap: Record<string, any[]> = {};
+    
+    if (propertyIds.length > 0) {
+      const { data: allPhotos, error: photosError } = await supabase
+        .from('property_photos')
+        .select('property_id, url, caption, is_primary, order_index')
+        .in('property_id', propertyIds);
+      
+      if (!photosError && allPhotos) {
+        // Group photos by property_id
+        allPhotos.forEach((photo: any) => {
+          if (!photosMap[photo.property_id]) {
+            photosMap[photo.property_id] = [];
+          }
+          photosMap[photo.property_id].push(photo);
+        });
+        
+        // Sort photos for each property
+        Object.keys(photosMap).forEach((propertyId) => {
+          photosMap[propertyId].sort((a: any, b: any) => {
+            if (a.is_primary && !b.is_primary) return -1;
+            if (!a.is_primary && b.is_primary) return 1;
+            return (a.order_index || 0) - (b.order_index || 0);
+          });
         });
       }
-      return property;
-    }) || [];
+    }
+    
+    // Attach photos to properties
+    const propertiesWithSortedPhotos = (properties || []).map((property: any) => ({
+      ...property,
+      photos: photosMap[property.id] || []
+    }));
     
     // Calculate distances if coordinates are provided
     let propertiesWithDistance = propertiesWithSortedPhotos;
@@ -115,10 +138,18 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error: any) {
     console.error('Error fetching properties:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch properties',
-      message: error.message
+      message: error.message || 'Unknown error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.details : undefined
     });
   }
 };
@@ -254,48 +285,6 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       .update({ is_host: true })
       .eq('id', hostId);
     
-    // Auto-verify location if coordinates are provided
-    if (property.id && (latitude || longitude)) {
-      try {
-        const { autoVerifyPropertyLocation } = await import('../services/locationVerificationService');
-        await autoVerifyPropertyLocation(property.id, supabase);
-      } catch (error) {
-        console.error('Error auto-verifying location:', error);
-        // Don't fail property creation if verification fails
-      }
-    }
-
-    // Auto-verify photos if minimum photos uploaded
-    if (property.id && req.body.photos && req.body.photos.length >= 3) {
-      try {
-        await supabase
-          .from('properties')
-          .update({
-            photos_verified_at: new Date().toISOString(),
-          })
-          .eq('id', property.id);
-
-        // Create verification record
-        await supabase.from('verifications').insert({
-          property_id: property.id,
-          verification_type: 'property_photos',
-          status: 'verified',
-          verified_at: new Date().toISOString(),
-          metadata: {
-            photoCount: req.body.photos.length,
-            autoVerified: true,
-          },
-        });
-
-        // Update badge status
-        const { updatePropertyBadgeStatus } = await import('../services/verificationService');
-        await updatePropertyBadgeStatus(property.id, supabase);
-      } catch (error) {
-        console.error('Error auto-verifying photos:', error);
-        // Don't fail property creation if verification fails
-      }
-    }
-    
     res.status(201).json({
       success: true,
       data: { property },
@@ -369,19 +358,12 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     }
     
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
-    let shouldVerifyLocation = false;
     if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {
       updateData.longitude = req.body.coordinates[0]; // Mapbox format: [longitude, latitude]
       updateData.latitude = req.body.coordinates[1];
-      shouldVerifyLocation = true;
       console.log('[updateProperty] Saving coordinates:', { latitude: updateData.latitude, longitude: updateData.longitude, coordinates: req.body.coordinates });
     } else {
       console.log('[updateProperty] No coordinates provided:', { coordinates: req.body.coordinates });
-    }
-
-    // Check if address changed (need to re-verify location)
-    if (req.body.address || req.body.city || req.body.state || req.body.zip_code) {
-      shouldVerifyLocation = true;
     }
     
     const { data: updatedProperty, error: updateError } = await supabase
@@ -392,17 +374,6 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       .single();
     
     if (updateError) throw updateError;
-
-    // Re-verify location if address or coordinates changed
-    if (shouldVerifyLocation && updatedProperty.id) {
-      try {
-        const { autoVerifyPropertyLocation } = await import('../services/locationVerificationService');
-        await autoVerifyPropertyLocation(updatedProperty.id, supabase);
-      } catch (error) {
-        console.error('Error auto-verifying location on update:', error);
-        // Don't fail property update if verification fails
-      }
-    }
     
     res.json({
       success: true,

@@ -6,65 +6,149 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    scroll-behavior: smooth;
   }
   
   body {
-    @apply bg-mist-100 text-charcoal-800;
+    @apply bg-mist-100 text-charcoal-800 antialiased;
+  }
+
+  /* Respect reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
+  /* Enhanced Button Styles with Glassmorphism */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    @apply inline-flex items-center justify-center px-6 py-3 border text-sm font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 touch-target backdrop-blur-sm;
   }
   
   .btn-primary {
-    @apply btn bg-accent-500 text-white hover:bg-accent-600 focus:ring-2 focus:ring-offset-2 focus:ring-accent-300;
+    @apply btn text-white border-white/20 hover:shadow-accent-lg hover:-translate-y-0.5 active:translate-y-0 focus:ring-accent-300 focus:ring-offset-2;
+    background: linear-gradient(135deg, rgba(61, 187, 133, 0.9) 0%, rgba(41, 139, 95, 0.9) 100%);
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(61, 187, 133, 1) 0%, rgba(41, 139, 95, 1) 100%);
   }
   
   .btn-secondary {
-    @apply btn bg-white text-primary-700 border-mist-300 hover:bg-mist-100 focus:ring-2 focus:ring-offset-2 focus:ring-accent-300;
+    @apply btn text-primary-700 border-white/30 hover:border-accent-300/40 hover:text-accent-700 focus:ring-accent-300;
+    background: rgba(255, 255, 255, 0.8);
+  }
+  
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.9);
   }
   
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn text-white border-white/20 hover:shadow-lg focus:ring-red-500;
+    background: rgba(220, 38, 38, 0.9);
   }
   
+  .btn-danger:hover {
+    background: rgba(185, 28, 28, 1);
+  }
+
+  .btn-ghost {
+    @apply btn text-charcoal-700 border-transparent hover:bg-white/40 focus:ring-mist-300;
+    background: rgba(255, 255, 255, 0);
+  }
+  
+  /* Enhanced Input Styles */
   .input {
-    @apply block w-full px-3 py-2 border border-mist-300 rounded-md shadow-sm placeholder-mist-500 focus:outline-none focus:ring-accent-400 focus:border-accent-400 sm:text-sm bg-white;
+    @apply block w-full px-4 py-3 border border-mist-300 rounded-lg shadow-sm placeholder-mist-500 focus:outline-none focus:ring-2 focus:ring-accent-400/20 focus:border-accent-400 sm:text-sm bg-white transition-all duration-200;
+  }
+
+  .input-error {
+    @apply input border-red-300 focus:border-red-500 focus:ring-red-500/20;
   }
   
+  /* Enhanced Card Styles */
   .card {
-    @apply bg-white overflow-hidden shadow rounded-lg;
+    @apply bg-white overflow-hidden shadow-md rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .card-glass {
+    @apply card bg-white/80 backdrop-blur-md border border-white/20;
   }
   
   .card-header {
-    @apply px-4 py-5 sm:px-6 border-b border-gray-200;
+    @apply px-6 py-5 sm:px-8 border-b border-mist-200;
   }
   
   .card-body {
-    @apply px-4 py-5 sm:p-6;
+    @apply px-6 py-5 sm:p-8;
+  }
+
+  /* Property Card (Special) */
+  .property-card {
+    @apply card cursor-pointer;
+  }
+
+  .property-card:hover {
+    @apply shadow-2xl -translate-y-2;
   }
   
+  /* Badge Styles */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
   }
   
   .badge-success {
-    @apply badge bg-accent-100 text-accent-700;
+    @apply badge bg-accent-100 text-accent-700 border border-accent-200;
   }
   
   .badge-warning {
-    @apply badge bg-yellow-100 text-yellow-800;
+    @apply badge bg-amber-100 text-amber-800 border border-amber-200;
   }
   
   .badge-error {
-    @apply badge bg-red-100 text-red-800;
+    @apply badge bg-red-100 text-red-800 border border-red-200;
   }
   
   .badge-info {
-    @apply badge bg-sky-100 text-sky-700;
+    @apply badge bg-sky-100 text-sky-700 border border-sky-200;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-700 border border-primary-200;
+  }
+
+  /* Loading Skeleton */
+  .skeleton {
+    @apply animate-pulse bg-mist-200 rounded;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-title {
+    @apply skeleton h-6 w-3/4;
+  }
+
+  .skeleton-avatar {
+    @apply skeleton rounded-full;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-charcoal-900/80 backdrop-blur-md border border-white/10;
   }
 }
 
@@ -72,4 +156,82 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Mobile touch target utilities */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Smooth scrolling for mobile */
+  @media (max-width: 640px) {
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* Gradient Text */
+  .text-gradient-accent {
+    @apply bg-gradient-accent bg-clip-text text-transparent;
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-primary bg-clip-text text-transparent;
+  }
+
+  /* Glow Effects */
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(61, 187, 133, 0.3);
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(107, 125, 151, 0.2);
+  }
+
+  /* Focus Visible Enhancement */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2 focus:ring-offset-white;
+  }
+
+  .focus-ring-inset {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-inset;
+  }
+
+  /* Container Utilities */
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-padding {
+    @apply py-12 sm:py-16 lg:py-24;
+  }
+
+  /* Animation Utilities */
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger Animation Delays */
+  .stagger-1 { transition-delay: 0.1s; }
+  .stagger-2 { transition-delay: 0.2s; }
+  .stagger-3 { transition-delay: 0.3s; }
+  .stagger-4 { transition-delay: 0.4s; }
+  .stagger-5 { transition-delay: 0.5s; }
 } 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
 import { PropertiesMap } from '@/components/PropertiesMap'
 import { BookingModal } from '@/components/BookingModal'
@@ -156,8 +156,6 @@ function FindParkingContent() {
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false) // Collapsed by default on mobile
-  const [sortBy, setSortBy] = useState<'recommended' | 'price-low' | 'price-high' | 'distance' | 'rating'>('recommended')
 
   const geocodeProperty = useCallback(async (property: any) => {
     if (!mapboxToken || !property?.id) return null
@@ -257,8 +255,6 @@ function FindParkingContent() {
     // The map will use selectedLocation for centering, userLocation is for the user's actual GPS position
     // Clear accuracy warning when user manually selects a location (more precise)
     setLocationAccuracyWarning(null)
-    // Clear any previous error
-    setError(null)
     await fetchPropertiesNearLocation(place.center[1], place.center[0], DEFAULT_RADIUS_KM)
   }
 
@@ -282,22 +278,9 @@ function FindParkingContent() {
           setLocationAccuracyWarning(null)
         }
         
-        // Always update userLocation with actual GPS coordinates
         setUserLocation({ lat: latitude, lng: longitude })
         setLocationPermission('granted')
-        // Clear selected location and search query when using GPS - user wants to use their actual location
-        // This overrides all filters and takes user to their current location
-        setSelectedLocation(null)
-        setSearchQuery('')
-        setError(null)
-        // Clear all filters when using GPS location - it's an override
-        setSelectedDate('')
-        setSelectedTime('')
-        setPropertyType('all')
-        setSelectedFeatures([])
-        setPriceRange([0, 50])
-        setLocationAccuracyWarning(null)
-        // Fetch properties near user's actual GPS location
+        // Fetch properties near user location
         fetchPropertiesNearLocation(latitude, longitude, DEFAULT_RADIUS_KM)
       },
       (error) => {
@@ -447,7 +430,7 @@ function FindParkingContent() {
 
             setSelectedLocation(place)
             setSearchQuery(feature.place_name)
-            // Don't overwrite userLocation - keep GPS location separate from searched location
+            setUserLocation({ lat: feature.center[1], lng: feature.center[0] })
             await fetchPropertiesNearLocation(feature.center[1], feature.center[0], DEFAULT_RADIUS_KM)
           } else {
             setError('Could not find that location. Showing all listings.')
@@ -511,78 +494,39 @@ function FindParkingContent() {
       return matchesSearch && matchesType && matchesPrice && matchesFeatures
     })
     .sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return (a.hourly_rate || 0) - (b.hourly_rate || 0)
-        case 'price-high':
-          return (b.hourly_rate || 0) - (a.hourly_rate || 0)
-        case 'distance':
-          const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
-          const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
-          if (distanceA === distanceB) {
-            return 0
-          }
-          return distanceA - distanceB
-        case 'rating':
-          const ratingA = a.rating || 0
-          const ratingB = b.rating || 0
-          if (ratingA === ratingB) {
-            // If ratings are equal, sort by review count
-            return (b.review_count || 0) - (a.review_count || 0)
-          }
-          return ratingB - ratingA
-        case 'recommended':
-        default:
-          // Recommended: prioritize by distance if available, then by rating
-          const distA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
-          const distB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
-          if (distA !== Number.POSITIVE_INFINITY && distB !== Number.POSITIVE_INFINITY) {
-            // Both have distance, sort by distance
-            return distA - distB
-          } else if (distA !== Number.POSITIVE_INFINITY) {
-            // Only A has distance, prioritize it
-            return -1
-          } else if (distB !== Number.POSITIVE_INFINITY) {
-            // Only B has distance, prioritize it
-            return 1
-          } else {
-            // Neither has distance, sort by rating
-            const rateA = a.rating || 0
-            const rateB = b.rating || 0
-            if (rateA === rateB) {
-              return (b.review_count || 0) - (a.review_count || 0)
-            }
-            return rateB - rateA
-          }
+      const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+      const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+      if (distanceA === distanceB) {
+        return 0
       }
+      return distanceA - distanceB
     })
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-mist-200 sticky top-16 md:top-20 z-40">
+        <div className="max-w-7xl mx-auto container-padding py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Find Parking</h1>
-              <p className="mt-1 text-gray-600">Discover available parking spots near you</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900">Find Parking</h1>
+              <p className="mt-2 text-charcoal-600">Discover available parking spots near you</p>
             </div>
-            {/* Map/List View Button - Hidden on mobile, shown in filters section */}
-            <div className="hidden lg:flex items-center space-x-3">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowMap(!showMap)}
-                className={`flex items-center px-4 py-2 border rounded-lg transition-colors ${
+                className={`flex items-center px-5 py-2.5 border-2 rounded-lg transition-all duration-200 font-semibold ${
                   showMap 
-                    ? 'bg-accent-500 text-white border-accent-500 hover:bg-accent-600' 
-                    : 'border-mist-300 hover:bg-mist-100'
+                    ? 'bg-gradient-accent text-white border-accent-500 hover:shadow-accent-lg hover:-translate-y-0.5' 
+                    : 'border-mist-300 hover:bg-mist-50 hover:border-accent-300 text-charcoal-700'
                 }`}
               >
                 {showMap ? (
-                  <Navigation className="h-5 w-5 mr-2 text-white" />
+                  <Navigation className="h-5 w-5 mr-2" />
                 ) : (
-                  <MapIcon className="h-5 w-5 mr-2 text-accent-500" />
+                  <MapIcon className="h-5 w-5 mr-2" />
                 )}
-                <span className={showMap ? 'text-white' : 'text-accent-500'}>
+                <span>
                   {showMap ? 'List View' : 'Map View'}
                 </span>
               </button>
@@ -593,46 +537,10 @@ function FindParkingContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar - Collapsible on mobile */}
+          {/* Filters Sidebar - Always Visible */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm sticky top-8">
-              {/* Collapsible Header - Mobile Only */}
-              <button
-                onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                className="lg:hidden w-full flex items-center justify-between px-6 py-4 border-b border-gray-200"
-              >
-                <h3 className="text-lg font-semibold text-gray-900">Search & Filters</h3>
-                {isFiltersExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                )}
-              </button>
-              
-              {/* Map/List View Button - Mobile Only, Below Header */}
-              <div className="lg:hidden px-6 py-3 border-b border-gray-200">
-                <button
-                  onClick={() => setShowMap(!showMap)}
-                  className={`w-full flex items-center justify-center px-4 py-2 border rounded-lg transition-colors ${
-                    showMap 
-                      ? 'bg-accent-500 text-white border-accent-500 hover:bg-accent-600' 
-                      : 'border-mist-300 hover:bg-mist-100'
-                  }`}
-                >
-                  {showMap ? (
-                    <Navigation className="h-5 w-5 mr-2 text-white" />
-                  ) : (
-                    <MapIcon className="h-5 w-5 mr-2 text-accent-500" />
-                  )}
-                  <span className={showMap ? 'text-white' : 'text-accent-500'}>
-                    {showMap ? 'List View' : 'Map View'}
-                  </span>
-                </button>
-              </div>
-              
-              {/* Filters Content - Collapsible on mobile */}
-              <div className={`${isFiltersExpanded ? 'block' : 'hidden'} lg:block p-6`}>
-              <h3 className="hidden lg:block text-lg font-semibold text-gray-900 mb-4">Search & Filters</h3>
+            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24 border border-mist-200">
+              <h3 className="text-lg font-bold text-charcoal-900 mb-6">Search & Filters</h3>
                 
                 {/* Search */}
                 <div className="mb-6">
@@ -642,7 +550,7 @@ function FindParkingContent() {
                   <div className="flex space-x-2 mb-2">
                     <button
                       onClick={getUserLocation}
-                      className="flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm bg-gradient-accent text-white rounded-lg hover:shadow-accent-lg hover:-translate-y-0.5 transition-all duration-200 font-semibold"
                     >
                       <Navigation className="h-4 w-4 mr-2" />
                       Use My Location
@@ -806,7 +714,6 @@ function FindParkingContent() {
               >
                 Clear All Filters
               </button>
-              </div>
             </div>
           </div>
 
@@ -832,16 +739,12 @@ function FindParkingContent() {
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
-                  <select 
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat"
-                  >
-                    <option value="recommended">Sort by: Recommended</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="distance">Distance</option>
-                    <option value="rating">Rating</option>
+                  <select className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
+                    <option>Sort by: Recommended</option>
+                    <option>Price: Low to High</option>
+                    <option>Price: High to Low</option>
+                    <option>Distance</option>
+                    <option>Rating</option>
                   </select>
                 </div>
 
@@ -877,45 +780,45 @@ function FindParkingContent() {
                       ].filter(Boolean)
 
                       return (
-                  <div key={property.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="relative">
+                  <div key={property.id} className="property-card group">
+                    <div className="relative overflow-hidden">
                       {property.photos && property.photos.length > 0 && property.photos[0]?.url ? (
                         <img
                           src={property.photos[0].url}
                           alt={property.title || 'Parking Space'}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                           onError={(e) => {
                             // Fallback to a default image if photo fails to load
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%23e5e7eb" width="300" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E'
                           }}
                         />
                       ) : (
-                        <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                          <div className="text-center text-gray-400">
+                        <div className="w-full h-48 bg-gradient-to-br from-mist-200 to-mist-300 flex items-center justify-center">
+                          <div className="text-center text-mist-600">
                             <Car className="h-12 w-12 mx-auto mb-2" />
-                            <p className="text-sm">No photos available</p>
+                            <p className="text-sm font-medium">No photos available</p>
                           </div>
                         </div>
                       )}
                       {property.status !== 'active' && (
-                        <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-sm">
+                        <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
                           {property.status === 'pending_review' ? 'Pending Review' : 'Unavailable'}
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 bg-accent-500 text-white px-2 py-1 rounded text-sm">
+                      <div className="absolute top-3 left-3 bg-gradient-accent text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg shadow-accent-500/40">
                         ${property.hourly_rate || 0}/hr
                       </div>
                     </div>
                     
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gray-900 pr-2">{property.title || 'Parking Space'}</h3>
+                        <h3 className="text-lg font-bold text-charcoal-900 pr-2 group-hover:text-accent-700 transition-colors">{property.title || 'Parking Space'}</h3>
                         {(property.rating || property.review_count) > 0 && (
-                          <div className="flex items-center flex-shrink-0">
+                          <div className="flex items-center flex-shrink-0 bg-white px-2 py-1 rounded-full shadow-sm border border-mist-200">
                             <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span className="ml-1 text-sm text-gray-600">{property.rating || 0}</span>
+                            <span className="ml-1 text-sm font-semibold text-charcoal-700">{property.rating || 0}</span>
                             {property.review_count > 0 && (
-                              <span className="ml-1 text-sm text-gray-500">({property.review_count})</span>
+                              <span className="ml-1 text-xs text-mist-600">({property.review_count})</span>
                             )}
                           </div>
                         )}
@@ -967,14 +870,14 @@ function FindParkingContent() {
                       )}
                       
                       {property.host_id === user?.id ? (
-                        <div className="w-full bg-gray-100 text-gray-600 py-2 px-4 rounded-lg text-center text-sm">
+                        <div className="w-full bg-mist-100 text-charcoal-600 py-3 px-4 rounded-lg text-center text-sm font-semibold border border-mist-200">
                           Your Listing
                         </div>
                       ) : (
                         <button
                           onClick={() => handleOpenBooking(property)}
                           disabled={property.status !== 'active'}
-                          className="w-full bg-accent-500 text-white py-2.5 px-4 rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                          className="w-full bg-gradient-accent text-white py-3 px-4 rounded-lg hover:shadow-accent-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none transition-all duration-200 font-bold"
                         >
                           {property.status === 'active' ? 'Book Now' : 'Currently Unavailable'}
                         </button>
@@ -990,27 +893,7 @@ function FindParkingContent() {
                   <div className="text-center py-12">
                     <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No parking spots found</h3>
-                    {selectedLocation ? (
-                      <div className="max-w-md mx-auto space-y-4">
-                        <p className="text-gray-600 mb-4">
-                          We don't have any listings in {selectedLocation.place_name} yet.
-                        </p>
-                        <div className="bg-accent-50 border border-accent-200 rounded-lg p-6">
-                          <p className="text-accent-900 font-semibold mb-2">Do you live here?</p>
-                          <p className="text-accent-800 text-sm mb-4">
-                            List your driveway now to begin earning passive income and help drivers in your area find parking.
-                          </p>
-                          <button
-                            onClick={() => router.push('/list-your-driveway')}
-                            className="w-full bg-accent-500 text-white py-2.5 px-4 rounded-lg hover:bg-accent-600 transition-colors font-medium"
-                          >
-                            List Your Driveway
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gray-600">Try adjusting your search criteria or location</p>
-                    )}
+                    <p className="text-gray-600">Try adjusting your search criteria or location</p>
                   </div>
                 )}
               </>
@@ -1041,10 +924,18 @@ function FindParkingContent() {
 export default function FindParkingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-mist-200 sticky top-16 md:top-20 z-40">
+          <div className="max-w-7xl mx-auto container-padding py-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900">Find Parking</h1>
+            <p className="mt-2 text-charcoal-600">Discover available parking spots near you</p>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto container-padding py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
       </div>
     }>

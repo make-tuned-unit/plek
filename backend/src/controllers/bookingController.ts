@@ -1060,9 +1060,7 @@ export const generateReviewReminders = async (req: Request, res: Response): Prom
     }
 
     let createdCount = 0;
-    let processedCount = 0;
-
-    for (const booking of bookings) {
+    let processedCount = 0;    for (const booking of bookings) {
       processedCount++;
 
       // Check if reviews already exist for this booking
@@ -1158,4 +1156,3 @@ export const generateReviewReminders = async (req: Request, res: Response): Prom
     });
   }
 };
-
