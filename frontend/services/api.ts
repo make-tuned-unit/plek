@@ -195,8 +195,9 @@ class ApiService {
     });
   }
 
-  async getUserBookings(): Promise<ApiResponse<{ bookings: any[] }>> {
-    return this.request('/bookings');
+  async getUserBookings(role?: 'renter' | 'host'): Promise<ApiResponse<{ bookings: any[] }>> {
+    const queryParam = role ? `?role=${role}` : '';
+    return this.request(`/bookings${queryParam}`);
   }
 
   async cancelBooking(bookingId: string): Promise<ApiResponse> {

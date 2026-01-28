@@ -268,20 +268,22 @@ function ProfileContent() {
         return
       }
 
-      // Fetch all bookings (both renter and host)
-      const response = await apiService.getUserBookings()
+      // Fetch bookings as both renter and host
+      // The backend requires a role parameter, so we fetch both separately
+      const [renterResponse, hostResponse] = await Promise.all([
+        apiService.getUserBookings('renter'),
+        apiService.getUserBookings('host'),
+      ])
 
-      if (response.success && response.data) {
-        const allBookings = response.data.bookings || []
-        // Separate into renter and host bookings based on user role
-        const renterBookings = allBookings.filter((b: any) => b.user_id === user?.id)
-        const hostBookings = allBookings.filter((b: any) => b.host_id === user?.id)
-        setBookings(renterBookings)
-        setHostBookings(hostBookings)
-      } else {
-        setBookings([])
-        setHostBookings([])
-      }
+      const renterBookings = renterResponse.success && renterResponse.data?.bookings 
+        ? renterResponse.data.bookings 
+        : []
+      const hostBookings = hostResponse.success && hostResponse.data?.bookings 
+        ? hostResponse.data.bookings 
+        : []
+
+      setBookings(renterBookings)
+      setHostBookings(hostBookings)
     } catch (error) {
       console.error('Error fetching bookings:', error)
       setBookings([])
