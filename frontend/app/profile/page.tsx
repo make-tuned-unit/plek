@@ -201,7 +201,7 @@ function ProfileContent() {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
     
-    if (tabParam && ['profile', 'bookings', 'reviews', 'notifications', 'listings', 'payments', 'settings', 'verification'].includes(tabParam)) {
+    if (tabParam && ['profile', 'bookings', 'reviews', 'listings'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
     
@@ -224,11 +224,12 @@ function ProfileContent() {
 
   // Fetch notifications when notifications tab is active (only once per tab switch)
   useEffect(() => {
-    if (activeTab === 'notifications' && user?.id && !hasFetchedNotifications) {
+    // Fetch notifications when profile tab is active (notifications are now in Profile tab)
+    if (activeTab === 'profile' && user?.id && !hasFetchedNotifications) {
       fetchNotifications()
       setHasFetchedNotifications(true)
-    } else if (activeTab !== 'notifications') {
-      // Reset flag when switching away from notifications tab
+    } else if (activeTab !== 'profile') {
+      // Reset flag when switching away from profile tab
       setHasFetchedNotifications(false)
     }
   }, [activeTab, user?.id, hasFetchedNotifications])
@@ -370,6 +371,10 @@ function ProfileContent() {
       case 'message_received':
         // Navigate to bookings tab, expand booking, and open messages
         return bookingId ? `/profile?tab=bookings&bookingId=${bookingId}` : null
+      
+      default:
+        // For other notification types, stay on profile tab
+        return null
       
       case 'booking_request':
       case 'booking_confirmed':
@@ -872,11 +877,7 @@ function ProfileContent() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'bookings', label: 'My Bookings', icon: Calendar },
     { id: 'reviews', label: 'Reviews', icon: Star },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'listings', label: 'My Listings', icon: Car },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'verification', label: 'Verification', icon: Shield },
-    { id: 'settings', label: 'Settings', icon: Settings },
   ]
 
   // Show loading state while checking authentication
@@ -1446,6 +1447,323 @@ function ProfileContent() {
                     </div>
                   </div>
                 </form>
+
+                {/* Notifications Section */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                      <Bell className="h-5 w-5 mr-2 text-accent-500" />
+                      Notifications
+                    </h2>
+                    {notificationTab === 'inbox' && notifications.filter((n: any) => !n.is_read).length > 0 && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await Promise.all(
+                              notifications
+                                .filter((n: any) => !n.is_read)
+                                .map((n: any) => apiService.markNotificationAsRead(n.id))
+                            )
+                            setNotifications(notifications.map((n: any) => ({ ...n, is_read: true })))
+                            toast.success('All notifications marked as read')
+                          } catch (error) {
+                            console.error('Error marking all as read:', error)
+                          }
+                        }}
+                        className="text-sm text-accent-600 hover:text-accent-700 font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification Tabs */}
+                  <div className="mb-6 border-b border-gray-200">
+                    <nav className="flex space-x-8">
+                      <button
+                        onClick={() => setNotificationTab('inbox')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          notificationTab === 'inbox'
+                            ? 'border-accent-500 text-accent-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        Inbox
+                        {notifications.filter((n: any) => !n.is_read).length > 0 && (
+                          <span className="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full">
+                            {notifications.filter((n: any) => !n.is_read).length}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setNotificationTab('history')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          notificationTab === 'history'
+                            ? 'border-accent-500 text-accent-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        History
+                        {notifications.filter((n: any) => n.is_read).length > 0 && (
+                          <span className="ml-2 px-2 py-0.5 bg-gray-400 text-white text-xs rounded-full">
+                            {notifications.filter((n: any) => n.is_read).length}
+                          </span>
+                        )}
+                      </button>
+                    </nav>
+                  </div>
+                  {isLoadingNotifications && notifications.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
+                      <span className="ml-3 text-gray-600">Loading notifications...</span>
+                    </div>
+                  ) : filteredNotifications.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-2">
+                        {notificationTab === 'inbox' ? 'No unread notifications' : 'No notification history'}
+                      </p>
+                      <p className="text-sm text-gray-500">You'll see notifications here when you receive them</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredNotifications.map((notification: any) => {
+                        const isUnread = !notification.is_read
+                        const isReviewReminder = notification.type === 'review_reminder'
+                        const hasReviewed = notification.has_reviewed || notification.title === 'Review Left'
+                        
+                        const hasAction = getNotificationUrl(notification) !== null || 
+                                         (isReviewReminder && !hasReviewed)
+
+                        return (
+                          <div
+                            key={notification.id}
+                            onClick={() => hasAction && handleNotificationClick(notification)}
+                            className={`border rounded-lg p-4 transition-colors ${
+                              isUnread
+                                ? 'border-accent-200 bg-accent-50'
+                                : 'border-gray-200 bg-white'
+                            } ${
+                              hasAction ? 'cursor-pointer hover:shadow-md hover:border-accent-300' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                                  {isUnread && (
+                                    <span className="h-2 w-2 bg-accent-500 rounded-full"></span>
+                                  )}
+                                  {hasAction && (
+                                    <span className="text-xs text-accent-600 ml-auto">Click to view →</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(notification.created_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                                {isReviewReminder && !hasReviewed && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleReviewReminderClick(notification)
+                                    }}
+                                    className="mt-3 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
+                                  >
+                                    Leave Review
+                                  </button>
+                                )}
+                                {isReviewReminder && hasReviewed && (
+                                  <div className="mt-3 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium inline-flex items-center gap-2">
+                                    <span>✓</span>
+                                    <span>Review Left</span>
+                                  </div>
+                                )}
+                              </div>
+                              {isUnread && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleMarkAsRead(notification.id)
+                                  }}
+                                  className="ml-4 text-xs text-gray-500 hover:text-gray-700"
+                                >
+                                  Mark as read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Payments Section */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-5 sm:mb-6 flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
+                    Payout Account
+                  </h2>
+                  
+                  {!stripeConnected ? (
+                    <div className="text-center py-12">
+                      {pendingEarnings > 0 ? (
+                        <>
+                          <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            You have ${pendingEarnings.toFixed(2)} ready to withdraw!
+                          </h3>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            Add your payout details to receive your earnings directly to your bank account.
+                          </p>
+                          <button
+                            onClick={handleConnectStripe}
+                            disabled={isConnectingStripe}
+                            className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
+                          >
+                            {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
+                          </button>
+                          <p className="text-xs text-gray-500 mt-4">
+                            Secure setup takes just a few minutes
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            Set up your payout details after you receive your first booking. 
+                            You can list your driveway right away!
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Complete a booking to enable payouts
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className={`border rounded-lg p-4 ${
+                        stripeStatus === 'active' 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        <div className="flex items-start">
+                          <CheckCircle className={`h-5 w-5 mr-3 mt-0.5 ${
+                            stripeStatus === 'active' ? 'text-green-600' : 'text-yellow-600'
+                          }`} />
+                          <div className="flex-1">
+                            <h3 className={`font-semibold mb-1 ${
+                              stripeStatus === 'active' ? 'text-green-900' : 'text-yellow-900'
+                            }`}>
+                              {stripeStatus === 'active' 
+                                ? 'Stripe Account Connected' 
+                                : 'Stripe Account Pending'}
+                            </h3>
+                            <p className={`text-sm ${
+                              stripeStatus === 'active' ? 'text-green-800' : 'text-yellow-800'
+                            }`}>
+                              {stripeStatus === 'active'
+                                ? 'Your account is set up and ready to receive payouts. Earnings will be automatically transferred to your bank account.'
+                                : 'Your Stripe account is being set up. Please complete the onboarding process to start receiving payouts.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {stripeStatus === 'pending' && (
+                        <div className="bg-accent-50 border border-accent-200 rounded-lg p-4">
+                          <p className="text-sm text-accent-800 mb-3">
+                            <strong>Action Required:</strong> {
+                              stripeNeedsVerification 
+                                ? 'Your Stripe account needs identity verification. Please upload the required documents to enable payouts.'
+                                : 'Please complete your Stripe account setup to receive payouts.'
+                            }
+                          </p>
+                          <button
+                            onClick={() => {
+                              if (stripeVerificationUrl) {
+                                window.location.href = stripeVerificationUrl;
+                              } else {
+                                handleConnectStripe();
+                              }
+                            }}
+                            disabled={isConnectingStripe}
+                            className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold min-h-[44px]"
+                          >
+                            {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Verification Section */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <Shield className="h-5 w-5 mr-2 text-accent-500" />
+                    Verification Status
+                  </h2>
+                  <div className="text-center py-8">
+                    <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">Verification system is currently being updated</p>
+                  </div>
+                </div>
+
+                {/* Settings Section */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <Settings className="h-5 w-5 mr-2 text-accent-500" />
+                    Account Settings
+                  </h2>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Notifications</h3>
+                      <div className="space-y-3">
+                        <label className="flex items-center">
+                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                          <span className="ml-2 text-sm text-gray-700">Email notifications for new bookings</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                          <span className="ml-2 text-sm text-gray-700">SMS notifications for urgent messages</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
+                          <span className="ml-2 text-sm text-gray-700">Marketing emails and promotions</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy</h3>
+                      <div className="space-y-3">
+                        <label className="flex items-center">
+                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                          <span className="ml-2 text-sm text-gray-700">Show my profile to other users</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
+                          <span className="ml-2 text-sm text-gray-700">Allow reviews and ratings</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t">
+                      <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Delete Account
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1978,167 +2296,6 @@ function ProfileContent() {
             )}
 
             {/* Notifications Tab */}
-            {activeTab === 'notifications' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
-                  {notificationTab === 'inbox' && notifications.filter((n: any) => !n.is_read).length > 0 && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          // TODO: Implement markAllNotificationsAsRead endpoint
-                          // For now, mark each notification individually
-                          await Promise.all(
-                            notifications
-                              .filter((n: any) => !n.is_read)
-                              .map((n: any) => apiService.markNotificationAsRead(n.id))
-                          )
-                          setNotifications(notifications.map((n: any) => ({ ...n, is_read: true })))
-                          toast.success('All notifications marked as read')
-                        } catch (error) {
-                          console.error('Error marking all as read:', error)
-                        }
-                      }}
-                      className="text-sm text-accent-600 hover:text-accent-700 font-medium"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
-                </div>
-
-                {/* Notification Tabs */}
-                <div className="mb-6 border-b border-gray-200">
-                  <nav className="flex space-x-8">
-                    <button
-                      onClick={() => setNotificationTab('inbox')}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        notificationTab === 'inbox'
-                          ? 'border-accent-500 text-accent-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Inbox
-                      {notifications.filter((n: any) => !n.is_read).length > 0 && (
-                        <span className="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full">
-                          {notifications.filter((n: any) => !n.is_read).length}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setNotificationTab('history')}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        notificationTab === 'history'
-                          ? 'border-accent-500 text-accent-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      History
-                      {notifications.filter((n: any) => n.is_read).length > 0 && (
-                        <span className="ml-2 px-2 py-0.5 bg-gray-400 text-white text-xs rounded-full">
-                          {notifications.filter((n: any) => n.is_read).length}
-                        </span>
-                      )}
-                    </button>
-                  </nav>
-                </div>
-                {isLoadingNotifications && notifications.length === 0 ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
-                    <span className="ml-3 text-gray-600">Loading notifications...</span>
-                  </div>
-                ) : filteredNotifications.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">
-                      {notificationTab === 'inbox' ? 'No unread notifications' : 'No notification history'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {notificationTab === 'inbox'
-                        ? 'You\'re all caught up!'
-                        : 'Read notifications will appear here'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredNotifications.map((notification: any) => {
-                      const isUnread = !notification.is_read
-                      const isReviewReminder = notification.type === 'review_reminder'
-                      const hasReviewed = notification.has_reviewed || notification.title === 'Review Left'
-                      
-                      const hasAction = getNotificationUrl(notification) !== null || 
-                                       (isReviewReminder && !hasReviewed)
-
-                      return (
-                        <div
-                          key={notification.id}
-                          onClick={() => hasAction && handleNotificationClick(notification)}
-                          className={`border rounded-lg p-4 transition-colors ${
-                            isUnread
-                              ? 'border-accent-200 bg-accent-50'
-                              : 'border-gray-200 bg-white'
-                          } ${
-                            hasAction ? 'cursor-pointer hover:shadow-md hover:border-accent-300' : ''
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                                {isUnread && (
-                                  <span className="h-2 w-2 bg-accent-500 rounded-full"></span>
-                                )}
-                                {hasAction && (
-                                  <span className="text-xs text-accent-600 ml-auto">Click to view →</span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(notification.created_at).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </p>
-                              {isReviewReminder && !hasReviewed && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation() // Prevent triggering notification click
-                                    handleReviewReminderClick(notification)
-                                  }}
-                                  className="mt-3 px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors text-sm font-medium"
-                                >
-                                  Leave Review
-                                </button>
-                              )}
-                              {isReviewReminder && hasReviewed && (
-                                <div className="mt-3 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium inline-flex items-center gap-2">
-                                  <span>✓</span>
-                                  <span>Review Left</span>
-                                </div>
-                              )}
-                            </div>
-                            {isUnread && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation() // Prevent triggering notification click
-                                  handleMarkAsRead(notification.id)
-                                }}
-                                className="ml-4 text-xs text-gray-500 hover:text-gray-700"
-                              >
-                                Mark as read
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                      })}
-                    </div>
-                )}
-              </div>
-            )}
-
             {/* Listings Tab */}
             {activeTab === 'listings' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
@@ -2254,187 +2411,6 @@ function ProfileContent() {
               </div>
             )}
 
-            {/* Payments Tab */}
-            {activeTab === 'payments' && (
-              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-5 sm:mb-6">Payout Account</h2
-                >
-                
-                {!stripeConnected ? (
-                  <div className="text-center py-12">
-                    {pendingEarnings > 0 ? (
-                      <>
-                        <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          You have ${pendingEarnings.toFixed(2)} ready to withdraw!
-                        </h3>
-                        <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                          Add your payout details to receive your earnings directly to your bank account.
-                        </p>
-                        <button
-                          onClick={handleConnectStripe}
-                          disabled={isConnectingStripe}
-                          className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
-                        >
-                          {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
-                        </button>
-                        <p className="text-xs text-gray-500 mt-4">
-                          Secure setup takes just a few minutes
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
-                        <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                          Set up your payout details after you receive your first booking. 
-                          You can list your driveway right away!
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Complete a booking to enable payouts
-                        </p>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className={`border rounded-lg p-4 ${
-                      stripeStatus === 'active' 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-yellow-50 border-yellow-200'
-                    }`}>
-                      <div className="flex items-start">
-                        <CheckCircle className={`h-5 w-5 mr-3 mt-0.5 ${
-                          stripeStatus === 'active' ? 'text-green-600' : 'text-yellow-600'
-                        }`} />
-                        <div className="flex-1">
-                          <h3 className={`font-semibold mb-1 ${
-                            stripeStatus === 'active' ? 'text-green-900' : 'text-yellow-900'
-                          }`}>
-                            {stripeStatus === 'active' 
-                              ? 'Stripe Account Connected' 
-                              : 'Stripe Account Pending'}
-                          </h3>
-                          <p className={`text-sm ${
-                            stripeStatus === 'active' ? 'text-green-800' : 'text-yellow-800'
-                          }`}>
-                            {stripeStatus === 'active'
-                              ? 'Your account is set up and ready to receive payouts. Earnings will be automatically transferred to your bank account.'
-                              : 'Your Stripe account is being set up. Please complete the onboarding process to start receiving payouts.'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {stripeStatus === 'pending' && (
-                      <div className="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                        <p className="text-sm text-accent-800 mb-3">
-                          <strong>Action Required:</strong> {
-                            stripeNeedsVerification 
-                              ? 'Your Stripe account needs identity verification. Please upload the required documents to enable payouts.'
-                              : 'Please complete your Stripe account setup to receive payouts.'
-                          }
-                        </p>
-                        <button
-                          onClick={() => {
-                            if (stripeVerificationUrl) {
-                              window.location.href = stripeVerificationUrl;
-                            } else {
-                              handleConnectStripe();
-                            }
-                          }}
-                          disabled={isConnectingStripe}
-                          className="w-full sm:w-auto px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 text-sm font-semibold min-h-[44px]"
-                        >
-                          {isConnectingStripe ? 'Loading...' : stripeNeedsVerification ? 'Complete Verification' : 'Complete Setup'}
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="border-t border-gray-200 pt-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">How Payouts Work</h3>
-                      <div className="space-y-3 text-sm text-gray-600">
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
-                            1
-                          </div>
-                          <p>When a renter books your parking space, they pay through our platform</p>
-                        </div>
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
-                            2
-                          </div>
-                          <p>We automatically transfer your earnings (minus platform fee) to your Stripe account</p>
-                        </div>
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">
-                            3
-                          </div>
-                          <p>Stripe automatically deposits funds to your bank account (typically daily)</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Verification Tab */}
-            {activeTab === 'verification' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Verification Status</h2>
-                
-                <div className="space-y-6">
-                  {/* Verification system removed - section hidden */}
-                </div>
-              </div>
-            )}
-
-            {/* Settings Tab */}
-            {activeTab === 'settings' && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Account Settings</h2>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Notifications</h3>
-                    <div className="space-y-3">
-                      <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
-                        <span className="ml-2 text-sm text-gray-700">Email notifications for new bookings</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
-                        <span className="ml-2 text-sm text-gray-700">SMS notifications for urgent messages</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
-                        <span className="ml-2 text-sm text-gray-700">Marketing emails and promotions</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy</h3>
-                    <div className="space-y-3">
-                      <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
-                        <span className="ml-2 text-sm text-gray-700">Show my profile to other users</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
-                        <span className="ml-2 text-sm text-gray-700">Allow reviews and ratings</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t">
-                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                      Delete Account
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -3136,7 +3112,7 @@ function ProfileContent() {
           reviewedUserName={selectedReviewBooking.reviewedUserName}
           onReviewSubmitted={() => {
             // Refresh notifications after review is submitted
-            if (activeTab === 'notifications') {
+            if (activeTab === 'profile') {
               fetchNotifications()
             }
           }}
@@ -3147,7 +3123,7 @@ function ProfileContent() {
       {user && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-lg">
           <nav className="flex items-center justify-around px-2 py-2 safe-area-inset-bottom">
-            {tabs.slice(0, 5).map((tab) => {
+            {tabs.map((tab) => {
               const Icon = tab.icon
               return (
                 <button
