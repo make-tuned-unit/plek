@@ -1,3 +1,5 @@
+import { ContactForm } from '@/components/ContactForm'
+
 export const metadata = {
   title: 'Contact Us | plekk',
   description: 'Reach out to the plekk team for support, partnerships, or general inquiries.',
@@ -22,8 +24,8 @@ export default function ContactPage() {
           <ul className="space-y-4 text-gray-600">
             <li>
               <strong className="text-gray-900">Email:</strong>{' '}
-              <a href="mailto:support@plekk.com" className="text-accent-600 hover:text-accent-700">
-                support@plekk.com
+              <a href="mailto:support@parkplekk.com" className="text-accent-600 hover:text-accent-700">
+                support@parkplekk.com
               </a>
               <p className="text-sm text-gray-500 mt-1">
                 We aim to respond within one business day. Include booking details if your question
@@ -38,8 +40,8 @@ export default function ContactPage() {
             </li>
             <li>
               <strong className="text-gray-900">Press & partnerships:</strong>{' '}
-              <a href="mailto:partners@plekk.com" className="text-accent-600 hover:text-accent-700">
-                partners@plekk.com
+              <a href="mailto:partners@parkplekk.com" className="text-accent-600 hover:text-accent-700">
+                partners@parkplekk.com
               </a>
             </li>
           </ul>
@@ -72,71 +74,7 @@ export default function ContactPage() {
             Fill out the form below and we&apos;ll respond as soon as possible. For urgent issues,
             email us directly with &quot;URGENT&quot; in the subject line.
           </p>
-          <form className="grid gap-6">
-            <div className="grid gap-2">
-              <label htmlFor="name" className="text-sm font-medium text-gray-700">
-                Full name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="Alex Johnson"
-                className="rounded-lg border border-mist-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@plekk.com"
-                className="rounded-lg border border-mist-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="topic" className="text-sm font-medium text-gray-700">
-                Topic
-              </label>
-              <select
-                id="topic"
-                name="topic"
-                className="rounded-lg border border-mist-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:border-transparent bg-white text-charcoal-700"
-              >
-                <option value="">Select a topic</option>
-                <option value="booking">Booking question</option>
-                <option value="listing">Listing question</option>
-                <option value="payments">Payments & payouts</option>
-                <option value="technical">Technical support</option>
-                <option value="other">Something else</option>
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="message" className="text-sm font-medium text-gray-700">
-                Message
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                rows={5}
-                placeholder="Share details about how we can help."
-                className="rounded-lg border border-mist-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-              ></textarea>
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-lg bg-accent-500 px-5 py-3 text-white font-medium hover:bg-accent-600 transition"
-            >
-              Submit
-            </button>
-            <p className="text-sm text-gray-500">
-              Submissions through this form are delivered to support@plekk.com. Please do not share
-              sensitive financial information when contacting us.
-            </p>
-          </form>
+          <ContactForm />
         </section>
       </div>
     </div>

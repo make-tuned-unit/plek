@@ -518,3 +518,52 @@ export async function sendPasswordResetEmail(
   }
 }
 
+const TOPIC_LABELS: Record<string, string> = {
+  booking: 'Booking question',
+  listing: 'Listing question',
+  payments: 'Payments & payouts',
+  technical: 'Technical support',
+  other: 'Something else',
+};
+
+/**
+ * Send contact form submission as an email to the configured inbox (e.g. INBOUND_FORWARD_TO).
+ */
+export async function sendContactFormEmail(
+  to: string,
+  name: string,
+  email: string,
+  topic: string,
+  message: string
+): Promise<void> {
+  const client = getResendClient();
+  const topicLabel = TOPIC_LABELS[topic] || topic || 'General';
+  const subject = `Contact form: ${topicLabel} from ${name}`;
+
+  await client.emails.send({
+    from: getFromEmail(),
+    to,
+    replyTo: email,
+    subject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+          <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            ${getEmailHeader('Contact form')}
+            <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+              <p style="font-size: 16px; margin: 0 0 8px 0;"><strong>From:</strong> ${name} &lt;${email}&gt;</p>
+              <p style="font-size: 16px; margin: 0 0 20px 0;"><strong>Topic:</strong> ${topicLabel}</p>
+              <div style="font-size: 16px; margin: 20px 0 0 0; padding: 16px; background: ${BRAND_COLORS.background}; border-radius: 8px; white-space: pre-wrap;">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <p style="margin-top: 24px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Reply directly to this email to respond to ${name}.</p>
+            </div>
+            ${getEmailFooter()}
+          </div>
+        </body>
+      </html>
+    `,
+    text: `From: ${name} <${email}>\nTopic: ${topicLabel}\n\n${message}`,
+  });
+}
+

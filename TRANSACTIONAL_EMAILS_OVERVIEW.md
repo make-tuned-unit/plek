@@ -187,7 +187,31 @@ await sendWelcomeEmail(user.email, user.first_name);
 - **Service:** Resend (`resend` package v6.4.1)
 - **API Key:** `RESEND_API_KEY` environment variable
 - **From Email:** `FROM_EMAIL` environment variable (defaults to `onboarding@resend.dev` for testing)
-- **Frontend URL:** `FRONTEND_URL` environment variable (for confirmation, password reset, and other links in emails). **In production/staging this must be your public app URL** (e.g. `https://plekk.com`), not localhost, so links work for all users.
+- **Frontend URL:** `FRONTEND_URL` environment variable (for confirmation, password reset, and other links in emails). **In production/staging this must be your public app URL** (e.g. `https://www.parkplekk.com`), not localhost, so links work for all users.
+
+### Receiving emails (support@parkplekk.com, partners@parkplekk.com)
+
+The site shows **support@parkplekk.com** and **partners@parkplekk.com** for contact. To actually receive mail at those addresses, use **Resend Inbound**:
+
+1. **Resend Dashboard → Receiving (Inbound)**  
+   - Add your domain **parkplekk.com** if it isn’t already verified for sending.  
+   - Enable **Inbound** for that domain.
+
+2. **DNS (MX records)**  
+   - Resend will show the MX records to add at your DNS provider (e.g. `mx1.resend.com`, `mx2.resend.com`).  
+   - Point mail for `parkplekk.com` (or the subdomain you use for inbound) to Resend so that `support@parkplekk.com`, `partners@parkplekk.com`, etc. are received by Resend.
+
+3. **Forward to your inbox**  
+   - The backend forwards all received emails to **INBOUND_FORWARD_TO** (default: `jesse.sharratt@gmail.com`).  
+   - **Webhook URL:** `https://<your-backend-host>/api/webhooks/resend-inbound` (e.g. Railway backend URL).  
+   - In Resend → **Webhooks** → Add Webhook: URL = that endpoint, event = `email.received`. Copy the **Signing secret** and set **RESEND_WEBHOOK_SECRET** in the backend env.  
+   - Set **INBOUND_FORWARD_TO** and **RESEND_WEBHOOK_SECRET** in the backend (e.g. Railway).
+
+4. **Replying from Gmail**  
+   - When you reply from Gmail, the reply is sent **from your Gmail address** (e.g. jesse.sharratt@gmail.com), so the customer sees that.  
+   - To have replies show as **support@parkplekk.com**, use Gmail **Settings → Accounts → Send mail as** and add `support@parkplekk.com` (you’ll need to use Resend SMTP or your domain’s SMTP for “Send mail as” verification).
+
+Docs: [Resend – Receiving emails](https://resend.com/docs/dashboard/receiving/introduction).
 
 ### Current Configuration Notes
 ⚠️ **Important for Staging/Production:**

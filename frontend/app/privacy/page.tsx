@@ -47,7 +47,7 @@ const sections = [
   {
     title: '9. Your Choices',
     content:
-      'You can update your account information, manage notification preferences, or request account deletion by contacting support@plekk.com. You may opt out of promotional communications by following the unsubscribe instructions in our emails.',
+      'You can update your account information, manage notification preferences, or request account deletion by contacting support@parkplekk.com. You may opt out of promotional communications by following the unsubscribe instructions in our emails.',
   },
   {
     title: '10. Children\'s Privacy',
@@ -67,7 +67,7 @@ const sections = [
   {
     title: '13. Contact Us',
     content:
-      'If you have questions or concerns about this Privacy Policy, contact us at privacy@plekk.com or write to plekk Technologies Inc., Halifax, Nova Scotia, Canada.',
+      'If you have questions or concerns about this Privacy Policy, contact us at privacy@parkplekk.com or write to plekk Technologies Inc., Halifax, Nova Scotia, Canada.',
   },
 ]
 

@@ -141,6 +141,13 @@ class ApiService {
     });
   }
 
+  async submitContactForm(data: { name: string; email: string; topic?: string; message?: string }): Promise<ApiResponse<{ message?: string }>> {
+    return this.request('/contact', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async getMe(): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/me');
   }

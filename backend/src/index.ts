@@ -16,6 +16,8 @@ import { messageRoutes } from './routes/messages';
 import { paymentRoutes } from './routes/payments';
 import { userRoutes } from './routes/users';
 import { notificationRoutes } from './routes/notifications';
+import { webhooksRoutes } from './routes/webhooks';
+import { contactRoutes } from './routes/contact';
 import { initializeSupabase } from './services/supabaseService';
 
 // Load environment variables
@@ -53,6 +55,8 @@ app.use('/api/', limiter);
 // Stripe webhook route (must be before body parsing middleware)
 // Webhooks need raw body for signature verification
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+// Resend Inbound: forward received emails to INBOUND_FORWARD_TO
+app.use('/api/webhooks/resend-inbound', express.raw({ type: 'application/json' }), webhooksRoutes);
 
 // Body parsing middleware
 // Note: Don't use body parser for multipart/form-data (file uploads)
@@ -87,6 +91,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Error handling middleware
 app.use(notFound);

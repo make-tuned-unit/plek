@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Car, Mail, Phone, MapPin } from 'lucide-react'
+import { Mail, Phone, MapPin } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -11,14 +11,18 @@ export function Footer() {
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-6">
-              <span className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-accent text-charcoal-900 shadow-lg shadow-accent-500/40 mr-3 transition-transform duration-300 hover:scale-110">
-                <Car className="h-6 w-6" />
-              </span>
-              <span className="text-3xl font-bold tracking-wide text-white">plekk</span>
+              <Link href="/" className="flex items-center transition-transform duration-200 hover:scale-105">
+                <img
+                  src="/logo.png"
+                  alt="plekk logo"
+                  className="h-10 md:h-12 w-auto object-contain"
+                  style={{ maxHeight: '48px', maxWidth: '300px' }}
+                />
+              </Link>
             </div>
             <p className="text-mist-200/90 leading-relaxed mb-6 max-w-lg text-base">
-              The smartest way to find parking and earn from your driveway. 
-              We connect neighbours with idle space to drivers looking for reliable spots across the city.
+              The smartest way to find parking and earn from your driveway.{' '}
+              We connect neighbours with idle space to drivers looking for reliable parking spots.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Facebook">
@@ -26,9 +30,14 @@ export function Footer() {
                   <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
                 </svg>
               </a>
-              <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Twitter">
+              <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="LinkedIn">
                 <svg className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+              </a>
+              <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Bluesky">
+                <svg className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 4c-2 0-3.5 1.5-4 3.2C7.5 6 6.5 5 5.2 5 3.5 5 2 6.5 2 8.3s1.5 3.3 3.3 3.3c.8 0 1.5-.3 2-.8l-.8 4.5h1.5l.8-4.5c.5.5 1.2.8 2 .8 1.8 0 3.3-1.5 3.3-3.3S16.5 5 14.8 5c-1.3 0-2.3 1-2.8 2.2C11.5 5.5 10 4 12 4zm-6.8 4.2c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5zm9.6 0c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5zM12 14c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z" />
                 </svg>
               </a>
               <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Instagram">
@@ -105,16 +114,16 @@ export function Footer() {
               <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-accent text-charcoal-900 shadow-lg shadow-accent-500/30 transition-transform duration-300 group-hover:scale-110">
                 <Mail className="h-5 w-5" />
               </span>
-              <a href="mailto:support@plekk.com" className="text-mist-100 hover:text-accent-300 transition-colors duration-200">
-                support@plekk.com
+              <a href="mailto:support@parkplekk.com" className="text-mist-100 hover:text-accent-300 transition-colors duration-200">
+                support@parkplekk.com
               </a>
             </div>
             <div className="flex items-center gap-3 group">
               <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-accent text-charcoal-900 shadow-lg shadow-accent-500/30 transition-transform duration-300 group-hover:scale-110">
                 <Phone className="h-5 w-5" />
               </span>
-              <a href="tel:+19025551234" className="text-mist-100 hover:text-accent-300 transition-colors duration-200">
-                +1 (902) 555-1234
+              <a href="tel:+12703099368" className="text-mist-100 hover:text-accent-300 transition-colors duration-200">
+                +1 (270) 309-9368
               </a>
             </div>
             <div className="flex items-center gap-3 group">

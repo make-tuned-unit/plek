@@ -67,7 +67,7 @@ const sections = [
   {
     title: '13. Contact',
     content:
-      'Questions about these terms can be sent to support@plekk.com. We encourage users to resolve disputes directly but can assist with guidance related to the platform.',
+      'Questions about these terms can be sent to support@parkplekk.com. We encourage users to resolve disputes directly but can assist with guidance related to the platform.',
   },
 ]
 

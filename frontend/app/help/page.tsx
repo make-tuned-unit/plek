@@ -24,7 +24,7 @@ const faqs = [
   {
     question: 'How can I contact support?',
     answer:
-      'You can reach us at support@plekk.com. We typically respond within one business day.',
+      'You can reach us at support@parkplekk.com. We typically respond within one business day.',
   },
   {
     question: 'Can I cancel a booking?',
@@ -64,10 +64,10 @@ export default function HelpPage() {
           </p>
           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-4 sm:space-y-0">
             <Link
-              href="mailto:support@plekk.com"
+              href="mailto:support@parkplekk.com"
               className="inline-flex items-center justify-center rounded-lg bg-accent-500 px-5 py-3 text-white font-medium hover:bg-accent-600 transition"
             >
-              Email support@plekk.com
+              Email support@parkplekk.com
             </Link>
             <Link
               href="/contact"
