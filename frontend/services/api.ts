@@ -216,7 +216,7 @@ class ApiService {
   }
 
   async getBookingMessages(bookingId: string): Promise<ApiResponse<{ messages: any[]; booking?: any }>> {
-    return this.request(`/messages?bookingId=${bookingId}`);
+    return this.request(`/messages/booking/${bookingId}`);
   }
 
   async sendMessage(messageData: any): Promise<ApiResponse<{ message: any }>> {

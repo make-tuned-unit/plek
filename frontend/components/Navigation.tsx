@@ -55,7 +55,7 @@ export function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-lg border-b border-white/20 transition-all duration-300">
+    <nav className="sticky top-0 z-50 bg-white/60 backdrop-blur-2xl border-b border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300">
       <div className="max-w-7xl mx-auto container-padding">
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
@@ -109,7 +109,7 @@ export function Navigation() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white/90 backdrop-blur-xl rounded-xl shadow-2xl py-2 z-50 border border-white/30 animate-scale-in overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-56 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] py-2 z-50 border border-white/50 animate-scale-in overflow-hidden">
                     <Link
                       href="/profile"
                       onClick={handleProfileClick}
@@ -198,7 +198,7 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-mist-200 animate-slide-down">
+          <div className="md:hidden py-4 border-t border-white/40 bg-white/40 backdrop-blur-xl animate-slide-down">
             <div className="space-y-1">
               <Link 
                 href="/find-parking" 
@@ -218,7 +218,7 @@ export function Navigation() {
               {user && (
                 <>
                   <div className="pt-4 border-t border-mist-200">
-                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/60 backdrop-blur-sm border border-white/30 rounded-lg shadow-sm">
+                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/50 backdrop-blur-xl border border-white/50 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
                       {user.avatar && (
                         <img 
                           src={user.avatar} 
