@@ -92,7 +92,7 @@ export function Navigation() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-white/60 backdrop-blur-sm rounded-lg border border-transparent hover:border-white/30 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
+                  className="flex items-center space-x-2 px-3 py-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-white/60 backdrop-blur-sm rounded-lg border border-accent-500 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center space-x-2">
                     {user.avatar && (
