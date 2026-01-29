@@ -127,6 +127,13 @@ class ApiService {
     });
   }
 
+  async googleAuth(accessToken: string): Promise<ApiResponse<{ user: any; token: string }>> {
+    return this.request('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+  }
+
   async getMe(): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/me');
   }

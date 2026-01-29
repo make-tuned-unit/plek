@@ -2,6 +2,49 @@ import { Request, Response } from 'express';
 import { SupabaseAuthService, getSupabaseClient } from '../services/supabaseService';
 import { sendEmailConfirmationEmail, sendPasswordResetEmail } from '../services/emailService';
 
+// @desc    Sign in / sign up with Google (OAuth token from Supabase)
+// @route   POST /api/auth/google
+// @access  Public
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { access_token } = req.body;
+    if (!access_token) {
+      res.status(400).json({ success: false, message: 'Access token is required' });
+      return;
+    }
+    const { user, token, error } = await SupabaseAuthService.getOrCreateUserFromOAuthToken(access_token);
+    if (error || !user || !token) {
+      res.status(401).json({
+        success: false,
+        message: error?.message || 'Invalid or expired Google sign-in',
+      });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          phone: user.phone,
+          isVerified: user.is_verified,
+          isHost: user.is_host,
+          avatar: user.avatar,
+          role: user.role,
+          createdAt: user.created_at,
+        },
+        token,
+      },
+    });
+  } catch (err: any) {
+    console.error('Google auth error:', err);
+    res.status(500).json({ success: false, message: err?.message || 'Server error' });
+  }
+};
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public

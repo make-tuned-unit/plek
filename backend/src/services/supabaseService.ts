@@ -361,6 +361,82 @@ export class SupabaseAuthService {
   }
 
   /**
+   * Exchange Google (or other OAuth) Supabase JWT for session: verify token,
+   * ensure a public.users row exists (create from auth user if first sign-in), return user + token.
+   */
+  static async getOrCreateUserFromOAuthToken(
+    token: string
+  ): Promise<{ user: DatabaseUser | null; token: string | null; error: AuthError | null }> {
+    try {
+      const supabaseUrl = process.env['SUPABASE_URL'];
+      const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+      if (!supabaseUrl || !serviceKey) {
+        return {
+          user: null,
+          token: null,
+          error: { message: 'Supabase configuration missing', name: 'ConfigError', status: 500 } as AuthError,
+        };
+      }
+      const authClient = createClient(supabaseUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: { user: authUser }, error } = await authClient.auth.getUser(token);
+      if (error || !authUser) {
+        return {
+          user: null,
+          token: null,
+          error: error || ({ message: 'Invalid token', name: 'InvalidToken', status: 401 } as AuthError),
+        };
+      }
+      const adminClient = getSupabaseClient();
+      const { data: existing } = await adminClient.from('users').select('*').eq('id', authUser.id).single();
+      if (existing) {
+        return { user: existing, token, error: null };
+      }
+      const meta = (authUser.user_metadata || {}) as Record<string, string>;
+      const fullName = meta.full_name || meta.name || authUser.email || '';
+      const parts = fullName.trim().split(/\s+/);
+      const first_name = meta.given_name || parts[0] || 'User';
+      const last_name = meta.family_name || (parts.length > 1 ? parts.slice(1).join(' ') : '');
+      const { data: inserted, error: insertError } = await adminClient
+        .from('users')
+        .insert({
+          id: authUser.id,
+          email: authUser.email,
+          first_name,
+          last_name,
+          phone: null,
+          role: 'user',
+          is_verified: true,
+          is_host: false,
+          total_bookings: 0,
+          total_earnings: 0,
+          rating: 0,
+          review_count: 0,
+          country: 'US',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .select()
+        .single();
+      if (insertError || !inserted) {
+        return {
+          user: null,
+          token: null,
+          error: { message: insertError?.message || 'Failed to create user', name: 'InsertError', status: 500 } as AuthError,
+        };
+      }
+      return { user: inserted, token, error: null };
+    } catch (err: any) {
+      return {
+        user: null,
+        token: null,
+        error: { message: err?.message || 'Internal server error', name: 'InternalError', status: 500 } as AuthError,
+      };
+    }
+  }
+
+  /**
    * Verify JWT token and get user
    */
   static async verifyToken(token: string): Promise<{ user: DatabaseUser | null; error: AuthError | null }> {

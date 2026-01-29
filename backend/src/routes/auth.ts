@@ -1,9 +1,19 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import multer from 'multer';
-import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar } from '../controllers/authController';
+import rateLimit from 'express-rate-limit';
+import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar, googleAuth } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+
+// Stricter rate limit for auth (brute-force protection)
+const authStrictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 min per IP for login/register
+  message: { success: false, message: 'Too many attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Configure multer for avatar uploads
 const upload = multer({
@@ -50,10 +60,11 @@ const resetPasswordValidation = [
 ];
 
 // Routes
-router.post('/register', registerValidation, validate, register);
-router.post('/login', loginValidation, validate, login);
+router.post('/register', authStrictLimiter, registerValidation, validate, register);
+router.post('/login', authStrictLimiter, loginValidation, validate, login);
+router.post('/google', authStrictLimiter, googleAuth);
 router.get('/confirm-email', confirmEmail);
-router.post('/forgot-password', forgotPasswordValidation, validate, forgotPassword);
+router.post('/forgot-password', authStrictLimiter, forgotPasswordValidation, validate, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validate, resetPassword);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
