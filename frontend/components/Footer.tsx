@@ -36,9 +36,7 @@ export function Footer() {
                 </svg>
               </a>
               <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Bluesky">
-                <svg className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 4c-2 0-3.5 1.5-4 3.2C7.5 6 6.5 5 5.2 5 3.5 5 2 6.5 2 8.3s1.5 3.3 3.3 3.3c.8 0 1.5-.3 2-.8l-.8 4.5h1.5l.8-4.5c.5.5 1.2.8 2 .8 1.8 0 3.3-1.5 3.3-3.3S16.5 5 14.8 5c-1.3 0-2.3 1-2.8 2.2C11.5 5.5 10 4 12 4zm-6.8 4.2c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5zm9.6 0c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5zM12 14c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3z" />
-                </svg>
+                <img src="/BlueSkysocial.png" alt="Bluesky" className="h-5 w-5 transition-transform duration-300 group-hover:scale-110 object-contain" />
               </a>
               <a href="#" className="group inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary-800/60 hover:bg-accent-500 transition-all duration-300 shadow-md hover:shadow-accent-500/40 text-accent-300 hover:text-charcoal-900 transform hover:scale-110" aria-label="Instagram">
                 <svg className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
