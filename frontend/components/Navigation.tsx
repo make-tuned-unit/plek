@@ -109,11 +109,11 @@ export function Navigation() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white/70 backdrop-blur-2xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] py-2 z-50 border border-white/50 animate-scale-in overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl shadow-xl py-2 z-50 border border-mist-200 animate-scale-in overflow-hidden bg-white bg-opacity-100 [backdrop-filter:none] isolate">
                     <Link
                       href="/profile"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 transition-colors duration-150"
                     >
                       <User className="h-4 w-4 mr-3 text-mist-600" />
                       Profile
@@ -121,7 +121,7 @@ export function Navigation() {
                     <Link
                       href="/profile?tab=bookings"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 transition-colors duration-150"
                     >
                       <Calendar className="h-4 w-4 mr-3 text-mist-600" />
                       My Bookings
@@ -129,7 +129,7 @@ export function Navigation() {
                     <Link
                       href="/profile?tab=listings"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 transition-colors duration-150"
                     >
                       <Car className="h-4 w-4 mr-3 text-mist-600" />
                       My Listings
@@ -137,7 +137,7 @@ export function Navigation() {
                     <Link
                       href="/profile?tab=payments"
                       onClick={handleProfileClick}
-                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 backdrop-blur-sm transition-colors duration-150"
+                      className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 hover:bg-accent-500/10 hover:text-accent-700 transition-colors duration-150"
                     >
                       <CreditCard className="h-4 w-4 mr-3 text-mist-600" />
                       Payments
@@ -148,7 +148,7 @@ export function Navigation() {
                         <Link
                           href="/admin"
                           onClick={handleProfileClick}
-                          className="flex items-center px-4 py-2.5 text-sm text-accent-700 hover:bg-accent-500/10 font-semibold backdrop-blur-sm transition-colors duration-150"
+                          className="flex items-center px-4 py-2.5 text-sm text-accent-700 hover:bg-accent-500/10 font-semibold transition-colors duration-150"
                         >
                           <Shield className="h-4 w-4 mr-3 text-accent-600" />
                           Admin Dashboard
@@ -158,7 +158,7 @@ export function Navigation() {
                     <div className="border-t border-mist-200 my-1"></div>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-500/10 backdrop-blur-sm transition-colors duration-150"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-500/10 transition-colors duration-150"
                     >
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out
