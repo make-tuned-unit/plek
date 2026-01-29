@@ -1135,7 +1135,7 @@ function ProfileContent() {
 
       <div className="max-w-7xl mx-auto container-padding py-4 sm:py-6 lg:py-8">
         {/* Mobile Tab Navigation */}
-        <div className="lg:hidden mb-6 sticky top-[calc(4rem+3.25rem)] z-20">
+        <div className="lg:hidden mb-6">
           <div className="bg-white/80 backdrop-blur-xl rounded-xl shadow-md border border-white/30 p-4">
             {/* User Info - Mobile */}
             <div className="flex flex-col items-center mb-4 pb-4 border-b border-mist-200">
@@ -1226,6 +1226,37 @@ function ProfileContent() {
                       <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
                       <span className="ml-1 text-sm text-gray-500">({user?.reviewCount || 0} reviews)</span>
                     </div>
+                    {activeTab === 'profile' && (
+                      <div className="mt-4">
+                        {!isEditing ? (
+                          <button
+                            onClick={() => setIsEditing(true)}
+                            className="w-full flex items-center justify-center px-4 py-2 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Profile
+                          </button>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleCancelEdit}
+                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleSubmit(onSubmit)}
+                              disabled={isLoading}
+                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
+                            >
+                              <Save className="h-4 w-4 mr-1" />
+                              Save
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -1279,21 +1310,25 @@ function ProfileContent() {
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-3">
+                <div className="mb-5 sm:mb-6">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Personal Information</h2>
+                </div>
+
+                {/* Mobile Edit Button */}
+                <div className="lg:hidden mb-6">
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
+                      className="w-full flex items-center justify-center px-4 py-2.5 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
                     </button>
                   ) : (
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+                    <div className="flex gap-2">
                       <button
                         onClick={handleCancelEdit}
-                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
+                        className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -1301,7 +1336,7 @@ function ProfileContent() {
                       <button
                         onClick={handleSubmit(onSubmit)}
                         disabled={isLoading}
-                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
+                        className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
                       >
                         <Save className="h-4 w-4 mr-2" />
                         {isLoading ? 'Saving...' : 'Save Changes'}
@@ -1310,7 +1345,8 @@ function ProfileContent() {
                   )}
                 </div>
 
-                <form className="space-y-6">
+                {isEditing ? (
+                  <form className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1441,7 +1477,47 @@ function ProfileContent() {
                       />
                     </div>
                   </div>
-                </form>
+                  </form>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">First Name</label>
+                        <p className="text-sm text-gray-900">{watch('firstName') || user?.firstName || '—'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Last Name</label>
+                        <p className="text-sm text-gray-900">{watch('lastName') || user?.lastName || '—'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Email Address</label>
+                      <p className="text-sm text-gray-900">{watch('email') || user?.email || '—'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Phone Number</label>
+                      <p className="text-sm text-gray-900">{watch('phone') || user?.phone || '—'}</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Address</label>
+                        <p className="text-sm text-gray-900">{watch('address') || user?.address || '—'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">City</label>
+                        <p className="text-sm text-gray-900">{watch('city') || user?.city || '—'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">State</label>
+                        <p className="text-sm text-gray-900">{watch('state') || user?.state || '—'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">ZIP Code</label>
+                        <p className="text-sm text-gray-900">{watch('zipCode') || user?.zipCode || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Notifications Section */}
                 <div className="mt-8 pt-8 border-t border-gray-200">
