@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar, googleAuth } from '../controllers/authController';
+import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar, googleAuth, resendConfirmation } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -11,6 +11,15 @@ const authStrictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // 10 attempts per 15 min per IP for login/register
   message: { success: false, message: 'Too many attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Resend confirmation: limit to 3 per 15 min per IP
+const resendConfirmationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { success: false, message: 'Too many requests. Please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -64,6 +73,7 @@ router.post('/register', authStrictLimiter, registerValidation, validate, regist
 router.post('/login', authStrictLimiter, loginValidation, validate, login);
 router.post('/google', authStrictLimiter, googleAuth);
 router.get('/confirm-email', confirmEmail);
+router.post('/resend-confirmation', resendConfirmationLimiter, body('email').isEmail().withMessage('Valid email required'), validate, resendConfirmation);
 router.post('/forgot-password', authStrictLimiter, forgotPasswordValidation, validate, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validate, resetPassword);
 router.get('/me', protect, getMe);

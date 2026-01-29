@@ -30,7 +30,7 @@ function getFromEmail(): string {
   return process.env['FROM_EMAIL'] || 'onboarding@resend.dev';
 }
 
-// Get the frontend URL for links
+// Get the frontend URL for links (confirm email, reset password, etc.). In production, set FRONTEND_URL to your public app URL.
 function getFrontendUrl(): string {
   return process.env['FRONTEND_URL'] || 'http://localhost:3000';
 }

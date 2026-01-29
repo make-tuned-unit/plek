@@ -150,6 +150,58 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// @desc    Resend confirmation email
+// @route   POST /api/auth/resend-confirmation
+// @access  Public
+export const resendConfirmation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+    const client = getSupabaseClient();
+    const { data: userRow, error: findError } = await client
+      .from('users')
+      .select('id, is_verified, first_name')
+      .eq('email', email.trim())
+      .maybeSingle();
+
+    // Same response whether user exists or not (don't reveal)
+    const genericSuccess = {
+      success: true,
+      message: 'If that email is registered and not yet confirmed, we\'ve sent a new confirmation link.',
+    };
+
+    if (findError || !userRow) {
+      res.json(genericSuccess);
+      return;
+    }
+    if (userRow.is_verified) {
+      res.json(genericSuccess);
+      return;
+    }
+
+    const { link: confirmationLink, error: linkError } = await SupabaseAuthService.generateEmailConfirmationLink(
+      email.trim(),
+      userRow.id
+    );
+    if (linkError || !confirmationLink) {
+      res.json(genericSuccess);
+      return;
+    }
+    try {
+      await sendEmailConfirmationEmail(email.trim(), userRow.first_name || 'there', confirmationLink);
+    } catch (_) {
+      // Don't reveal send failure
+    }
+    res.json(genericSuccess);
+  } catch (err: any) {
+    console.error('Resend confirmation error:', err);
+    res.status(500).json({ success: false, message: err?.message || 'Server error' });
+  }
+};
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public

@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
+import { apiService } from '@/services/api'
 import toast from 'react-hot-toast'
 
 const signUpSchema = z.object({
@@ -38,6 +39,9 @@ function SignUpContent() {
   const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : null
   const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
   const checkEmail = searchParams.get('check-email') === 'true'
+  const pendingEmail = searchParams.get('email') || ''
+  const [isResending, setIsResending] = useState(false)
+  const [resendEmailInput, setResendEmailInput] = useState('')
 
   const defaultValues = useMemo(() => ({
     firstName: '',
@@ -68,8 +72,7 @@ function SignUpContent() {
       const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
       if (success) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
-        // Don't redirect - show message about checking email
-        router.push('/auth/signup?check-email=true')
+        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}`)
       } else {
         toast.error('Failed to create account. Please try again.')
       }
@@ -78,7 +81,7 @@ function SignUpContent() {
       // Check if it's a success response but without token (email confirmation required)
       if (error?.response?.data?.success && error?.response?.data?.message?.includes('check your email')) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
-        router.push('/auth/signup?check-email=true')
+        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}`)
       } else {
         toast.error(error?.response?.data?.message || 'An error occurred during sign up')
       }
@@ -111,6 +114,58 @@ function SignUpContent() {
               <li>Make sure you entered the correct email address</li>
               <li>Wait a few minutes - emails can take up to 5 minutes to arrive</li>
             </ul>
+            <div className="mt-4 pt-4 border-t border-accent-200">
+              {pendingEmail ? (
+                <button
+                  type="button"
+                  disabled={isResending}
+                  onClick={async () => {
+                    setIsResending(true)
+                    try {
+                      await apiService.resendConfirmation(pendingEmail)
+                      toast.success('If that email is not yet confirmed, we\'ve sent a new link.')
+                    } catch {
+                      toast.error('Could not resend. Try again in a few minutes.')
+                    } finally {
+                      setIsResending(false)
+                    }
+                  }}
+                  className="text-accent-600 hover:text-accent-700 font-semibold text-sm disabled:opacity-50"
+                >
+                  {isResending ? 'Sending…' : 'Resend confirmation email'}
+                </button>
+              ) : (
+                <div className="space-y-2 text-left">
+                  <p className="text-sm text-gray-700 font-medium">Resend confirmation link</p>
+                  <input
+                    type="email"
+                    placeholder="Your email"
+                    value={resendEmailInput}
+                    onChange={(e) => setResendEmailInput(e.target.value)}
+                    className="input w-full text-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={isResending || !resendEmailInput.trim()}
+                    onClick={async () => {
+                      if (!resendEmailInput.trim()) return
+                      setIsResending(true)
+                      try {
+                        await apiService.resendConfirmation(resendEmailInput.trim())
+                        toast.success('If that email is not yet confirmed, we\'ve sent a new link.')
+                      } catch {
+                        toast.error('Could not resend. Try again in a few minutes.')
+                      } finally {
+                        setIsResending(false)
+                      }
+                    }}
+                    className="text-accent-600 hover:text-accent-700 font-semibold text-sm disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending…' : 'Resend confirmation email'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-3">
             <button

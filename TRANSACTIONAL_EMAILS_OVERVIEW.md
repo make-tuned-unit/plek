@@ -187,7 +187,7 @@ await sendWelcomeEmail(user.email, user.first_name);
 - **Service:** Resend (`resend` package v6.4.1)
 - **API Key:** `RESEND_API_KEY` environment variable
 - **From Email:** `FROM_EMAIL` environment variable (defaults to `onboarding@resend.dev` for testing)
-- **Frontend URL:** `FRONTEND_URL` environment variable (for email links)
+- **Frontend URL:** `FRONTEND_URL` environment variable (for confirmation, password reset, and other links in emails). **In production/staging this must be your public app URL** (e.g. `https://plekk.com`), not localhost, so links work for all users.
 
 ### Current Configuration Notes
 ⚠️ **Important for Staging/Production:**

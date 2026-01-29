@@ -9,29 +9,84 @@ import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Base URL for absolute meta URLs (og:image, etc.). Set NEXT_PUBLIC_APP_URL in production (e.g. https://www.parkplekk.com).
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+
 export const metadata: Metadata = {
-  title: 'plekk - Rent Driveways by the Hour',
-  description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
-  keywords: 'driveway rental, parking, storage, parking space, hourly parking',
-  authors: [{ name: 'plekk Team' }],
+  metadataBase: new URL(appUrl),
+  title: {
+    default: 'plekk - Rent Driveways by the Hour | Find Parking Near You',
+    template: '%s | plekk',
+  },
+  description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighborhood. List your driveway and earn. Easy, local parking with plekk.',
+  keywords: ['driveway rental', 'parking', 'hourly parking', 'parking space', 'rent driveway', 'parking near me', 'driveway sharing', 'parking marketplace', 'plekk'],
+  authors: [{ name: 'plekk', url: appUrl }],
+  creator: 'plekk',
+  publisher: 'plekk',
+  formatDetection: { email: false, address: false, telephone: false },
   viewport: 'width=device-width, initial-scale=1',
-  robots: 'index, follow',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   icons: {
     icon: '/icon.png',
     apple: '/icon.png',
   },
   openGraph: {
-    title: 'plekk - Rent Driveways by the Hour',
-    description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
-    images: ['/logo.png'],
     type: 'website',
+    locale: 'en_US',
+    url: appUrl,
+    siteName: 'plekk',
+    title: 'plekk - Rent Driveways by the Hour | Find Parking Near You',
+    description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighborhood. List your driveway and earn.',
+    images: [
+      {
+        url: '/PlekkFeaturedImage.png',
+        width: 1200,
+        height: 630,
+        alt: 'plekk - Rent driveways by the hour. Find parking near you.',
+      },
+    ],
   },
   twitter: {
-    card: 'summary',
-    title: 'plekk - Rent Driveways by the Hour',
-    description: 'Find and rent driveways, parking spaces, and storage solutions in your neighborhood.',
-    images: ['/logo.png'],
+    card: 'summary_large_image',
+    title: 'plekk - Rent Driveways by the Hour | Find Parking Near You',
+    description: 'Find and rent driveways, parking spaces, and storage by the hour. List your driveway and earn.',
+    images: ['/PlekkFeaturedImage.png'],
   },
+  alternates: {
+    canonical: appUrl,
+  },
+  category: 'marketplace',
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${appUrl}/#organization`,
+      name: 'plekk',
+      url: appUrl,
+      logo: { '@type': 'ImageObject', url: `${appUrl}/logo.png` },
+      description: 'Parking marketplace powered by local driveways. Rent driveways by the hour.',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${appUrl}/#website`,
+      url: appUrl,
+      name: 'plekk - Rent Driveways by the Hour',
+      description: 'Find and rent driveways, parking spaces, and storage by the hour. List your driveway and earn.',
+      publisher: { '@id': `${appUrl}/#organization` },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${appUrl}/find-parking?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
 }
 
 export default function RootLayout({
@@ -42,6 +97,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <Providers>
           <Navigation />
           {children}

@@ -24,6 +24,14 @@ dotenv.config();
 // Initialize Supabase
 initializeSupabase();
 
+// Ensure production uses a public FRONTEND_URL for email links (confirm, reset, etc.)
+const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+if (process.env['NODE_ENV'] === 'production' && (frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1'))) {
+  console.warn(
+    '[CONFIG] FRONTEND_URL is localhost in production. Email confirmation and password reset links will not work for users. Set FRONTEND_URL to your public app URL (e.g. https://plekk.com) in the backend environment.'
+  );
+}
+
 const app = express();
 const PORT = process.env['PORT'] || 8000;
 

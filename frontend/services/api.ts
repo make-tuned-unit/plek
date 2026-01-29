@@ -134,6 +134,13 @@ class ApiService {
     });
   }
 
+  async resendConfirmation(email: string): Promise<ApiResponse<{ message?: string }>> {
+    return this.request('/auth/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async getMe(): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/me');
   }

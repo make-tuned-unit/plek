@@ -244,6 +244,7 @@ export class SupabaseAuthService {
   static async generateEmailConfirmationLink(email: string, userId: string): Promise<{ link: string | null; error: AuthError | null }> {
     try {
       const client = getSupabaseClient();
+      // Must be the public app URL in production so confirmation links work for all users (not localhost)
       const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
       
       // Generate a signup link using Supabase admin API
