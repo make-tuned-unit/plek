@@ -20,26 +20,26 @@ const HeroVideo = dynamic(() => import('@/components/HeroVideo'), { ssr: false }
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      {/* Hero Section - fixed height so video fills without letterboxing */}
+      <section className="relative overflow-hidden min-h-[70vh] max-h-[95vh] h-[85vh] flex flex-col">
         <HeroVideo />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/25 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/25 backdrop-blur-sm pointer-events-none" />
         {/* Header fade for readability over video */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/25 to-transparent pointer-events-none" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-32 lg:pb-28">
+        <div className="relative flex-1 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
           <div className="text-center">
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-50 mb-10 leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-50 mb-6 md:mb-8 leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
               Finding parking shouldn't{' '}
               <span className="text-accent-400 drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">mean circling the block</span>
             </h1>
             
             {/* Search Bar - Hidden on mobile */}
-            <div className="hidden md:block max-w-2xl mx-auto mb-10">
+            <div className="hidden md:block max-w-2xl mx-auto mb-6 md:mb-8">
               <SearchBar />
             </div>
 
             {/* Primary CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 md:mb-8">
               <Link 
                 href="/find-parking" 
                 className="group inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-bold bg-gradient-accent text-white shadow-xl shadow-accent-500/40 hover:shadow-accent-lg hover:-translate-y-1 transition-all duration-300"
@@ -57,7 +57,7 @@ export default function HomePage() {
             </div>
 
             {/* Branding Banner */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-5 md:mb-6 animate-fade-in">
               <div className="flex items-center gap-3 px-6 py-3 bg-primary-900/95 backdrop-blur-md rounded-full shadow-xl border border-white/10 hover:shadow-2xl transition-all duration-300">
                 <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gradient-accent text-charcoal-900 font-semibold shadow-lg shadow-accent-500/40 overflow-hidden">
                   <img 
@@ -73,7 +73,7 @@ export default function HomePage() {
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm animate-fade-in stagger-1">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-sm animate-fade-in stagger-1">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-md shadow-md border border-white/20 hover:shadow-lg transition-all duration-200">
                 <CheckCircle2 className="w-5 h-5 text-accent-600" />
                 <span className="font-semibold text-charcoal-800">Secure & Verified</span>

@@ -49,18 +49,21 @@ export default function HeroVideo() {
   }
 
   return (
-    <video
-      ref={videoRef}
-      className="absolute inset-0 h-full w-full object-cover"
-      autoPlay
-      muted
-      playsInline
-      aria-hidden="true"
-      controls={false}
-      preload="auto"
-      onEnded={handleVideoEnd}
-      src={isMobile ? '/plekkdriveway-mobile.mp4' : '/hero-driveway.mp4'}
-    />
+    <div className="absolute inset-0 min-w-full min-h-full">
+      <video
+        ref={videoRef}
+        className="absolute inset-0 w-full h-full object-cover object-center"
+        style={{ objectFit: 'cover' }}
+        autoPlay
+        muted
+        playsInline
+        aria-hidden="true"
+        controls={false}
+        preload="auto"
+        onEnded={handleVideoEnd}
+        src={isMobile ? '/plekkdriveway-mobile.mp4' : '/hero-driveway.mp4'}
+      />
+    </div>
   )
 }
 
