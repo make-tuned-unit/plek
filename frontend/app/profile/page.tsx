@@ -1026,6 +1026,16 @@ function ProfileContent() {
     try {
       setIsSubmittingListing(true);
       
+      // Pick canonical start/end from first available day (DB has one pair for all days)
+      const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+      const firstAvailable = daysOrder.find((d) => listingData.availability[d]?.available);
+      const startTime = firstAvailable
+        ? listingData.availability[firstAvailable].start
+        : '00:00';
+      const endTime = firstAvailable
+        ? listingData.availability[firstAvailable].end
+        : '23:59';
+
       // Prepare data for backend
       const propertyData = {
         title: listingData.title,
@@ -1040,7 +1050,17 @@ function ProfileContent() {
         require_approval: listingData.require_approval === true,
         lead_time_hours: Number(listingData.lead_time_hours) || 0,
         instant_booking: listingData.require_approval ? false : true,
-        coordinates: listingData.coordinates // Include coordinates from the form
+        coordinates: listingData.coordinates, // Include coordinates from the form
+        // Availability hours (so Find Parking shows correct times)
+        start_time: startTime,
+        end_time: endTime,
+        monday_available: listingData.availability.monday.available,
+        tuesday_available: listingData.availability.tuesday.available,
+        wednesday_available: listingData.availability.wednesday.available,
+        thursday_available: listingData.availability.thursday.available,
+        friday_available: listingData.availability.friday.available,
+        saturday_available: listingData.availability.saturday.available,
+        sunday_available: listingData.availability.sunday.available,
       };
 
       let response;
@@ -2710,36 +2730,64 @@ function ProfileContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Daily Availability
                   </label>
-                  
-                  {/* Quick Set All Days Button */}
-                  <div className="mb-3">
+
+                  {/* Quick actions: All Day + Copy from day to all */}
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const startTime = listingFormData.availability.monday.start;
-                        const endTime = listingFormData.availability.monday.end;
+                        setListingFormData(prev => ({
+                          ...prev,
+                          availability: Object.fromEntries(
+                            Object.entries(prev.availability).map(([d, s]) => [
+                              d,
+                              { ...s, start: '00:00', end: '23:59' }
+                            ])
+                          ) as typeof prev.availability
+                        }));
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium bg-mist-100 text-charcoal-700 rounded hover:bg-mist-200"
+                    >
+                      All Day (every day)
+                    </button>
+                    <span className="text-gray-400 text-xs hidden sm:inline">|</span>
+                    <span className="text-xs text-gray-600">Copy</span>
+                    <select
+                      className="text-xs border border-mist-300 rounded px-2 py-1.5 bg-white focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                      value="copy-source"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'copy-source') return;
+                        const sourceDay = val as keyof typeof listingFormData.availability;
+                        const source = listingFormData.availability[sourceDay];
+                        if (!source) return;
                         setListingFormData(prev => ({
                           ...prev,
                           availability: {
-                            monday: { start: startTime, end: endTime, available: true },
-                            tuesday: { start: startTime, end: endTime, available: true },
-                            wednesday: { start: startTime, end: endTime, available: true },
-                            thursday: { start: startTime, end: endTime, available: true },
-                            friday: { start: startTime, end: endTime, available: true },
-                            saturday: { start: startTime, end: endTime, available: true },
-                            sunday: { start: startTime, end: endTime, available: true }
+                            monday: { ...prev.availability.monday, start: source.start, end: source.end },
+                            tuesday: { ...prev.availability.tuesday, start: source.start, end: source.end },
+                            wednesday: { ...prev.availability.wednesday, start: source.start, end: source.end },
+                            thursday: { ...prev.availability.thursday, start: source.start, end: source.end },
+                            friday: { ...prev.availability.friday, start: source.start, end: source.end },
+                            saturday: { ...prev.availability.saturday, start: source.start, end: source.end },
+                            sunday: { ...prev.availability.sunday, start: source.start, end: source.end }
                           }
                         }));
+                        e.target.value = 'copy-source';
                       }}
-                      className="px-3 py-1 text-xs bg-accent-50 text-accent-700 rounded hover:bg-accent-100"
                     >
-                      🕐 Set All Days to Same Time
-                    </button>
+                      <option value="copy-source">from day…</option>
+                      {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((d) => (
+                        <option key={d} value={d}>
+                          {d.charAt(0).toUpperCase() + d.slice(1)} → all days
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {Object.entries(listingFormData.availability).map(([day, schedule]) => (
-                      <div key={day} className="flex items-center space-x-3">
+                      <div key={day} className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <label className="flex items-center space-x-2 min-w-[80px]">
                           <input
                             type="checkbox"
@@ -2760,7 +2808,7 @@ function ProfileContent() {
                           />
                           <span className="text-sm font-medium text-gray-700 capitalize">{day}</span>
                         </label>
-                        
+
                         {schedule.available && (
                           <>
                             <input
@@ -2798,13 +2846,32 @@ function ProfileContent() {
                               }}
                               className="px-2 py-1 text-sm border border-mist-300 rounded focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                             />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setListingFormData(prev => ({
+                                  ...prev,
+                                  availability: {
+                                    ...prev.availability,
+                                    [day]: {
+                                      ...prev.availability[day as keyof typeof prev.availability],
+                                      start: '00:00',
+                                      end: '23:59'
+                                    }
+                                  }
+                                }));
+                              }}
+                              className="px-2 py-1 text-xs text-accent-600 hover:text-accent-700 hover:bg-accent-50 rounded"
+                            >
+                              All Day
+                            </button>
                           </>
                         )}
                       </div>
                     ))}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    💡 Set when your parking space is available each day
+                    💡 e.g. overnight for winter parking bans: set one day (e.g. 6 PM–8 AM), then copy that day to all days
                   </p>
                 </div>
 

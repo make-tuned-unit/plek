@@ -55,13 +55,13 @@ export function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/60 backdrop-blur-2xl border-b border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300">
+    <nav className="sticky top-0 z-50 bg-accent-500 border-b border-accent-600 shadow-md transition-all duration-300">
       <div className="max-w-7xl mx-auto container-padding">
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center group transition-transform duration-200 hover:scale-105">
             <img 
-              src="/logo.png?v=2" 
+              src="/PlekkLogoWhite.png" 
               alt="plekk logo" 
               className="flex-shrink-0 h-10 md:h-12 w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
               style={{ maxHeight: '48px', maxWidth: '300px' }}
@@ -72,7 +72,7 @@ export function Navigation() {
           <div className="hidden md:flex items-center space-x-1">
             <Link 
               href="/find-parking" 
-              className="px-4 py-2 text-charcoal-700 hover:text-accent-600 flex items-center gap-2 rounded-lg transition-all duration-200 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 font-medium text-sm"
+              className="px-4 py-2 text-white hover:text-white/90 flex items-center gap-2 rounded-lg transition-all duration-200 hover:bg-white/10 font-medium text-sm"
             >
               <MapPin className="h-4 w-4" />
               Find Parking
@@ -80,7 +80,7 @@ export function Navigation() {
             <Link 
               href="/list-your-driveway" 
               onClick={handleListDrivewayClick}
-              className="px-4 py-2 text-charcoal-700 hover:text-accent-600 rounded-lg transition-all duration-200 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 font-medium text-sm"
+              className="px-4 py-2 text-white hover:text-white/90 rounded-lg transition-all duration-200 hover:bg-white/10 font-medium text-sm"
             >
               List Your Driveway
             </Link>
@@ -92,14 +92,14 @@ export function Navigation() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-white/60 backdrop-blur-sm rounded-lg border border-accent-500 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
+                  className="flex items-center space-x-2 px-3 py-2 text-white hover:text-white/90 hover:bg-white/10 rounded-lg border border-white/30 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center space-x-2">
                     {user.avatar && (
                       <img 
                         src={user.avatar} 
                         alt={user.name}
-                        className="w-8 h-8 rounded-full ring-2 ring-accent-200 hover:ring-accent-400 transition-all duration-200"
+                        className="w-8 h-8 rounded-full ring-2 ring-white/40 hover:ring-white/60 transition-all duration-200"
                       />
                     )}
                     <span className="text-sm font-semibold">{user.name}</span>
@@ -170,13 +170,13 @@ export function Navigation() {
               <>
                 <Link 
                   href="/auth/signin" 
-                  className="px-4 py-2 text-charcoal-700 hover:text-charcoal-900 font-medium text-sm transition-colors duration-200"
+                  className="px-4 py-2 text-white hover:text-white/90 hover:bg-white/10 font-medium text-sm transition-colors duration-200 rounded-lg"
                 >
                   Sign In
                 </Link>
                 <Link 
                   href="/auth/signup" 
-                  className="btn-primary px-6 py-2.5 text-sm shadow-lg"
+                  className="bg-white text-accent-600 hover:bg-white/90 px-6 py-2.5 text-sm font-semibold rounded-lg shadow-md transition-colors duration-200"
                 >
                   Sign Up
                 </Link>
@@ -188,7 +188,7 @@ export function Navigation() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-charcoal-700 hover:text-charcoal-900 hover:bg-mist-100 rounded-lg transition-colors duration-200 touch-target focus-ring"
+              className="p-2 text-white hover:text-white/90 hover:bg-white/10 rounded-lg transition-colors duration-200 touch-target focus-ring"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -198,11 +198,11 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/40 bg-white/40 backdrop-blur-xl animate-slide-down">
+          <div className="md:hidden py-4 border-t border-white/20 bg-accent-600 animate-slide-down">
             <div className="space-y-1">
               <Link 
                 href="/find-parking" 
-                className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150 font-medium"
+                className="block px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3 rounded-lg transition-all duration-150 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <MapPin className="h-5 w-5" />
@@ -211,26 +211,26 @@ export function Navigation() {
               <button 
                 type="button"
                 onClick={handleListDrivewayClick}
-                className="block text-left w-full px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 rounded-lg transition-all duration-150 font-medium"
+                className="block text-left w-full px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-all duration-150 font-medium"
               >
                 List Your Driveway
               </button>
               {user && (
                 <>
-                  <div className="pt-4 border-t border-mist-200">
-                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/50 backdrop-blur-xl border border-white/50 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                  <div className="pt-4 border-t border-white/20">
+                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/10 rounded-xl">
                       {user.avatar && (
                         <img 
                           src={user.avatar} 
                           alt={user.name}
-                          className="w-10 h-10 rounded-full ring-2 ring-accent-200"
+                          className="w-10 h-10 rounded-full ring-2 ring-white/40"
                         />
                       )}
-                      <span className="text-sm text-charcoal-800 font-semibold">{user.name}</span>
+                      <span className="text-sm text-white font-semibold">{user.name}</span>
                     </div>
                     <Link
                       href="/profile"
-                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
+                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <User className="h-5 w-5" />
@@ -238,7 +238,7 @@ export function Navigation() {
                     </Link>
                     <Link
                       href="/profile?tab=bookings"
-                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
+                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <Calendar className="h-5 w-5" />
@@ -246,7 +246,7 @@ export function Navigation() {
                     </Link>
                     <Link
                       href="/profile?tab=listings"
-                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
+                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <Car className="h-5 w-5" />
@@ -254,7 +254,7 @@ export function Navigation() {
                     </Link>
                     <Link
                       href="/profile?tab=payments"
-                      className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
+                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <CreditCard className="h-5 w-5" />
@@ -263,7 +263,7 @@ export function Navigation() {
                     {(user?.role === 'admin' || user?.role === 'super_admin') && (
                       <Link
                         href="/admin"
-                        className="block px-4 py-3 text-accent-700 hover:text-accent-800 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 flex items-center gap-3 rounded-lg transition-all duration-150 font-semibold"
+                        className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150 font-semibold"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <Shield className="h-5 w-5" />
@@ -272,7 +272,7 @@ export function Navigation() {
                     )}
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-500/10 backdrop-blur-sm border border-transparent hover:border-red-300/30 flex items-center gap-3 rounded-lg transition-all duration-150"
+                      className="w-full text-left px-4 py-3 text-white hover:bg-red-500/30 rounded-lg flex items-center gap-3 transition-all duration-150"
                     >
                       <LogOut className="h-5 w-5" />
                       Sign Out
@@ -281,17 +281,17 @@ export function Navigation() {
                 </>
               )}
               {!user && (
-                <div className="pt-4 border-t border-mist-200 space-y-2">
+                <div className="pt-4 border-t border-white/20 space-y-2">
                   <Link 
                     href="/auth/signin" 
-                    className="block px-4 py-3 text-charcoal-700 hover:text-accent-600 hover:bg-accent-500/10 backdrop-blur-sm border border-transparent hover:border-accent-300/30 rounded-lg transition-all duration-150 font-medium text-center"
+                    className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg font-medium text-center transition-all duration-150"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign In
                   </Link>
                   <Link 
                     href="/auth/signup" 
-                    className="block btn-primary text-center shadow-lg"
+                    className="block bg-white text-accent-600 font-semibold py-3 rounded-lg text-center shadow-md hover:bg-white/90 transition-all duration-150"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up

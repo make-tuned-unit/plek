@@ -244,16 +244,31 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       console.log('[createProperty] No coordinates provided:', { coordinates: req.body.coordinates });
     }
     
-    // Create the property
+    // Build insert payload (include availability when provided)
+    const insertPayload: Record<string, unknown> = {
+      ...propertyData,
+      host_id: hostId,
+      status: 'pending_review',
+      latitude: latitude,
+      longitude: longitude
+    };
+    if (req.body.start_time != null && typeof req.body.start_time === 'string') {
+      insertPayload.start_time = req.body.start_time;
+    }
+    if (req.body.end_time != null && typeof req.body.end_time === 'string') {
+      insertPayload.end_time = req.body.end_time;
+    }
+    if (typeof req.body.monday_available === 'boolean') insertPayload.monday_available = req.body.monday_available;
+    if (typeof req.body.tuesday_available === 'boolean') insertPayload.tuesday_available = req.body.tuesday_available;
+    if (typeof req.body.wednesday_available === 'boolean') insertPayload.wednesday_available = req.body.wednesday_available;
+    if (typeof req.body.thursday_available === 'boolean') insertPayload.thursday_available = req.body.thursday_available;
+    if (typeof req.body.friday_available === 'boolean') insertPayload.friday_available = req.body.friday_available;
+    if (typeof req.body.saturday_available === 'boolean') insertPayload.saturday_available = req.body.saturday_available;
+    if (typeof req.body.sunday_available === 'boolean') insertPayload.sunday_available = req.body.sunday_available;
+
     const { data: property, error: propertyError } = await supabase
       .from('properties')
-      .insert({
-        ...propertyData,
-        host_id: hostId,
-        status: 'pending_review',
-        latitude: latitude,
-        longitude: longitude
-      } as any)
+      .insert(insertPayload as any)
       .select()
       .single();
     
@@ -330,8 +345,21 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       return;
     }
     
-    // Update property data
-    const updateData: Partial<PropertyData & { latitude?: number; longitude?: number }> = {};
+    // Update property data (include availability hours and day flags)
+    type UpdatePayload = Partial<PropertyData & {
+      latitude?: number;
+      longitude?: number;
+      start_time?: string;
+      end_time?: string;
+      monday_available?: boolean;
+      tuesday_available?: boolean;
+      wednesday_available?: boolean;
+      thursday_available?: boolean;
+      friday_available?: boolean;
+      saturday_available?: boolean;
+      sunday_available?: boolean;
+    }>;
+    const updateData: UpdatePayload = {};
     if (req.body.title) updateData.title = req.body.title;
     if (req.body.description) updateData.description = req.body.description;
     if (req.body.address) updateData.address = req.body.address;
@@ -356,6 +384,21 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     } else if (typeof req.body.requireApproval === 'boolean') {
       updateData.require_approval = req.body.requireApproval;
     }
+
+    // Availability hours (so Find Parking shows correct times)
+    if (req.body.start_time != null && typeof req.body.start_time === 'string') {
+      updateData.start_time = req.body.start_time;
+    }
+    if (req.body.end_time != null && typeof req.body.end_time === 'string') {
+      updateData.end_time = req.body.end_time;
+    }
+    if (typeof req.body.monday_available === 'boolean') updateData.monday_available = req.body.monday_available;
+    if (typeof req.body.tuesday_available === 'boolean') updateData.tuesday_available = req.body.tuesday_available;
+    if (typeof req.body.wednesday_available === 'boolean') updateData.wednesday_available = req.body.wednesday_available;
+    if (typeof req.body.thursday_available === 'boolean') updateData.thursday_available = req.body.thursday_available;
+    if (typeof req.body.friday_available === 'boolean') updateData.friday_available = req.body.friday_available;
+    if (typeof req.body.saturday_available === 'boolean') updateData.saturday_available = req.body.saturday_available;
+    if (typeof req.body.sunday_available === 'boolean') updateData.sunday_available = req.body.sunday_available;
     
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
     if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {

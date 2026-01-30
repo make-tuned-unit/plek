@@ -3,8 +3,13 @@
 import { getSupabaseAuthClient } from '@/services/supabase'
 import toast from 'react-hot-toast'
 
-export function GoogleSignInButton() {
+interface GoogleSignInButtonProps {
+  disabled?: boolean
+}
+
+export function GoogleSignInButton({ disabled = false }: GoogleSignInButtonProps) {
   const handleClick = async () => {
+    if (disabled) return
     try {
       const supabase = getSupabaseAuthClient()
       const { error } = await supabase.auth.signInWithOAuth({
@@ -30,7 +35,8 @@ export function GoogleSignInButton() {
     <button
       type="button"
       onClick={handleClick}
-      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+      disabled={disabled}
+      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path

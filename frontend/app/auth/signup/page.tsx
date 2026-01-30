@@ -42,6 +42,7 @@ function SignUpContent() {
   const pendingEmail = searchParams.get('email') || ''
   const [isResending, setIsResending] = useState(false)
   const [resendEmailInput, setResendEmailInput] = useState('')
+  const [googleTermsAccepted, setGoogleTermsAccepted] = useState(false)
 
   const defaultValues = useMemo(() => ({
     firstName: '',
@@ -396,7 +397,31 @@ function SignUpContent() {
             </div>
 
             <div className="mt-6">
-              <GoogleSignInButton />
+              <GoogleSignInButton disabled={!googleTermsAccepted} />
+              <div className="flex items-start mt-3">
+                <div className="flex items-center h-5">
+                  <input
+                    id="googleAcceptTerms"
+                    type="checkbox"
+                    checked={googleTermsAccepted}
+                    onChange={(e) => setGoogleTermsAccepted(e.target.checked)}
+                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="googleAcceptTerms" className="text-gray-700 cursor-pointer">
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-accent-600 hover:text-accent-500">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" className="text-accent-600 hover:text-accent-500">
+                      Privacy Policy
+                    </Link>{' '}
+                    to continue with Google
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

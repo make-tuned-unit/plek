@@ -176,38 +176,48 @@ export default function ListYourDrivewayPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-x-hidden">
+        {/* Progress Steps: compact tabs on mobile, text below */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          {/* Tab row - equal width, no horizontal scroll */}
+          <div className="flex items-center gap-2 sm:gap-4">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  currentStep >= step.id 
-                    ? 'bg-accent-500 border-accent-500 text-white' 
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => setCurrentStep(step.id)}
+                className="flex-1 min-w-0 flex flex-col items-center gap-1 sm:gap-2 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2 rounded-lg p-1"
+                aria-current={currentStep === step.id ? 'step' : undefined}
+                aria-label={`Step ${step.id}: ${step.title}`}
+              >
+                <div className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 flex-shrink-0 ${
+                  currentStep >= step.id
+                    ? 'bg-accent-500 border-accent-500 text-white'
                     : 'border-gray-300 text-gray-500'
                 }`}>
                   {currentStep > step.id ? (
-                    <CheckCircle className="h-6 w-6" />
+                    <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                   ) : (
                     <span className="text-sm font-medium">{step.id}</span>
                   )}
                 </div>
-                <div className="ml-3">
-                  <p className={`text-sm font-medium ${
-                    currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </p>
-                  <p className="text-xs text-gray-500">{step.description}</p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-accent-500' : 'bg-gray-300'
-                  }`} />
-                )}
-              </div>
+                {/* Step title below tab on mobile; hide on small to save space, show from sm */}
+                <span className={`hidden sm:block text-xs font-medium text-center truncate w-full ${
+                  currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+                }`}>
+                  {step.title}
+                </span>
+              </button>
             ))}
+          </div>
+          {/* Current step title + description below (mobile-friendly) */}
+          <div className="mt-3 text-center sm:mt-4">
+            <p className="text-sm font-medium text-gray-900">
+              {steps.find(s => s.id === currentStep)?.title}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {steps.find(s => s.id === currentStep)?.description}
+            </p>
           </div>
         </div>
 
@@ -409,28 +419,43 @@ export default function ListYourDrivewayPage() {
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Start Time
-                  </label>
-                  <input
-                    {...register('startTime')}
-                    type="time"
-                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                  />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available Times
+                </label>
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue('startTime', '00:00')
+                      setValue('endTime', '23:59')
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium bg-mist-100 text-charcoal-700 rounded hover:bg-mist-200"
+                  >
+                    All Day (00:00 – 23:59)
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    End Time
-                  </label>
-                  <input
-                    {...register('endTime')}
-                    type="time"
-                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                    <input
+                      {...register('startTime')}
+                      type="time"
+                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">End Time</label>
+                    <input
+                      {...register('endTime')}
+                      type="time"
+                      className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                    />
+                  </div>
                 </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  💡 Same times apply to all selected days. e.g. overnight for winter parking bans: set 6 PM–8 AM.
+                </p>
               </div>
 
               <div className="space-y-4">
