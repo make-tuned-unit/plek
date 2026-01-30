@@ -2378,14 +2378,20 @@ function ProfileContent() {
                         </>
                       ) : (
                         <>
-                          <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No earnings yet</h3>
+                          <CreditCard className="h-12 w-12 text-accent-500 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">Set up payouts</h3>
                           <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                            Set up your payout details after you receive your first booking. 
-                            You can list your driveway right away!
+                            Add your payout details anytime. When you earn from bookings, funds will go straight to your bank account.
                           </p>
-                          <p className="text-sm text-gray-500">
-                            Complete a booking to enable payouts
+                          <button
+                            onClick={handleConnectStripe}
+                            disabled={isConnectingStripe}
+                            className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
+                          >
+                            {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
+                          </button>
+                          <p className="text-xs text-gray-500 mt-4">
+                            Secure setup takes just a few minutes
                           </p>
                         </>
                       )}
