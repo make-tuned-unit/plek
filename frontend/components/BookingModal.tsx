@@ -23,9 +23,19 @@ interface PriceBreakdown {
   total: number
 }
 
+// Format amount in user's currency for display
+function formatMoney(amount: number, currency: string = 'usd'): string {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency.toUpperCase() }).format(amount)
+  } catch {
+    return `${currency.toUpperCase()} ${amount.toFixed(2)}`
+  }
+}
+
 interface PaymentFormProps {
   paymentIntentId: string | null
   priceBreakdown: PriceBreakdown | null
+  currency?: string
   onBack: () => Promise<void> | void
   onPaymentSuccess: (bookingId?: string) => void
 }
@@ -33,6 +43,7 @@ interface PaymentFormProps {
 function PaymentForm({
   paymentIntentId,
   priceBreakdown,
+  currency = 'usd',
   onBack,
   onPaymentSuccess,
 }: PaymentFormProps) {
@@ -142,20 +153,20 @@ function PaymentForm({
               Payment Summary
             </h3>
             <div className="text-right">
-              <div className="text-3xl font-bold">${priceBreakdown.total.toFixed(2)}</div>
+              <div className="text-3xl font-bold">{formatMoney(priceBreakdown.total, currency)}</div>
               <div className="text-sm text-accent-100">Total</div>
             </div>
           </div>
           <div className="bg-white/10 rounded-lg p-4 space-y-2 text-sm backdrop-blur-sm">
             <div className="flex justify-between">
               <span className="text-accent-100">
-                {priceBreakdown.hours} hour{priceBreakdown.hours !== 1 ? 's' : ''} × ${priceBreakdown.hourlyRate}/hour
+                {priceBreakdown.hours} hour{priceBreakdown.hours !== 1 ? 's' : ''} × {formatMoney(priceBreakdown.hourlyRate, currency)}/hour
               </span>
-              <span className="font-medium">${priceBreakdown.subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(priceBreakdown.subtotal, currency)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-accent-100">Service Fee (5%)</span>
-              <span className="font-medium">${priceBreakdown.bookerServiceFee.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(priceBreakdown.bookerServiceFee, currency)}</span>
             </div>
           </div>
         </div>
@@ -233,6 +244,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
   const [step, setStep] = useState<'date-time' | 'details' | 'payment'>('date-time')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
+  const [paymentCurrency, setPaymentCurrency] = useState<string>('usd')
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null)
 
   // Calculate price breakdown when dates/times change
@@ -410,6 +422,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
 
       const clientSecret = (paymentResponse as any).clientSecret ?? paymentResponse.data?.clientSecret ?? null
       const paymentId = (paymentResponse as any).paymentIntentId ?? paymentResponse.data?.paymentIntentId ?? null
+      const currency = (paymentResponse.data as any)?.currency ?? (paymentResponse.data as any)?.pricing?.currency ?? 'usd'
 
       if (!clientSecret) {
         toast.error('Payment setup did not return a client secret. Please try again.')
@@ -418,6 +431,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
 
       setClientSecret(clientSecret)
       setPaymentIntentId(paymentId)
+      setPaymentCurrency(currency)
       setStep('payment') // Move to payment step
       toast('Please complete payment to confirm your booking.', { 
         icon: '💳',
@@ -812,6 +826,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <PaymentForm
                   paymentIntentId={paymentIntentId}
                   priceBreakdown={priceBreakdown}
+                  currency={paymentCurrency}
                   onBack={handleReturnToBooking}
                   onPaymentSuccess={(bookingId) => {
                     setClientSecret(null)

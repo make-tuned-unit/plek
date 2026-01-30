@@ -183,6 +183,12 @@ class ApiService {
     lastName: string;
     phone: string;
     avatar: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    bio: string;
   }>): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/profile', {
       method: 'PUT',
@@ -327,6 +333,25 @@ class ApiService {
     return this.request('/payments/connect/status');
   }
 
+  async getHostEarnings(): Promise<ApiResponse<{
+    totalGross: number;
+    totalPlatformFee: number;
+    netEarnings: number;
+    pendingPayout: number;
+    breakdown: Array<{
+      bookingId: string;
+      propertyTitle: string;
+      totalAmount: number;
+      bookerServiceFee: number;
+      grossAmount: number;
+      platformFee: number;
+      yourEarnings: number;
+      startTime: string;
+    }>;
+  }>> {
+    return this.request('/payments/earnings');
+  }
+
   // Payments
   async createPaymentIntent(payload: {
     propertyId: string;
@@ -337,11 +362,13 @@ class ApiService {
   }): Promise<ApiResponse<{
     clientSecret: string;
     paymentIntentId: string;
+    currency?: string;
     pricing?: {
       totalAmount: number;
       baseAmount: number;
       bookerServiceFee: number;
       hostServiceFee: number;
+      currency?: string;
     };
   }>> {
     return this.request('/payments', {

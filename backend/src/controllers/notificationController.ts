@@ -62,7 +62,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
 
     res.json({
       success: true,
-      data: enrichedNotifications || [],
+      data: { notifications: enrichedNotifications || [] },
     });
   } catch (error: any) {
     console.error('Error in getNotifications:', error);

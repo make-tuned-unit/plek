@@ -39,6 +39,65 @@ import { BookingMessages } from '../../components/BookingMessages'
 import { ReviewModal } from '../../components/ReviewModal'
 // VerificationStatus component removed - verification system was removed
 
+const PROFILE_BANNER_DISMISSED_KEY = 'plekk_profile_banner_dismissed'
+
+function ProfileCompleteBanner({ user, onEditProfile }: { user: any; onEditProfile?: () => void }) {
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      setDismissed(localStorage.getItem(PROFILE_BANNER_DISMISSED_KEY) === 'true')
+    } catch {
+      setDismissed(false)
+    }
+  }, [])
+
+  const isIncomplete = user && (
+    !user.phone?.trim() ||
+    !user.address?.trim() ||
+    !user.country?.trim()
+  )
+
+  const handleDismiss = () => {
+    try {
+      localStorage.setItem(PROFILE_BANNER_DISMISSED_KEY, 'true')
+      setDismissed(true)
+    } catch {
+      setDismissed(false)
+    }
+  }
+
+  if (!isIncomplete || dismissed) return null
+
+  return (
+    <div className="mb-6 rounded-xl bg-accent-50 border border-accent-200 p-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-accent-900">
+          Complete your profile — add your phone, address, and country so we can show you local currency and improve your experience.
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onEditProfile}
+          className="px-4 py-2 text-sm font-semibold text-white bg-accent-500 rounded-lg hover:bg-accent-600"
+        >
+          Edit profile
+        </button>
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="p-2 text-accent-600 hover:text-accent-800 rounded-lg hover:bg-accent-100"
+          aria-label="Dismiss"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
@@ -48,9 +107,30 @@ const profileSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
+  country: z.string().optional(),
 })
 
 type ProfileForm = z.infer<typeof profileSchema>
+
+// Country options for profile (ISO 3166-1 alpha-2 code as value)
+const COUNTRY_OPTIONS = [
+  { value: '', label: 'Select country' },
+  { value: 'CA', label: 'Canada' },
+  { value: 'US', label: 'United States' },
+  { value: 'GB', label: 'United Kingdom' },
+  { value: 'AU', label: 'Australia' },
+  { value: 'NZ', label: 'New Zealand' },
+  { value: 'IE', label: 'Ireland' },
+  { value: 'DE', label: 'Germany' },
+  { value: 'FR', label: 'France' },
+  { value: 'ES', label: 'Spain' },
+  { value: 'IT', label: 'Italy' },
+  { value: 'NL', label: 'Netherlands' },
+  { value: 'MX', label: 'Mexico' },
+  { value: 'IN', label: 'India' },
+  { value: 'JP', label: 'Japan' },
+  { value: 'KR', label: 'South Korea' },
+]
 
 
 
@@ -106,6 +186,23 @@ function ProfileContent() {
   const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
   const [pendingEarnings, setPendingEarnings] = useState<number>(0);
+  const [hostEarnings, setHostEarnings] = useState<{
+    totalGross: number;
+    totalPlatformFee: number;
+    netEarnings: number;
+    pendingPayout: number;
+    breakdown: Array<{
+      bookingId: string;
+      propertyTitle: string;
+      totalAmount: number;
+      bookerServiceFee: number;
+      grossAmount: number;
+      platformFee: number;
+      yourEarnings: number;
+      startTime: string;
+    }>;
+  } | null>(null);
+  const [isLoadingEarnings, setIsLoadingEarnings] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
@@ -191,6 +288,7 @@ function ProfileContent() {
         city: user.city || '',
         state: user.state || '',
         zipCode: user.zipCode || '',
+        country: user.country || '',
       })
     }
   }, [user, reset])
@@ -309,8 +407,9 @@ function ProfileContent() {
 
       const response = await apiService.getNotifications()
       if (response.success && response.data) {
-        // API returns { notifications: [...] }
-        setNotifications(response.data.notifications || [])
+        // API returns { notifications: [...] }; support both shapes for resilience
+        const list = Array.isArray(response.data) ? response.data : (response.data.notifications || [])
+        setNotifications(list)
       } else {
         setNotifications([])
       }
@@ -756,8 +855,6 @@ function ProfileContent() {
             setStripeStatus(response.data.status || 'pending');
             setStripeNeedsVerification(response.data.needsVerification || false);
             setStripeVerificationUrl(response.data.verificationUrl || null);
-            // pendingEarnings not available in current API response
-            setPendingEarnings(0);
           }
         } catch (error) {
           console.error('Error checking Stripe status:', error);
@@ -768,7 +865,35 @@ function ProfileContent() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id]); // Only depend on user.id to prevent multiple calls
+  }, [user?.id]);
+
+  // Fetch host earnings when on Payments tab (so pendingEarnings and revenue dashboard are correct)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchEarnings = async () => {
+      if (!user?.id || activeTab !== 'payments') return;
+      setIsLoadingEarnings(true);
+      try {
+        const response = await apiService.getHostEarnings();
+        if (isMounted && response.success && response.data) {
+          setHostEarnings(response.data);
+          setPendingEarnings(response.data.netEarnings);
+        } else if (isMounted) {
+          setHostEarnings(null);
+          setPendingEarnings(0);
+        }
+      } catch {
+        if (isMounted) {
+          setHostEarnings(null);
+          setPendingEarnings(0);
+        }
+      } finally {
+        if (isMounted) setIsLoadingEarnings(false);
+      }
+    };
+    fetchEarnings();
+    return () => { isMounted = false; };
+  }, [user?.id, activeTab]);
 
   // Handle Stripe Connect onboarding (delayed - only when earnings exist)
   const handleConnectStripe = async () => {
@@ -836,10 +961,23 @@ function ProfileContent() {
   const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true)
     try {
-      // TODO: Implement profile update logic
-      console.log('Profile data:', data)
-      setIsEditing(false)
-      toast.success('Profile updated successfully!')
+      const ok = await updateProfile({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        country: data.country,
+      })
+      if (ok) {
+        await refreshUser()
+        setIsEditing(false)
+        toast.success('Profile updated successfully!')
+      } else {
+        toast.error('Failed to update profile')
+      }
     } catch (error) {
       console.error('Error updating profile:', error)
       toast.error('Failed to update profile')
@@ -859,6 +997,7 @@ function ProfileContent() {
         city: user.city || '',
         state: user.state || '',
         zipCode: user.zipCode || '',
+        country: user.country || '',
       })
     }
     setIsEditing(false)
@@ -1373,6 +1512,9 @@ function ProfileContent() {
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
+                {/* Complete your profile banner - show when key fields missing, dismissible */}
+                <ProfileCompleteBanner user={user} onEditProfile={() => setIsEditing(true)} />
+
                 <div className="mb-5 sm:mb-6">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Personal Information</h2>
                 </div>
@@ -1483,13 +1625,15 @@ function ProfileContent() {
                           onChange={(value) => setValue('address', value)}
                           onSelect={(place) => {
                             setValue('address', place.place_name);
-                            // Extract city, state, zip from place context
+                            // Extract city, state, zip, country from place context
                             const city = place.context?.find(ctx => ctx.id.includes('place'))?.text || '';
                             const state = place.context?.find(ctx => ctx.id.includes('region'))?.text || '';
                             const zipCode = place.context?.find(ctx => ctx.id.includes('postcode'))?.text || '';
+                            const countryCode = place.context?.find(ctx => ctx.id.includes('country'))?.country_code?.toUpperCase() || '';
                             setValue('city', city);
                             setValue('state', state);
                             setValue('zipCode', zipCode);
+                            if (countryCode) setValue('country', countryCode);
                           }}
                           placeholder="e.g. 1234 Barrington St, Halifax, NS"
                           className="w-full"
@@ -1573,6 +1717,12 @@ function ProfileContent() {
                       <div>
                         <label className="block text-sm font-medium text-gray-500 mb-1">Province/State</label>
                         <p className="text-sm text-gray-900">{watch('state') || user?.state || '—'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Country</label>
+                        <p className="text-sm text-gray-900">
+                          {COUNTRY_OPTIONS.find(o => o.value === (watch('country') || user?.country))?.label || watch('country') || user?.country || '—'}
+                        </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500 mb-1">Postal/Zip Code</label>
@@ -2331,6 +2481,72 @@ function ProfileContent() {
             {/* Payments Tab */}
             {activeTab === 'payments' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6 space-y-8">
+                {/* Host revenue dashboard – shows gross, platform fee, net so they expect payout = net */}
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
+                    Your revenue
+                  </h2>
+                  {isLoadingEarnings ? (
+                    <div className="rounded-xl border border-mist-200 bg-mist-50/50 p-6 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500" />
+                      <span className="ml-3 text-gray-600">Loading earnings…</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-mist-200 bg-mist-50/50 overflow-hidden">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-mist-200">
+                        <div className="p-4 sm:p-5 text-center sm:text-left">
+                          <p className="text-sm font-medium text-gray-500">Total from bookings</p>
+                          <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">
+                            ${(hostEarnings?.totalGross ?? 0).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Amount renters paid (before fees)</p>
+                        </div>
+                        <div className="p-4 sm:p-5 text-center sm:text-left">
+                          <p className="text-sm font-medium text-gray-500">Platform service fee (5%)</p>
+                          <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">
+                            −${(hostEarnings?.totalPlatformFee ?? 0).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Deducted before payout</p>
+                        </div>
+                        <div className="p-4 sm:p-5 text-center sm:text-left bg-accent-50/50">
+                          <p className="text-sm font-medium text-accent-800">Your earnings (payout)</p>
+                          <p className="text-xl sm:text-2xl font-bold text-accent-900 mt-1">
+                            ${(hostEarnings?.netEarnings ?? 0).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-accent-700 mt-1">This is what you receive</p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 bg-mist-100 border-t border-mist-200">
+                        <p className="text-sm text-gray-600">
+                          Payouts are the booking total minus the renter’s service fee and our 5% platform fee. You receive <strong>your earnings</strong> above, not the full amount the renter paid.
+                        </p>
+                      </div>
+                      {hostEarnings?.breakdown && hostEarnings.breakdown.length > 0 && (
+                        <div className="border-t border-mist-200">
+                          <h3 className="text-sm font-semibold text-gray-700 px-4 py-3 bg-white">By booking</h3>
+                          <ul className="divide-y divide-mist-200">
+                            {hostEarnings.breakdown.map((row) => (
+                              <li key={row.bookingId} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-white">
+                                <div>
+                                  <p className="font-medium text-gray-900">{row.propertyTitle}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(row.startTime).toLocaleDateString()} · Renter paid ${row.totalAmount.toFixed(2)} (incl. their fee)
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-500">−${row.platformFee.toFixed(2)} fee</p>
+                                  <p className="font-semibold text-accent-700">${row.yourEarnings.toFixed(2)} to you</p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Payment method for reservations */}
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">

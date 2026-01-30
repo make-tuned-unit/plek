@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
+import geoip from 'geoip-lite';
 import { getSupabaseClient } from '../services/supabaseService';
+
+/** Get country code from request IP (fallback when user profile has no country). */
+function getCountryFromRequest(req: Request): string | null {
+  const ip = req.ip || (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress;
+  if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.')) return null;
+  const cleanIp = ip.replace(/^::ffff:/, '');
+  const geo = geoip.lookup(cleanIp);
+  return geo?.country ?? null;
+}
 
 // Initialize Stripe lazily to ensure env vars are loaded
 let stripeInstance: Stripe | null = null;
@@ -25,6 +35,58 @@ function getStripe(): Stripe {
 function calculateTotalHours(startTime: Date, endTime: Date): number {
   const diffMs = endTime.getTime() - startTime.getTime();
   return diffMs / (1000 * 60 * 60);
+}
+
+// Map user country (ISO 3166-1 alpha-2) to Stripe currency (ISO 4217 lowercase)
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  US: 'usd', CA: 'cad', GB: 'gbp', UK: 'gbp', AU: 'aud', NZ: 'nzd',
+  IE: 'eur', DE: 'eur', FR: 'eur', ES: 'eur', IT: 'eur', NL: 'eur', BE: 'eur', AT: 'eur', PT: 'eur',
+  JP: 'jpy', KR: 'krw', CN: 'cny', IN: 'inr', MX: 'mxn', BR: 'brl', ZA: 'zar', CH: 'chf', SE: 'sek', NO: 'nok', DK: 'dkk',
+};
+const ZERO_DECIMAL_CURRENCIES = new Set(['jpy', 'krw', 'vnd', 'clp', 'pyg', 'jod', 'kwd', 'bif', 'djf', 'gnf', 'kmf', 'mga', 'rwf', 'xof', 'xpf']);
+
+function countryToCurrency(country: string | null | undefined): string {
+  if (!country || typeof country !== 'string') return 'usd';
+  const code = country.toUpperCase().trim();
+  return COUNTRY_TO_CURRENCY[code] || 'usd';
+}
+
+/** Infer country code from province/state name when profile has no country set. */
+function inferCountryFromState(state: string | null | undefined): string | null {
+  if (!state || typeof state !== 'string') return null;
+  const normalized = state.trim().toLowerCase();
+  if (!normalized) return null;
+  // Canadian provinces and territories
+  const caProvinces = [
+    'alberta', 'british columbia', 'manitoba', 'new brunswick', 'newfoundland and labrador',
+    'nova scotia', 'northwest territories', 'nunavut', 'ontario', 'prince edward island',
+    'quebec', 'saskatchewan', 'yukon', 'nl', 'ns', 'nb', 'pe', 'qc', 'on', 'mb', 'sk', 'ab', 'bc', 'nt', 'yt', 'nu',
+  ];
+  if (caProvinces.some(p => normalized === p || normalized.startsWith(p + ' ') || normalized.endsWith(' ' + p))) return 'CA';
+  // US states (abbreviations and common names)
+  const usStates: string[] = [
+    'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut',
+    'delaware', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa',
+    'kansas', 'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan',
+    'minnesota', 'mississippi', 'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire',
+    'new jersey', 'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio',
+    'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 'south dakota',
+    'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington', 'west virginia',
+    'wisconsin', 'wyoming', 'district of columbia', 'dc',
+    'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il', 'in', 'ia',
+    'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy', 'dc',
+  ];
+  if (usStates.some(s => normalized === s || normalized.startsWith(s + ' ') || normalized.endsWith(' ' + s))) return 'US';
+  // Australian states/territories
+  const auStates = ['nsw', 'vic', 'qld', 'wa', 'sa', 'tas', 'act', 'nt', 'new south wales', 'victoria', 'queensland', 'western australia', 'south australia', 'tasmania', 'australian capital territory', 'northern territory'];
+  if (auStates.some(s => normalized === s || normalized.includes(s))) return 'AU';
+  return null;
+}
+
+function amountInSmallestUnit(amount: number, currency: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
+    ? Math.round(amount)
+    : Math.round(amount * 100);
 }
 
 function calculateBookingPriceForProperty(
@@ -331,6 +393,92 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
   }
 };
 
+// Host service fee is 5% of base (half of 10% total fee; booker pays the other 5%)
+const HOST_SERVICE_FEE_PERCENT = 0.05;
+
+// @desc    Get host earnings summary (for Payments tab: gross, platform fee, net)
+// @route   GET /api/payments/earnings
+// @access  Private
+export const getHostEarnings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+
+    const { data: bookings, error } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        total_amount,
+        service_fee,
+        start_time,
+        end_time,
+        status,
+        payment_status,
+        property:properties(id, title, address)
+      `)
+      .eq('host_id', userId)
+      .eq('payment_status', 'completed')
+      .in('status', ['confirmed', 'completed'])
+      .order('start_time', { ascending: false });
+
+    if (error) throw error;
+
+    let totalGross = 0;
+    let totalPlatformFee = 0;
+    const breakdown: Array<{
+      bookingId: string;
+      propertyTitle: string;
+      totalAmount: number;
+      bookerServiceFee: number;
+      grossAmount: number;
+      platformFee: number;
+      yourEarnings: number;
+      startTime: string;
+    }> = [];
+
+    for (const b of bookings || []) {
+      const totalAmount = Number(b.total_amount) || 0;
+      const bookerServiceFee = Number(b.service_fee) || 0;
+      const grossAmount = totalAmount - bookerServiceFee; // base amount (what renter paid for the space)
+      const platformFee = Math.round(grossAmount * HOST_SERVICE_FEE_PERCENT * 100) / 100;
+      const yourEarnings = Math.round((grossAmount - platformFee) * 100) / 100;
+
+      totalGross += grossAmount;
+      totalPlatformFee += platformFee;
+      breakdown.push({
+        bookingId: b.id,
+        propertyTitle: (b.property as any)?.title || 'Parking space',
+        totalAmount,
+        bookerServiceFee,
+        grossAmount,
+        platformFee,
+        yourEarnings,
+        startTime: b.start_time,
+      });
+    }
+
+    const netEarnings = Math.round((totalGross - totalPlatformFee) * 100) / 100;
+
+    res.json({
+      success: true,
+      data: {
+        totalGross: Math.round(totalGross * 100) / 100,
+        totalPlatformFee: Math.round(totalPlatformFee * 100) / 100,
+        netEarnings,
+        pendingPayout: netEarnings, // same as net; Stripe handles payout schedule
+        breakdown,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getting host earnings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get earnings',
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Create payment intent for booking
 // @route   POST /api/payments/create-intent
 // @access  Private
@@ -351,6 +499,18 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     } = req.body;
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
+
+    // Fetch renter's country to charge in their local currency (profile, then province/state, then IP)
+    const { data: renter } = await supabase
+      .from('users')
+      .select('country, state')
+      .eq('id', renterId)
+      .single();
+    const country =
+      renter?.country ||
+      inferCountryFromState(renter?.state) ||
+      getCountryFromRequest(req);
+    const currency = countryToCurrency(country);
 
     if (!propertyId || !startTime || !endTime) {
       res.status(400).json({
@@ -514,11 +674,13 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       data: {
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
+        currency,
         pricing: {
           totalAmount,
           baseAmount,
           bookerServiceFee,
           hostServiceFee,
+          currency,
         },
       },
     });
