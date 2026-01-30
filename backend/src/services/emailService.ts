@@ -466,16 +466,15 @@ export async function sendPaymentReceiptEmail(
 
 /**
  * Send password reset email
+ * @param resetLink - Full URL to the frontend reset-password page including token_hash, token, type, email query params (built by authController)
  */
 export async function sendPasswordResetEmail(
   email: string,
   firstName: string,
-  resetToken: string
+  resetLink: string
 ): Promise<void> {
   try {
     const client = getResendClient();
-    
-    const resetUrl = `${getFrontendUrl()}/auth/reset-password?token=${resetToken}`;
     
     await client.emails.send({
       from: getFromEmail(),
@@ -496,7 +495,7 @@ export async function sendPasswordResetEmail(
                 <p style="font-size: 16px; margin: 0 0 30px 0;">We received a request to reset your password. Click the button below to create a new password:</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${resetUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Reset Password</a>
+                  <a href="${resetLink}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Reset Password</a>
                 </div>
                 
                 <p style="font-size: 16px; margin: 30px 0;">If you didn't request this, you can safely ignore this email. Your password will not be changed.</p>

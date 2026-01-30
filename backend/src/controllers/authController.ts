@@ -774,8 +774,8 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Construct reset link pointing to our backend endpoint
-    const resetLink = `${frontendUrl}/api/auth/reset-password?token_hash=${hashedToken}&token=${recoveryToken}&type=recovery&email=${encodeURIComponent(email)}`;
+    // Construct reset link pointing to the frontend page (user submits new password via POST to API from that page)
+    const resetLink = `${frontendUrl}/auth/reset-password?token_hash=${hashedToken}&token=${encodeURIComponent(recoveryToken)}&type=recovery&email=${encodeURIComponent(email)}`;
 
     // Send password reset email via Resend
     try {

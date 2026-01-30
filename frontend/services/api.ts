@@ -141,6 +141,32 @@ class ApiService {
     });
   }
 
+  async forgotPassword(email: string): Promise<ApiResponse<{ message?: string }>> {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(params: {
+    token_hash: string;
+    token: string;
+    type?: string;
+    email?: string;
+    newPassword: string;
+  }): Promise<ApiResponse<{ message?: string }>> {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        token_hash: params.token_hash,
+        token: params.token,
+        type: params.type ?? 'recovery',
+        email: params.email,
+        newPassword: params.newPassword,
+      }),
+    });
+  }
+
   async submitContactForm(data: { name: string; email: string; topic?: string; message?: string }): Promise<ApiResponse<{ message?: string }>> {
     return this.request('/contact', {
       method: 'POST',

@@ -28,6 +28,11 @@ dist/
 *secret*
 *key*
 *password*
+# Allow auth route folders (forgot/reset password pages)
+!**/auth/forgot-password/
+!**/auth/forgot-password/**
+!**/auth/reset-password/
+!**/auth/reset-password/**
 *.pem
 *.key
 *.cert
