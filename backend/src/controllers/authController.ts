@@ -807,10 +807,10 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
   try {
     const { token_hash, token, type, email, newPassword } = req.body;
 
-    if (!token_hash || !token || !newPassword) {
+    if (!newPassword) {
       res.status(400).json({
         success: false,
-        message: 'Token and new password are required',
+        message: 'New password is required',
       });
       return;
     }
@@ -825,12 +825,32 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     const client = getSupabaseClient();
 
-    // Verify the token using Supabase (verifyOtp is on auth, not auth.admin)
-    const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-      type: (type as string) === 'recovery' ? 'recovery' : 'email',
-      token_hash: token_hash as string,
-      token: token as string,
-    });
+    // Verify using Supabase: verifyOtp expects EITHER token_hash (VerifyTokenHashParams) OR email+token (VerifyEmailOtpParams), not both
+    let verifyData: { user?: { id: string } } | null = null;
+    let verifyError: any = null;
+
+    if (token_hash) {
+      const result = await client.auth.verifyOtp({
+        type: (type as string) === 'recovery' ? 'recovery' : 'email',
+        token_hash: token_hash as string,
+      });
+      verifyData = result.data;
+      verifyError = result.error;
+    } else if (email && token) {
+      const result = await client.auth.verifyOtp({
+        type: (type as string) === 'recovery' ? 'recovery' : 'email',
+        email: email as string,
+        token: token as string,
+      });
+      verifyData = result.data;
+      verifyError = result.error;
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Token or token hash is required',
+      });
+      return;
+    }
 
     if (verifyError || !verifyData.user) {
       console.error('[Password Reset] Token verification error:', verifyError);
