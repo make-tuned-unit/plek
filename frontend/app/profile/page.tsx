@@ -136,6 +136,7 @@ function ProfileContent() {
     city: '',
     state: '',
     zipCode: '',
+    propertyType: 'driveway' as string,
     features: [] as string[],
     requireApproval: false,
     leadTimeHours: 0,
@@ -905,6 +906,7 @@ function ProfileContent() {
       city: listing.city || '',
       state: listing.state || '',
       zipCode: listing.zip_code || '',
+      propertyType: listing.property_type || 'driveway',
       features: listing.features || [],
       requireApproval: listing.require_approval === true,
       leadTimeHours: listing.lead_time_hours ?? 0,
@@ -1025,7 +1027,36 @@ function ProfileContent() {
   const handleSubmitListing = async (listingData: any) => {
     try {
       setIsSubmittingListing(true);
-      
+
+      // If address is set but no coordinates (e.g. user typed address without selecting), geocode for accurate pin
+      let coordinates = listingData.coordinates;
+      if (listingData.address?.trim() && !coordinates?.length) {
+        const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+        const queryParts = [
+          listingData.address,
+          listingData.city,
+          listingData.state,
+          listingData.zip_code,
+        ]
+          .filter(Boolean)
+          .map((s: string) => String(s).trim());
+        if (token && queryParts.length > 0) {
+          try {
+            const res = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+                queryParts.join(', ')
+              )}.json?access_token=${token}&limit=1&types=address,place`
+            );
+            const data = await res.json();
+            if (data?.features?.length && data.features[0].center?.length >= 2) {
+              coordinates = data.features[0].center; // [longitude, latitude]
+            }
+          } catch (_) {
+            // Continue without coordinates; backend will store null
+          }
+        }
+      }
+
       // Pick canonical start/end from first available day (DB has one pair for all days)
       const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
       const firstAvailable = daysOrder.find((d) => listingData.availability[d]?.available);
@@ -1045,12 +1076,12 @@ function ProfileContent() {
         state: listingData.state || '',
         zip_code: listingData.zip_code || '',
         price: listingData.price, // Backend expects 'price' not 'hourly_rate'
-        property_type: 'driveway',
+        property_type: listingData.property_type || 'driveway',
         max_vehicles: 1,
         require_approval: listingData.require_approval === true,
         lead_time_hours: Number(listingData.lead_time_hours) || 0,
         instant_booking: listingData.require_approval ? false : true,
-        coordinates: listingData.coordinates, // Include coordinates from the form
+        coordinates, // From autocomplete selection or geocode above
         // Availability hours (so Find Parking shows correct times)
         start_time: startTime,
         end_time: endTime,
@@ -1128,6 +1159,7 @@ function ProfileContent() {
           city: '',
           state: '',
           zipCode: '',
+          propertyType: 'driveway',
           features: [],
           requireApproval: false,
           leadTimeHours: 0,
@@ -1459,7 +1491,7 @@ function ProfileContent() {
                             setValue('state', state);
                             setValue('zipCode', zipCode);
                           }}
-                          placeholder="Enter your address"
+                          placeholder="e.g. 1234 Barrington St, Halifax, NS"
                           className="w-full"
                         />
                       ) : (
@@ -1498,7 +1530,7 @@ function ProfileContent() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ZIP Code
+                        Postal/Zip Code
                       </label>
                       <input
                         {...register('zipCode')}
@@ -1539,11 +1571,11 @@ function ProfileContent() {
                         <p className="text-sm text-gray-900">{watch('city') || user?.city || '—'}</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">State</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Province/State</label>
                         <p className="text-sm text-gray-900">{watch('state') || user?.state || '—'}</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">ZIP Code</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Postal/Zip Code</label>
                         <p className="text-sm text-gray-900">{watch('zipCode') || user?.zipCode || '—'}</p>
                       </div>
                     </div>
@@ -2581,6 +2613,7 @@ function ProfileContent() {
                     city: '',
                     state: '',
                     zipCode: '',
+                    propertyType: 'driveway',
                     features: [],
                     requireApproval: false,
                     leadTimeHours: 0,
@@ -2613,6 +2646,7 @@ function ProfileContent() {
                 city: listingFormData.city,
                 state: listingFormData.state,
                 zip_code: listingFormData.zipCode,
+                property_type: listingFormData.propertyType,
                 coordinates: listingFormData.coordinates,
                 features: listingFormData.features,
                 require_approval: listingFormData.requireApproval,
@@ -2656,12 +2690,30 @@ function ProfileContent() {
                         zipCode: place.context?.find(ctx => ctx.id.includes('postcode'))?.text || ''
                       }));
                     }}
-                    placeholder="Start typing your address..."
+                    placeholder="e.g. Halifax, NS"
                     className="w-full"
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     💡 Start typing and we'll suggest addresses for you
                   </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Property Type
+                  </label>
+                  <select
+                    value={listingFormData.propertyType}
+                    onChange={(e) => setListingFormData(prev => ({ ...prev, propertyType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                  >
+                    <option value="driveway">Driveway</option>
+                    <option value="garage">Garage</option>
+                    <option value="warehouse">Warehouse</option>
+                    <option value="barn">Barn</option>
+                    <option value="storage">Storage (boats, RVs, motorcycles, etc.)</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
 
                 <div>
@@ -3046,6 +3098,7 @@ function ProfileContent() {
                       city: '',
                       state: '',
                       zipCode: '',
+                      propertyType: 'driveway',
                       features: [],
                       requireApproval: false,
                       leadTimeHours: 0,

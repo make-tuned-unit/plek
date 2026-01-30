@@ -92,14 +92,14 @@ export function Navigation() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 text-white hover:text-white/90 hover:bg-white/10 rounded-lg border border-white/30 transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
+                  className="flex items-center space-x-2 px-3 py-2 text-white hover:text-white/90 hover:bg-white/10 rounded-lg border-2 border-white transition-all duration-200 focus-ring shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center space-x-2">
                     {user.avatar && (
                       <img 
                         src={user.avatar} 
                         alt={user.name}
-                        className="w-8 h-8 rounded-full ring-2 ring-white/40 hover:ring-white/60 transition-all duration-200"
+                        className="w-8 h-8 rounded-full ring-2 ring-white transition-all duration-200"
                       />
                     )}
                     <span className="text-sm font-semibold">{user.name}</span>
@@ -218,12 +218,12 @@ export function Navigation() {
               {user && (
                 <>
                   <div className="pt-4 border-t border-white/20">
-                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/10 rounded-xl">
+                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/10 rounded-xl border-2 border-white">
                       {user.avatar && (
                         <img 
                           src={user.avatar} 
                           alt={user.name}
-                          className="w-10 h-10 rounded-full ring-2 ring-white/40"
+                          className="w-10 h-10 rounded-full ring-2 ring-white"
                         />
                       )}
                       <span className="text-sm text-white font-semibold">{user.name}</span>

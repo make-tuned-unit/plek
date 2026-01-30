@@ -231,7 +231,7 @@ export default function HomePage() {
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-gray-900">Help your community</p>
-                    <p className="text-gray-600">Reduce traffic and emissions in your neighborhood</p>
+                    <p className="text-gray-600">Reduce traffic and emissions in your neighbourhood</p>
                   </div>
                 </li>
               </ul>

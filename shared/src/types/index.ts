@@ -267,7 +267,7 @@ export const PropertyFormSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
-  zipCode: z.string().min(1, 'ZIP code is required'),
+  zipCode: z.string().min(1, 'Postal/zip code is required'),
   size: z.number().min(1, 'Size must be at least 1 square foot'),
   maxVehicles: z.number().min(1, 'Must accommodate at least 1 vehicle'),
   hourlyRate: z.number().min(0, 'Hourly rate cannot be negative'),

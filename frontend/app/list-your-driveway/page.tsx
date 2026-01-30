@@ -24,9 +24,9 @@ const propertySchema = z.object({
   description: z.string().min(20, 'Description must be at least 20 characters'),
   address: z.string().min(10, 'Please enter a complete address'),
   city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'Valid ZIP code is required'),
-  propertyType: z.enum(['driveway', 'garage', 'street']),
+  state: z.string().min(2, 'Province/State is required'),
+  zipCode: z.string().min(3, 'Valid postal/zip code is required'),
+  propertyType: z.enum(['driveway', 'garage', 'warehouse', 'barn', 'storage', 'other']),
   hourlyRate: z.number().min(1, 'Hourly rate must be at least $1'),
   dailyRate: z.number().min(1, 'Daily rate must be at least $1'),
   maxVehicleSize: z.enum(['compact', 'sedan', 'suv', 'truck', 'any']),
@@ -266,7 +266,7 @@ export default function ListYourDrivewayPage() {
                     {...register('address')}
                     type="text"
                     className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                    placeholder="123 Main Street"
+                    placeholder="1234 Barrington St"
                   />
                   {errors.address && (
                     <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
@@ -281,7 +281,7 @@ export default function ListYourDrivewayPage() {
                     {...register('city')}
                     type="text"
                     className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                    placeholder="New York"
+                    placeholder="Halifax"
                   />
                   {errors.city && (
                     <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
@@ -296,7 +296,7 @@ export default function ListYourDrivewayPage() {
                     {...register('state')}
                     type="text"
                     className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                    placeholder="NY"
+                    placeholder="NS"
                   />
                   {errors.state && (
                     <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
@@ -305,13 +305,13 @@ export default function ListYourDrivewayPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ZIP Code
+                    Postal/Zip Code
                   </label>
                   <input
                     {...register('zipCode')}
                     type="text"
                     className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                    placeholder="10001"
+                    placeholder="B3J 1Y2"
                   />
                   {errors.zipCode && (
                     <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>
@@ -330,7 +330,10 @@ export default function ListYourDrivewayPage() {
                   >
                     <option value="driveway">Driveway</option>
                     <option value="garage">Garage</option>
-                    <option value="street">Street Parking</option>
+                    <option value="warehouse">Warehouse</option>
+                    <option value="barn">Barn</option>
+                    <option value="storage">Storage (boats, RVs, motorcycles, etc.)</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
 

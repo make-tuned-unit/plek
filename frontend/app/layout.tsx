@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: 'plekk - Rent Driveways by the Hour | Find Parking Near You',
     template: '%s | plekk',
   },
-  description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighborhood. List your driveway and earn. Easy, local parking with plekk.',
+  description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighbourhood. List your driveway and earn. Easy, local parking with plekk.',
   keywords: ['driveway rental', 'parking', 'hourly parking', 'parking space', 'rent driveway', 'parking near me', 'driveway sharing', 'parking marketplace', 'plekk'],
   authors: [{ name: 'plekk', url: appUrl }],
   creator: 'plekk',
@@ -36,11 +36,11 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'en_CA',
     url: appUrl,
     siteName: 'plekk',
     title: 'plekk - Rent Driveways by the Hour | Find Parking Near You',
-    description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighborhood. List your driveway and earn.',
+    description: 'Find and rent driveways, parking spaces, and storage by the hour in your neighbourhood. List your driveway and earn.',
     images: [
       {
         url: '/PlekkFeaturedImage.png',

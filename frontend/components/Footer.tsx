@@ -83,7 +83,7 @@ export function Footer() {
             <ul className="space-y-3 text-mist-200/90">
               <li>
                 <Link href="/help" className="hover:text-accent-300 transition-colors duration-200 inline-block">
-                  Help Center
+                  Help Centre
                 </Link>
               </li>
               <li>

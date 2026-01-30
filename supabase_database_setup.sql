@@ -15,7 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'property_type') THEN
-    CREATE TYPE property_type AS ENUM ('driveway', 'garage', 'street', 'storage', 'event_space');
+    CREATE TYPE property_type AS ENUM ('driveway', 'garage', 'street', 'storage', 'event_space', 'warehouse', 'barn', 'other');
   END IF;
 END $$;
 

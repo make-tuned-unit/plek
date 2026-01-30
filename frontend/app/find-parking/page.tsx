@@ -105,16 +105,16 @@ const mockProperties = [
   },
   {
     id: 4,
-    title: 'Street Parking Space',
-    address: '321 Elm St, Quiet Neighborhood',
-    price: 5,
+    title: 'Secure Storage Unit',
+    address: '321 Elm St, Quiet Neighbourhood',
+    price: 45,
     rating: 4.3,
     reviews: 45,
     distance: '1.2 miles',
     image: '/api/placeholder/300/200',
-    available: false,
-    type: 'street',
-    features: ['Free WiFi', 'Easy Access'],
+    available: true,
+    type: 'storage',
+    features: ['Covered', '24/7 Access', 'Easy Access'],
   },
 ]
 
@@ -179,14 +179,17 @@ function FindParkingContent() {
     if (queryParts.length === 0) return null
 
     try {
+      // Use types=address for address-level precision (exact point, not city/postcode centroid)
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
           queryParts.join(', ')
-        )}.json?access_token=${mapboxToken}&limit=1`
+        )}.json?access_token=${mapboxToken}&limit=1&types=address,place`
       )
       const data = await response.json()
       if (data?.features?.length) {
-        const [lng, lat] = data.features[0].center
+        const feature = data.features[0]
+        const [lng, lat] = feature.center
+        // Prefer address-type result for pin accuracy; place is fallback for rural/city-only
         const coords = { lat, lng }
         cache.set(cacheKey, coords)
         return coords
@@ -560,7 +563,7 @@ function FindParkingContent() {
                     value={searchQuery}
                     onChange={setSearchQuery}
                     onSelect={handleLocationSelect}
-                    placeholder="Enter address or area"
+                    placeholder="e.g. Halifax, Nova Scotia"
                   />
                   {selectedLocation && (
                     <div className="mt-2 p-2 bg-mist-200 rounded-lg">
@@ -616,7 +619,10 @@ function FindParkingContent() {
                   <option value="all">All Types</option>
                   <option value="driveway">Driveway</option>
                   <option value="garage">Garage</option>
-                  <option value="street">Street Parking</option>
+                  <option value="warehouse">Warehouse</option>
+                  <option value="barn">Barn</option>
+                  <option value="storage">Storage</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 

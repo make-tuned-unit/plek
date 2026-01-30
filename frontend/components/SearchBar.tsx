@@ -31,7 +31,7 @@ export function SearchBar() {
               // Store coordinates for future use
               console.log('Selected location:', place);
             }}
-            placeholder="Where do you need parking?"
+            placeholder="Where do you need parking? (e.g. Halifax, Nova Scotia)"
             className="w-full"
           />
         </div>

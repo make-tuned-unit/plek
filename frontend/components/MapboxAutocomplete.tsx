@@ -21,15 +21,18 @@ interface MapboxAutocompleteProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  /** When true, restrict to address + place for accurate pin placement (e.g. listing address) */
+  preferAddress?: boolean
 }
 
 export function MapboxAutocomplete({
   value,
   onChange,
   onSelect,
-  placeholder = "Enter address or area",
+  placeholder = "e.g. Halifax, Nova Scotia",
   className = "",
-  disabled = false
+  disabled = false,
+  preferAddress = false
 }: MapboxAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Place[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -122,7 +125,7 @@ export function MapboxAutocomplete({
         // Build the API URL with parameters
         const params = new URLSearchParams({
           access_token: MAPBOX_TOKEN || '',
-          types: 'address,poi,neighborhood,place',
+          types: preferAddress ? 'address,place' : 'address,poi,neighborhood,place',
           limit: '8',
           language: 'en'
         })
@@ -220,7 +223,7 @@ export function MapboxAutocomplete({
     if (types.includes('country')) return 'Country'
     if (types.includes('region')) return 'State/Province'
     if (types.includes('place')) return 'City'
-    if (types.includes('neighborhood')) return 'Neighborhood'
+    if (types.includes('neighborhood')) return 'Neighbourhood'
     if (types.includes('address')) return 'Address'
     if (types.includes('poi')) return 'Point of Interest'
     return 'Location'
