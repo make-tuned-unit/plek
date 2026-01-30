@@ -475,9 +475,17 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   try {
     const client = getResendClient();
-    
-    await client.emails.send({
-      from: getFromEmail(),
+    const fromEmail = getFromEmail();
+
+    console.log(`[Email] Attempting to send password reset email to ${email} from ${fromEmail}`);
+
+    if (fromEmail === 'onboarding@resend.dev' || fromEmail.includes('@resend.dev')) {
+      console.warn(`[Email] ⚠️ Using Resend test mode. Emails can only be sent to your verified email address.`);
+      console.warn(`[Email] To send to any email, verify a domain at resend.com/domains and update FROM_EMAIL env variable.`);
+    }
+
+    const result = await client.emails.send({
+      from: fromEmail,
       to: email,
       subject: 'Reset Your plekk Password',
       html: `
@@ -498,6 +506,9 @@ export async function sendPasswordResetEmail(
                   <a href="${resetLink}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Reset Password</a>
                 </div>
                 
+                <p style="font-size: 14px; margin: 30px 0 0 0; color: ${BRAND_COLORS.textLight};">If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style="font-size: 12px; margin: 10px 0 0 0; color: ${BRAND_COLORS.accent}; word-break: break-all;">${resetLink}</p>
+                
                 <p style="font-size: 16px; margin: 30px 0;">If you didn't request this, you can safely ignore this email. Your password will not be changed.</p>
                 <p style="color: ${BRAND_COLORS.textLight}; font-size: 13px; margin-top: 30px; padding: 15px; background: ${BRAND_COLORS.background}; border-radius: 8px;">⚠️ This link will expire in 1 hour.</p>
                 
@@ -509,11 +520,25 @@ export async function sendPasswordResetEmail(
         </html>
       `,
     });
-    
-    console.log(`[Email] Password reset email sent to ${email}`);
+
+    if (result.error) {
+      console.error('[Email] ❌ Resend API error (password reset):', JSON.stringify(result.error, null, 2));
+      if (result.error.message?.includes('testing emails to your own email address')) {
+        const helpfulError = `Resend validation error: ${result.error.message}. Using test mode (onboarding@resend.dev) - you can only send to your verified email. Verify a domain at resend.com/domains and set FROM_EMAIL for production.`;
+        console.error('[Email]', helpfulError);
+        throw new Error(helpfulError);
+      }
+      throw new Error(`Resend API error: ${result.error.message || 'Unknown error'}`);
+    }
+
+    if (result.data?.id) {
+      console.log(`[Email] ✅ Password reset email sent to ${email}. Resend Email ID: ${result.data.id}`);
+    } else {
+      console.warn(`[Email] ⚠️ Password reset email sent but no Resend ID returned. Response:`, JSON.stringify(result, null, 2));
+    }
   } catch (error: any) {
     console.error('[Email] Error sending password reset email:', error);
-    throw error; // Re-throw for password reset - this is important
+    throw error;
   }
 }
 
