@@ -825,8 +825,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     const client = getSupabaseClient();
 
-    // Verify the token using Supabase
-    const { data: verifyData, error: verifyError } = await client.auth.admin.verifyOtp({
+    // Verify the token using Supabase (verifyOtp is on auth, not auth.admin)
+    const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
       type: (type as string) === 'recovery' ? 'recovery' : 'email',
       token_hash: token_hash as string,
       token: token as string,
