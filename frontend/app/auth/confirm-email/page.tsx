@@ -58,15 +58,14 @@ function ConfirmEmailContent() {
       if (error === 'session') {
         setMessage('Email confirmed, but we couldn\'t log you in automatically. Please log in manually.')
       } else if (error === 'invalid') {
-        setMessage('Invalid confirmation link. The link may be expired or already used.')
+        setMessage('This link may have expired or already been used. If you already clicked it once (or your email client opened it), your email is likely confirmed—try signing in below.')
       } else {
-        setMessage('Failed to confirm email. The link may be invalid or expired.')
+        setMessage('We couldn\'t confirm your email with this link. It may have expired or already been used. Try signing in—if your email is already confirmed, you\'ll get in.')
       }
     } else {
-      // No token - check if this is coming from Supabase redirect
-      // Supabase might redirect here after verifying, but we need to check backend
+      // No token - e.g. opened confirm page without coming from the email link
       setStatus('error')
-      setMessage('Invalid confirmation link.')
+      setMessage('No confirmation data was found. Use the link from your confirmation email, or try signing in if you\'ve already confirmed.')
     }
   }, [searchParams, loginWithToken, router])
 

@@ -541,6 +541,23 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
         if (verifyError || !verifyData.user) {
           console.error('[Email Confirmation] Token verification error:', verifyError);
           console.error('[Email Confirmation] Verify data:', verifyData);
+          // Token may be "already used": email clients often prefetch links (Gmail, etc.), consuming the one-time token
+          // before the user clicks. When the user clicks, verifyOtp fails but the account is already confirmed.
+          // If we have email and that user is already verified, log them in instead of showing "invalid link".
+          if (email && typeof email === 'string') {
+            const { data: users } = await client
+              .from('users')
+              .select('id, is_verified')
+              .eq('email', email.trim())
+              .limit(1);
+            if (users?.[0]?.is_verified) {
+              const { data: session } = await client.auth.admin.createSession({ userId: users[0].id });
+              if (session?.session?.access_token) {
+                res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
+                return;
+              }
+            }
+          }
           res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=invalid`);
           return;
         }

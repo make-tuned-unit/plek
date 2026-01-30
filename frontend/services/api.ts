@@ -228,7 +228,7 @@ class ApiService {
   }
 
   async checkAvailability(propertyId: string, startTime: string, endTime: string): Promise<ApiResponse<{ isAvailable: boolean; hasConflict?: boolean }>> {
-    return this.request(`/properties/${propertyId}/availability?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`);
+    return this.request(`/bookings/availability/${propertyId}?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`);
   }
 
   // Message endpoints
