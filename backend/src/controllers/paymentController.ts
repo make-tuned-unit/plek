@@ -463,56 +463,51 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       return;
     }
 
-    if (!property.host?.stripe_account_id) {
-      res.status(400).json({
-        success: false,
-        error: 'Host has not set up payment account. Please contact support.',
-      });
-      return;
-    }
-
-    if (property.host?.stripe_account_status !== 'active') {
-      res.status(400).json({
-        success: false,
-        error: 'Host payment account is not yet active. Please try again later.',
-      });
-      return;
-    }
-
     const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } =
       calculateBookingPriceForProperty(property, startDate, endDate);
 
     const applicationFee = bookerServiceFee + hostServiceFee;
+    const hostHasConnect =
+      property.host?.stripe_account_id && property.host?.stripe_account_status === 'active';
+    const hostPayoutAmount = baseAmount - hostServiceFee;
 
-    const paymentIntent = await getStripe().paymentIntents.create({
+    const metadata: Record<string, string> = {
+      renter_id: renterId,
+      property_id: propertyId,
+      host_id: property.host_id,
+      property_title: serializeMetadataValue(property.title),
+      property_address: serializeMetadataValue(property.address),
+      start_time: startDate.toISOString(),
+      end_time: endDate.toISOString(),
+      total_hours: serializeMetadataValue(totalHours),
+      base_amount: serializeMetadataValue(baseAmount),
+      booker_service_fee: serializeMetadataValue(bookerServiceFee),
+      host_service_fee: serializeMetadataValue(hostServiceFee),
+      total_amount: serializeMetadataValue(totalAmount),
+      vehicle_info: serializeMetadataValue(vehicleInfo),
+      special_requests: serializeMetadataValue(specialRequests),
+      instant_booking: serializeMetadataValue(property.instant_booking),
+      platform: 'plekk',
+      host_connect_pending: hostHasConnect ? 'false' : 'true',
+      host_payout_amount: serializeMetadataValue(hostPayoutAmount),
+    };
+
+    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: Math.round(totalAmount * 100), // Convert to cents
       currency: 'usd',
-      application_fee_amount: Math.round(applicationFee * 100), // Platform share from booker + host fees
-      transfer_data: {
-        destination: property.host.stripe_account_id,
-      },
-      metadata: {
-        renter_id: renterId,
-        property_id: propertyId,
-        host_id: property.host_id,
-        property_title: serializeMetadataValue(property.title),
-        property_address: serializeMetadataValue(property.address),
-        start_time: startDate.toISOString(),
-        end_time: endDate.toISOString(),
-        total_hours: serializeMetadataValue(totalHours),
-        base_amount: serializeMetadataValue(baseAmount),
-        booker_service_fee: serializeMetadataValue(bookerServiceFee),
-        host_service_fee: serializeMetadataValue(hostServiceFee),
-        total_amount: serializeMetadataValue(totalAmount),
-        vehicle_info: serializeMetadataValue(vehicleInfo),
-        special_requests: serializeMetadataValue(specialRequests),
-        instant_booking: serializeMetadataValue(property.instant_booking),
-        platform: 'plekk',
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+      metadata,
+      automatic_payment_methods: { enabled: true },
+    };
+
+    if (hostHasConnect) {
+      paymentIntentParams.application_fee_amount = Math.round(applicationFee * 100);
+      paymentIntentParams.transfer_data = {
+        destination: property.host!.stripe_account_id!,
+      };
+    }
+    // If host has not set up Connect yet, charge goes to platform; host can connect later to receive payouts
+
+    const paymentIntent = await getStripe().paymentIntents.create(paymentIntentParams);
 
     res.json({
       success: true,
