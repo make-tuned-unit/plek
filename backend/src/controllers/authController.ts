@@ -761,12 +761,12 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Extract tokens from Supabase's response
+    // Extract tokens from Supabase's response (GenerateLinkProperties: hashed_token, email_otp — no recovery_token)
     const hashedToken = resetData.properties?.hashed_token;
-    const recoveryToken = resetData.properties?.recovery_token;
+    const emailOtp = resetData.properties?.email_otp;
 
-    if (!hashedToken || !recoveryToken) {
-      console.error('[Password Reset] No tokens in Supabase response');
+    if (!hashedToken || !emailOtp) {
+      console.error('[Password Reset] No tokens in Supabase response. properties:', JSON.stringify(resetData.properties ? Object.keys(resetData.properties) : 'none'));
       res.json({
         success: true,
         message: 'If an account with that email exists, a password reset link has been sent.',
@@ -775,7 +775,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     }
 
     // Construct reset link pointing to the frontend page (user submits new password via POST to API from that page)
-    const resetLink = `${frontendUrl}/auth/reset-password?token_hash=${hashedToken}&token=${encodeURIComponent(recoveryToken)}&type=recovery&email=${encodeURIComponent(email)}`;
+    const resetLink = `${frontendUrl}/auth/reset-password?token_hash=${hashedToken}&token=${encodeURIComponent(emailOtp)}&type=recovery&email=${encodeURIComponent(email)}`;
 
     // Send password reset email via Resend
     try {
