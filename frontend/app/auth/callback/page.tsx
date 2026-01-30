@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService } from '@/services/api'
@@ -10,12 +10,15 @@ export default function AuthCallbackPage() {
   const router = useRouter()
   const { loginWithToken } = useAuth()
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
+  const didComplete = useRef(false)
 
   useEffect(() => {
     const run = async () => {
       if (typeof window === 'undefined') return
+      if (didComplete.current) return
       const hash = window.location.hash
       if (!hash) {
+        didComplete.current = true
         setStatus('error')
         toast.error('No sign-in data received. Please try again.')
         router.replace('/auth/signin')
@@ -24,6 +27,7 @@ export default function AuthCallbackPage() {
       const params = new URLSearchParams(hash.slice(1))
       const accessToken = params.get('access_token')
       if (!accessToken) {
+        didComplete.current = true
         setStatus('error')
         toast.error('Invalid sign-in response. Please try again.')
         router.replace('/auth/signin')
@@ -33,7 +37,8 @@ export default function AuthCallbackPage() {
         const res = await apiService.googleAuth(accessToken)
         if (res.success && res.data?.token) {
           const ok = await loginWithToken(res.data.token)
-          if (ok) {
+          if (ok && !didComplete.current) {
+            didComplete.current = true
             toast.success('Signed in with Google!')
             router.replace('/profile')
             return
@@ -42,9 +47,12 @@ export default function AuthCallbackPage() {
       } catch (_) {
         // Handled below
       }
-      setStatus('error')
-      toast.error('Could not complete sign-in. Please try again.')
-      router.replace('/auth/signin')
+      if (!didComplete.current) {
+        didComplete.current = true
+        setStatus('error')
+        toast.error('Could not complete sign-in. Please try again.')
+        router.replace('/auth/signin')
+      }
     }
     run()
   }, [router, loginWithToken])

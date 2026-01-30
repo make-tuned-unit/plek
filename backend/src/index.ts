@@ -37,6 +37,9 @@ if (process.env['NODE_ENV'] === 'production' && (frontendUrl.includes('localhost
 const app = express();
 const PORT = process.env['PORT'] || 8000;
 
+// Trust proxy when behind Railway/nginx (needed for rate limit + X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({

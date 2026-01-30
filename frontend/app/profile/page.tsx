@@ -974,36 +974,40 @@ function ProfileContent() {
     }
   };
 
-  const uploadPhotos = async (propertyId: string, files: File[]): Promise<string[]> => {
+  const uploadPhotos = async (propertyId: string, files: File[]): Promise<{ uploadedUrls: string[]; failedCount: number }> => {
     const uploadedUrls: string[] = [];
-    
+    let failedCount = 0;
+
     for (const file of files) {
       try {
         const formData = new FormData();
         formData.append('photo', file);
         formData.append('propertyId', propertyId);
-        
+
         const token = localStorage.getItem('auth_token');
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/properties/${propertyId}/photos`, {
+        const apiBase = (() => {
+          const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+          return url.endsWith('/api') ? url.replace(/\/$/, '') : url.replace(/\/$/, '') + '/api';
+        })();
+        const response = await fetch(`${apiBase}/properties/${propertyId}/photos`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
           },
           body: formData,
         });
-        
+
         if (!response.ok) {
           let errorMessage = 'Failed to upload photo';
           try {
             const error = await response.json();
             errorMessage = error.message || error.error || errorMessage;
           } catch (e) {
-            // If response is not JSON, use status text
             errorMessage = response.statusText || errorMessage;
           }
           throw new Error(errorMessage);
         }
-        
+
         const data = await response.json();
         if (data.success && data.data?.url) {
           uploadedUrls.push(data.data.url);
@@ -1011,10 +1015,11 @@ function ProfileContent() {
       } catch (error) {
         console.error('Error uploading photo:', error);
         toast.error(`Failed to upload ${file.name}`);
+        failedCount += 1;
       }
     }
-    
-    return uploadedUrls;
+
+    return { uploadedUrls, failedCount };
   };
 
   const handleSubmitListing = async (listingData: any) => {
@@ -1077,8 +1082,14 @@ function ProfileContent() {
         // Upload photos if any were selected
         if (selectedPhotos.length > 0) {
           toast.loading('Uploading photos...', { id: 'photo-upload' });
-          await uploadPhotos(propertyId, selectedPhotos);
-          toast.success('Photos uploaded successfully!', { id: 'photo-upload' });
+          const { uploadedUrls, failedCount } = await uploadPhotos(propertyId, selectedPhotos);
+          if (failedCount === 0) {
+            toast.success('Photos uploaded successfully!', { id: 'photo-upload' });
+          } else if (uploadedUrls.length > 0) {
+            toast.error(`${failedCount} of ${selectedPhotos.length} photo(s) failed to upload.`, { id: 'photo-upload' });
+          } else {
+            toast.error('All photos failed to upload. Please try again.', { id: 'photo-upload' });
+          }
         }
         
         setShowAddListingModal(false);
