@@ -20,9 +20,15 @@ dist/
 .env.production.local
 .env.bak
 .env.backup
+.env.save
 *.env
 *.env.*
 !.env.example
+# Backend/frontend env (no exceptions - use env.example only)
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
 
 # Secrets and keys
 *secret*
@@ -148,4 +154,5 @@ ngrok.yml
 # Backup files
 *.bak
 *.backup
+*.svg.backup
 *~

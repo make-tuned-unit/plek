@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { logger } from '../utils/logger';
 
 /**
  * All plekk transactional emails are sent through Resend
@@ -123,8 +124,7 @@ export async function sendEmailConfirmationEmail(
     
     // Check if we're using test mode (onboarding@resend.dev) and warn if sending to non-verified email
     if (fromEmail === 'onboarding@resend.dev' || fromEmail.includes('@resend.dev')) {
-      console.warn(`[Email] ⚠️ Using Resend test mode. Emails can only be sent to your verified email address.`);
-      console.warn(`[Email] To send to any email, verify a domain at resend.com/domains and update FROM_EMAIL env variable.`);
+      logger.warn('[Email] Using Resend test mode. Verify domain for production.');
     }
     
     const result = await client.emails.send({
@@ -166,7 +166,7 @@ export async function sendEmailConfirmationEmail(
     
     // Check for errors in the response
     if (result.error) {
-      console.error('[Email] ❌ Resend API error:', JSON.stringify(result.error, null, 2));
+      logger.error('[Email] Resend API error', result.error);
       
       // Provide helpful error message for common Resend validation errors
       if (result.error.message?.includes('testing emails to your own email address')) {
@@ -176,7 +176,7 @@ export async function sendEmailConfirmationEmail(
           `To send to any email:\n` +
           `1. Verify a domain at https://resend.com/domains\n` +
           `2. Set FROM_EMAIL env variable to use your verified domain (e.g., noreply@yourdomain.com)`;
-        console.error(`[Email] ${helpfulError}`);
+        logger.error('[Email]', helpfulError);
         throw new Error(helpfulError);
       }
       
@@ -187,11 +187,10 @@ export async function sendEmailConfirmationEmail(
     if (result.data?.id) {
       console.log(`[Email] ✅ Confirmation email sent successfully to ${email}. Resend Email ID: ${result.data.id}`);
     } else {
-      console.warn(`[Email] ⚠️ Email sent but no Resend ID returned. Response:`, JSON.stringify(result, null, 2));
+      logger.warn('[Email] Email sent but no Resend ID returned');
     }
   } catch (error: any) {
-    console.error('[Email] Error sending confirmation email:', error);
-    console.error('[Email] Error details:', JSON.stringify(error, null, 2));
+    logger.error('[Email] Error sending confirmation email', error);
     throw error; // Re-throw so registration can handle it
   }
 }
@@ -243,7 +242,7 @@ export async function sendWelcomeEmail(
       `,
     });
     
-    console.log(`[Email] Welcome email sent to ${email}`);
+    logger.info('[Email] Welcome email sent');
   } catch (error: any) {
     console.error('[Email] Error sending welcome email:', error);
     // Don't throw - email failures shouldn't break the registration flow
@@ -330,7 +329,7 @@ export async function sendBookingConfirmationEmail(
       `,
     });
     
-    console.log(`[Email] Booking confirmation sent to ${data.renterEmail}`);
+    logger.info('[Email] Booking confirmation sent');
   } catch (error: any) {
     console.error('[Email] Error sending booking confirmation:', error);
   }
@@ -400,7 +399,7 @@ export async function sendBookingNotificationEmail(
       `,
     });
     
-    console.log(`[Email] Booking notification sent to ${data.hostEmail}`);
+    logger.info('[Email] Booking notification sent');
   } catch (error: any) {
     console.error('[Email] Error sending booking notification:', error);
   }
@@ -458,7 +457,7 @@ export async function sendPaymentReceiptEmail(
       `,
     });
     
-    console.log(`[Email] Payment receipt sent to ${data.userEmail}`);
+    logger.info('[Email] Payment receipt sent');
   } catch (error: any) {
     console.error('[Email] Error sending payment receipt:', error);
   }
@@ -477,11 +476,10 @@ export async function sendPasswordResetEmail(
     const client = getResendClient();
     const fromEmail = getFromEmail();
 
-    console.log(`[Email] Attempting to send password reset email to ${email} from ${fromEmail}`);
+    logger.info('[Email] Attempting to send password reset email');
 
     if (fromEmail === 'onboarding@resend.dev' || fromEmail.includes('@resend.dev')) {
-      console.warn(`[Email] ⚠️ Using Resend test mode. Emails can only be sent to your verified email address.`);
-      console.warn(`[Email] To send to any email, verify a domain at resend.com/domains and update FROM_EMAIL env variable.`);
+      logger.warn('[Email] Using Resend test mode. Verify domain for production.');
     }
 
     const result = await client.emails.send({
@@ -522,7 +520,7 @@ export async function sendPasswordResetEmail(
     });
 
     if (result.error) {
-      console.error('[Email] ❌ Resend API error (password reset):', JSON.stringify(result.error, null, 2));
+      logger.error('[Email] Resend API error (password reset)', result.error);
       if (result.error.message?.includes('testing emails to your own email address')) {
         const helpfulError = `Resend validation error: ${result.error.message}. Using test mode (onboarding@resend.dev) - you can only send to your verified email. Verify a domain at resend.com/domains and set FROM_EMAIL for production.`;
         console.error('[Email]', helpfulError);
@@ -532,12 +530,12 @@ export async function sendPasswordResetEmail(
     }
 
     if (result.data?.id) {
-      console.log(`[Email] ✅ Password reset email sent to ${email}. Resend Email ID: ${result.data.id}`);
+      logger.info('[Email] Password reset email sent successfully');
     } else {
-      console.warn(`[Email] ⚠️ Password reset email sent but no Resend ID returned. Response:`, JSON.stringify(result, null, 2));
+      logger.warn('[Email] Password reset email sent but no Resend ID returned');
     }
   } catch (error: any) {
-    console.error('[Email] Error sending password reset email:', error);
+    logger.error('[Email] Error sending password reset email', error);
     throw error;
   }
 }
@@ -590,4 +588,3 @@ export async function sendContactFormEmail(
     text: `From: ${name} <${email}>\nTopic: ${topicLabel}\n\n${message}`,
   });
 }
-

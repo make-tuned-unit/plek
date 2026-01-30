@@ -11,6 +11,7 @@ interface Place {
   context?: Array<{
     id: string
     text: string
+    short_code?: string
   }>
 }
 

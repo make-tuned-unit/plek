@@ -5,6 +5,19 @@ This guide walks you through setting up Stripe Connect for plekk marketplace, wh
 
 ---
 
+## ⚠️ "You can only create new accounts if you've signed up for Connect"
+
+If hosts see **"Payout setup is not available yet"** or the API returns this Stripe error, the **platform** (plekk) Stripe account has not completed Connect signup. The account that holds your `STRIPE_SECRET_KEY` must enable Connect **once** in the Dashboard:
+
+1. Log in to **https://dashboard.stripe.com** with the same account that owns your API keys.
+2. Go to **Connect** in the left sidebar (or **Settings** → **Connect**).
+3. Click **Get started** / **Enable Connect** and complete the platform onboarding (accept terms, provide any required business info).
+4. After that, creating connected accounts for hosts (Add Payout Details) will work.
+
+Until this is done, `stripe.accounts.create()` will fail with the error above. Users see a friendly message; you see the full error in logs.
+
+---
+
 ## Step 1: Enable Stripe Connect in Dashboard
 
 1. **Log into Stripe Dashboard**

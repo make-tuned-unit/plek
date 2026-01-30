@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 import { errorHandler } from './middleware/errorHandler';
+import { logger } from './utils/logger';
 import { notFound } from './middleware/notFound';
 import { authRoutes } from './routes/auth';
 import { propertyRoutes } from './routes/properties';
@@ -102,9 +103,7 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env['NODE_ENV']}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  logger.info('Server running', { port: PORT, env: process.env['NODE_ENV'] });
 });
 
 export default app; 

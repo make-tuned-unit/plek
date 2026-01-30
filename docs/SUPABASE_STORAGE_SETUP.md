@@ -26,7 +26,7 @@ After creating the bucket, we need to set up Row Level Security (RLS) policies.
 **Option A: Run the SQL file (Recommended)**
 1. Go to your Supabase Dashboard
 2. Navigate to **SQL Editor**
-3. Open the file `supabase_storage_setup.sql` in this project
+3. Open the file `scripts/sql/supabase_storage_setup.sql` in this project
 4. Copy and paste the entire contents
 5. Click **Run** to execute
 

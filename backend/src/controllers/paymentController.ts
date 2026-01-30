@@ -23,8 +23,7 @@ function getStripe(): Stripe {
     }
     // Remove quotes if present (sometimes .env files have quotes)
     const cleanKey = secretKey.replace(/^["']|["']$/g, '');
-    console.log('[Stripe] Initializing with key length:', cleanKey.length);
-    console.log('[Stripe] Key preview:', cleanKey.substring(0, 20) + '...');
+    logger.info('[Stripe] Initializing (key length omitted in prod)');
     stripeInstance = new Stripe(cleanKey, {
       apiVersion: '2023-10-16',
     });
@@ -200,7 +199,7 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
     
     if (existingUser?.stripe_account_id) {
       // Account already exists, create new account link for updates
-      console.log('[Stripe Connect] Creating account link for existing account:', existingUser.stripe_account_id);
+      logger.info('[Stripe Connect] Creating account link for existing account');
       const accountLink = await getStripe().accountLinks.create({
         account: existingUser.stripe_account_id,
         refresh_url: `${process.env['FRONTEND_URL']}/profile?stripe_refresh=true`,
@@ -219,7 +218,7 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
     }
     
     // Create new Express account
-    console.log('[Stripe Connect] Creating new Express account for user:', userId);
+    logger.info('[Stripe Connect] Creating new Express account');
     const account = await getStripe().accounts.create({
       type: 'express',
       country: existingUser?.country || 'US',
@@ -266,9 +265,9 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
       .eq('id', userId);
     
     if (updateError) {
-      console.error('[Stripe Connect] Error saving account ID:', updateError);
+      logger.error('[Stripe Connect] Error saving account ID', updateError);
     } else {
-      console.log('[Stripe Connect] Account ID saved successfully');
+      logger.info('[Stripe Connect] Account ID saved successfully');
     }
     
     res.json({
@@ -279,11 +278,26 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
       }
     });
   } catch (error: any) {
-    console.error('Error creating Connect account:', error);
+    logger.error('Error creating Connect account', error);
+    // Platform (plekk) must complete Stripe Connect signup in Dashboard before connected accounts can be created
+    const isConnectNotEnabled =
+      error?.type === 'StripeInvalidRequestError' &&
+      typeof error?.message === 'string' &&
+      error.message.toLowerCase().includes('signed up for connect');
+    if (isConnectNotEnabled) {
+      res.status(503).json({
+        success: false,
+        error: 'Payout setup is not available yet',
+        code: 'connect_not_enabled',
+        message:
+          'Payout setup is temporarily unavailable. Please try again later or contact support.',
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'Failed to create Stripe account',
-      message: error.message,
+      message: error?.message || 'Something went wrong',
     });
   }
 };
@@ -302,10 +316,10 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
       .eq('id', userId)
       .single();
     
-    console.log('[Stripe Status] User query result:', { user, error: userError });
+    logger.info('[Stripe Status] User query result');
     
     if (!user?.stripe_account_id) {
-      console.log('[Stripe Status] No account ID found for user:', userId);
+      logger.info('[Stripe Status] No account ID found');
       res.json({ 
         success: true,
         data: {
@@ -316,17 +330,15 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
       return;
     }
     
-    console.log('[Stripe Status] Found account ID:', user.stripe_account_id);
+    logger.info('[Stripe Status] Found account ID');
     
     // Retrieve account from Stripe
     const account = await getStripe().accounts.retrieve(user.stripe_account_id);
     
-    console.log('[Stripe Status] Account details:', {
-      id: account.id,
+    logger.info('[Stripe Status] Account details', {
       details_submitted: account.details_submitted,
       charges_enabled: account.charges_enabled,
       payouts_enabled: account.payouts_enabled,
-      requirements: account.requirements
     });
     
     // Check if there are pending requirements
@@ -350,7 +362,7 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
         .eq('id', userId);
     } catch (error: any) {
       // Column might not exist yet - that's okay, we'll still return the status
-      console.log('[Stripe] Note: stripe_account_status column may not exist yet');
+      logger.info('[Stripe] Note: stripe_account_status column may not exist yet');
     }
     
     // Create account link if verification is needed
@@ -365,7 +377,7 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
         });
         verificationUrl = accountLink.url;
       } catch (error: any) {
-        console.error('[Stripe Status] Error creating verification link:', error);
+        logger.error('[Stripe Status] Error creating verification link', error);
       }
     }
     
@@ -384,7 +396,7 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
       }
     });
   } catch (error: any) {
-    console.error('Error getting account status:', error);
+    logger.error('Error getting account status', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get account status',
@@ -470,7 +482,7 @@ export const getHostEarnings = async (req: Request, res: Response): Promise<void
       },
     });
   } catch (error: any) {
-    console.error('Error getting host earnings:', error);
+    logger.error('Error getting host earnings', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get earnings',
@@ -847,7 +859,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       .single();
 
     if (bookingError || !booking) {
-      console.error('[Payments] Failed to create booking after payment', bookingError);
+      logger.error('[Payments] Failed to create booking after payment', bookingError);
       res.status(500).json({
         success: false,
         error: 'Payment captured but booking failed to save. Support has been notified.',
@@ -914,7 +926,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
       }).catch((error) => {
-        console.error('Failed to send booking confirmation email:', error);
+        logger.error('Failed to send booking confirmation email', error);
       });
     }
 
@@ -939,7 +951,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
       }).catch((error) => {
-        console.error('Failed to send booking notification email:', error);
+        logger.error('Failed to send booking notification email', error);
       });
     }
 
@@ -953,7 +965,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         paymentDate: new Date().toISOString(),
         transactionId: paymentIntent.id,
       }).catch((error) => {
-        console.error('Failed to send payment receipt email:', error);
+        logger.error('Failed to send payment receipt email', error);
       });
     }
 
@@ -965,7 +977,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       },
     });
   } catch (error: any) {
-    console.error('Error confirming payment:', error);
+    logger.error('Error confirming payment', error);
     res.status(500).json({
       success: false,
       error: 'Failed to confirm payment',
@@ -1029,7 +1041,7 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
     // Verify webhook signature
     event = getStripe().webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+    logger.error('Webhook signature verification failed', err);
     res.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
@@ -1061,7 +1073,7 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
         break;
         
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        logger.info('Unhandled webhook event type', { type: event.type });
     }
     
     res.json({ received: true });
@@ -1079,7 +1091,7 @@ async function handlePaymentSuccess(
   const bookingId = paymentIntent.metadata['booking_id'];
   
   if (!bookingId) {
-    console.error('No booking_id in payment intent metadata');
+    logger.error('No booking_id in payment intent metadata');
     return;
   }
   
@@ -1136,7 +1148,7 @@ async function handlePaymentSuccess(
     });
   }
   
-  console.log(`Payment succeeded for booking ${bookingId}`);
+  logger.info('Payment succeeded for booking');
 }
 
 // Helper function to handle failed payment
@@ -1172,6 +1184,6 @@ async function handleAccountUpdate(
     .update({ stripe_account_status: status })
     .eq('stripe_account_id', account.id);
   
-  console.log(`Account ${account.id} status updated to ${status}`);
+  logger.info('Account status updated', { status });
 }
 

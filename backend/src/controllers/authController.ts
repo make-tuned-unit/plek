@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { SupabaseAuthService, getSupabaseClient } from '../services/supabaseService';
 import { sendEmailConfirmationEmail, sendPasswordResetEmail } from '../services/emailService';
+import { logger } from '../utils/logger';
 
 // @desc    Sign in / sign up with Google (OAuth token from Supabase)
 // @route   POST /api/auth/google
@@ -40,7 +41,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       },
     });
   } catch (err: any) {
-    console.error('Google auth error:', err);
+    logger.error('Google auth error', err);
     res.status(500).json({ success: false, message: err?.message || 'Server error' });
   }
 };
@@ -93,7 +94,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Supabase's generateLink only creates the token - we send the email ourselves
     let emailSent = false;
     try {
-      console.log(`[Registration] Attempting to generate confirmation link for ${email}`);
+      logger.info('[Registration] Attempting to generate confirmation link');
       const { link: confirmationLink, error: linkError } = await SupabaseAuthService.generateEmailConfirmationLink(email, user.id);
 
       if (linkError) {
@@ -140,8 +141,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error: any) {
-    console.error('Registration error:', error);
-    console.error('Error stack:', error?.stack);
+    logger.error('Registration error', error);
     res.status(500).json({
       success: false,
       message: error?.message || 'Server error',
@@ -259,14 +259,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error: any) {
-    console.error('Login error:', error);
-    console.error('Login error stack:', error?.stack);
-    console.error('Login error details:', {
-      message: error?.message,
-      code: error?.code,
-      details: error?.details,
-      hint: error?.hint,
-    });
+    logger.error('Login error', error);
     res.status(500).json({
       success: false,
       message: error?.message || 'Server error',
@@ -336,7 +329,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error('Get me error:', error);
+    logger.error('Get me error', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -406,7 +399,7 @@ export const uploadAvatar = async (req: Request, res: Response): Promise<void> =
       .eq('id', userId);
 
     if (updateError) {
-      console.error('Error updating avatar in database:', updateError);
+      logger.error('Error updating avatar in database', updateError);
       res.status(500).json({
         success: false,
         error: 'Failed to update avatar',
@@ -507,7 +500,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       },
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -523,7 +516,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
     const { token_hash, token, type, email } = req.query;
     const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
 
-    console.log('Confirmation request params:', { token_hash: !!token_hash, token: !!token, type, email });
+    logger.info('Confirmation request params', { hasTokenHash: !!token_hash, hasToken: !!token, type });
 
     const client = getSupabaseClient();
 
@@ -539,8 +532,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
         });
 
         if (verifyError || !verifyData.user) {
-          console.error('[Email Confirmation] Token verification error:', verifyError);
-          console.error('[Email Confirmation] Verify data:', verifyData);
+          logger.error('[Email Confirmation] Token verification error', verifyError);
           // Token may be "already used": email clients often prefetch links (Gmail, etc.), consuming the one-time token
           // before the user clicks. When the user clicks, verifyOtp fails but the account is already confirmed.
           // If we have email and that user is already verified, log them in instead of showing "invalid link".
@@ -585,7 +577,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
           
           if (userData && userData.email && userData.first_name) {
             sendWelcomeEmail(userData.email, userData.first_name).catch((error) => {
-              console.error('[Email Confirmation] Failed to send welcome email:', error);
+              logger.error('[Email Confirmation] Failed to send welcome email', error);
               // Don't fail the confirmation if welcome email fails
             });
           }
@@ -600,7 +592,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
         });
 
         if (sessionCreateError || !session?.session?.access_token) {
-          console.error('Session creation error:', sessionCreateError);
+          logger.error('Session creation error', sessionCreateError);
           res.redirect(`${frontendUrl}/auth/confirm-email?success=true&error=session`);
           return;
         }
@@ -639,12 +631,12 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
             const { sendWelcomeEmail } = await import('../services/emailService');
             if (user.email && user.first_name) {
               sendWelcomeEmail(user.email, user.first_name).catch((error) => {
-                console.error('[Email Confirmation] Failed to send welcome email:', error);
+                logger.error('[Email Confirmation] Failed to send welcome email', error);
                 // Don't fail the confirmation if welcome email fails
               });
             }
           } catch (welcomeEmailError) {
-            console.error('[Email Confirmation] Error sending welcome email:', welcomeEmailError);
+            logger.error('[Email Confirmation] Error sending welcome email', welcomeEmailError);
             // Don't fail the confirmation if welcome email fails
           }
 
@@ -666,7 +658,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
     // If we get here, something went wrong
     res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=missing_params`);
   } catch (error: any) {
-    console.error('Email confirmation error:', error);
+    logger.error('Email confirmation error', error);
     const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
     res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
   }
@@ -752,7 +744,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     });
 
     if (resetError || !resetData) {
-      console.error('[Password Reset] Failed to generate reset link:', resetError);
+      logger.error('[Password Reset] Failed to generate reset link', resetError);
       // Don't reveal error to user for security
       res.json({
         success: true,
@@ -780,7 +772,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     // Send password reset email via Resend
     try {
       await sendPasswordResetEmail(user.email, user.first_name, resetLink);
-      console.log(`[Password Reset] Reset email sent successfully to ${email}`);
+      logger.info('[Password Reset] Reset email sent successfully');
     } catch (emailError: any) {
       console.error('[Password Reset] Failed to send reset email:', emailError);
       // Don't reveal error to user for security
@@ -791,7 +783,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       message: 'If an account with that email exists, a password reset link has been sent.',
     });
   } catch (error: any) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error', error);
     // Don't reveal error details for security
     res.json({
       success: true,
@@ -870,7 +862,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     );
 
     if (updateError || !updateData.user) {
-      console.error('[Password Reset] Password update error:', updateError);
+      logger.error('[Password Reset] Password update error', updateError);
       res.status(500).json({
         success: false,
         message: 'Failed to reset password. Please try again.',
@@ -883,7 +875,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       message: 'Password has been reset successfully. You can now log in with your new password.',
     });
   } catch (error: any) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error', error);
     res.status(500).json({
       success: false,
       message: 'Failed to reset password. Please try again.',

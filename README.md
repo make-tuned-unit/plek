@@ -91,19 +91,17 @@ plekk/
 ├── frontend/                 # Next.js frontend application
 │   ├── app/                 # App Router pages
 │   ├── components/          # Reusable React components
-│   ├── lib/                 # Utilities and configurations
-│   └── types/               # TypeScript type definitions
-├── backend/                 # Express.js backend API
-│   ├── src/
-│   │   ├── controllers/     # Route controllers
-│   │   ├── middleware/      # Custom middleware
-│   │   ├── models/          # Prisma models
-│   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic
-│   │   └── utils/           # Utility functions
-│   └── prisma/              # Database schema and migrations
-├── shared/                  # Shared types and utilities
-└── docker-compose.yml       # Development environment
+│   └── ...
+├── backend/                  # Express.js backend API
+│   ├── src/controllers, routes, services, middleware
+│   └── prisma/               # Database schema
+├── shared/                   # Shared types
+├── docs/                     # Project documentation (setup, deployment, Stripe, Supabase)
+├── scripts/
+│   ├── sql/                  # Supabase SQL scripts (RLS, triggers, migrations)
+│   └── install-pre-commit.sh
+├── env.example               # Environment template (never commit .env)
+└── docker-compose.yml
 ```
 
 ## 🔄 Main User Flows

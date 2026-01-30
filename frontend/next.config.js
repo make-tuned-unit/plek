@@ -8,6 +8,10 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Strip all console.* in production to avoid leaking secrets or user data
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? true : false,
+  },
   images: {
     domains: ['localhost', 'drivemyway-uploads.s3.amazonaws.com'],
   },

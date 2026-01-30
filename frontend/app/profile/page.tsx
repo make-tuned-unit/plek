@@ -911,15 +911,22 @@ function ProfileContent() {
         toast.error(response.error || 'Failed to start payout setup');
       }
     } catch (error: any) {
-      console.error('Error connecting Stripe:', error);
-      // Check if error is about no earnings
-      if (error.message?.includes('No earnings available') || error.response?.data?.error?.includes('No earnings')) {
+      const data = error.response?.data;
+      const code = data?.code;
+      const message = data?.message || error.message;
+      // Payout setup not yet available (platform must enable Stripe Connect in Dashboard)
+      if (code === 'connect_not_enabled' || message?.toLowerCase().includes('temporarily unavailable')) {
+        toast('Payout setup is not available yet. Please try again later or contact support.', {
+          icon: 'ℹ️',
+          duration: 5000,
+        });
+      } else if (error.message?.includes('No earnings available') || data?.error?.includes('No earnings')) {
         toast('Complete your first booking to set up payouts', {
           icon: 'ℹ️',
           duration: 4000,
         });
       } else {
-        toast.error(error.message || 'Failed to connect payout account');
+        toast.error(message || 'Failed to connect payout account');
       }
     } finally {
       setIsConnectingStripe(false);
@@ -1629,7 +1636,7 @@ function ProfileContent() {
                             const city = place.context?.find(ctx => ctx.id.includes('place'))?.text || '';
                             const state = place.context?.find(ctx => ctx.id.includes('region'))?.text || '';
                             const zipCode = place.context?.find(ctx => ctx.id.includes('postcode'))?.text || '';
-                            const countryCode = place.context?.find(ctx => ctx.id.includes('country'))?.country_code?.toUpperCase() || '';
+                            const countryCode = place.context?.find(ctx => ctx.id.includes('country'))?.short_code?.toUpperCase() || '';
                             setValue('city', city);
                             setValue('state', state);
                             setValue('zipCode', zipCode);

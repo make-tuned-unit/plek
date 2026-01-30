@@ -25,7 +25,7 @@ After creating the bucket, run the SQL setup file:
 
 1. Go to your Supabase Dashboard
 2. Navigate to **SQL Editor**
-3. Open the file `supabase_avatars_bucket_setup.sql` in this project
+3. Open the file `scripts/sql/supabase_avatars_bucket_setup.sql` in this project
 4. Copy and paste the entire contents
 5. Click **Run** to execute
 
@@ -64,7 +64,7 @@ SUPABASE_AVATARS_BUCKET=user-avatars
    - Verify the bucket was created in the Storage section
 
 2. **"Permission denied" error**
-   - Run the SQL policies in `supabase_avatars_bucket_setup.sql`
+   - Run the SQL policies in `scripts/sql/supabase_avatars_bucket_setup.sql`
    - Make sure RLS is enabled on storage.objects
 
 3. **Avatars not displaying**

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getSupabaseClient } from '../services/supabaseService';
+import { logger } from '../utils/logger';
 
 // @desc    Get all notifications for current user
 // @route   GET /api/notifications
@@ -28,7 +29,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
     const { data: notifications, error: notificationsError } = await query;
 
     if (notificationsError) {
-      console.error('Error fetching notifications:', notificationsError);
+      logger.error('Error fetching notifications:', notificationsError);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch notifications',
@@ -65,7 +66,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
       data: { notifications: enrichedNotifications || [] },
     });
   } catch (error: any) {
-    console.error('Error in getNotifications:', error);
+    logger.error('Error in getNotifications:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -113,7 +114,7 @@ export const markAsRead = async (req: Request, res: Response): Promise<void> => 
       .single();
 
     if (updateError) {
-      console.error('Error updating notification:', updateError);
+      logger.error('Error updating notification:', updateError);
       res.status(500).json({
         success: false,
         error: 'Failed to update notification',
@@ -126,7 +127,7 @@ export const markAsRead = async (req: Request, res: Response): Promise<void> => 
       data: updatedNotification,
     });
   } catch (error: any) {
-    console.error('Error in markAsRead:', error);
+    logger.error('Error in markAsRead:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -149,7 +150,7 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<void> 
       .eq('is_read', false);
 
     if (updateError) {
-      console.error('Error updating notifications:', updateError);
+      logger.error('Error updating notifications:', updateError);
       res.status(500).json({
         success: false,
         error: 'Failed to update notifications',
@@ -162,7 +163,7 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<void> 
       message: 'All notifications marked as read',
     });
   } catch (error: any) {
-    console.error('Error in markAllAsRead:', error);
+    logger.error('Error in markAllAsRead:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -185,7 +186,7 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<void>
       .eq('is_read', false);
 
     if (countError) {
-      console.error('Error counting notifications:', countError);
+      logger.error('Error counting notifications:', countError);
       res.status(500).json({
         success: false,
         error: 'Failed to count notifications',
@@ -200,7 +201,7 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<void>
       },
     });
   } catch (error: any) {
-    console.error('Error in getUnreadCount:', error);
+    logger.error('Error in getUnreadCount:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',

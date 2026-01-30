@@ -1,9 +1,18 @@
 import { Request, Response } from 'express';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env['RESEND_API_KEY']);
+function getResend(): Resend {
+  const apiKey = process.env['RESEND_API_KEY'];
+  if (!apiKey) throw new Error('RESEND_API_KEY is not set');
+  return new Resend(apiKey);
+}
 
-const INBOUND_FORWARD_TO = process.env['INBOUND_FORWARD_TO'] || 'jesse.sharratt@gmail.com';
+function getInboundForwardTo(): string {
+  const addr = process.env['INBOUND_FORWARD_TO'];
+  if (!addr?.trim()) throw new Error('INBOUND_FORWARD_TO is not set');
+  return addr.trim();
+}
+
 const FROM_EMAIL = process.env['FROM_EMAIL'] || 'support@parkplekk.com';
 
 /**
@@ -12,6 +21,8 @@ const FROM_EMAIL = process.env['FROM_EMAIL'] || 'support@parkplekk.com';
  */
 export async function handleResendInbound(req: Request, res: Response): Promise<void> {
   try {
+    const resend = getResend();
+    const inboundForwardTo = getInboundForwardTo();
     const rawBody =
       typeof req.body === 'string'
         ? req.body
@@ -24,7 +35,7 @@ export async function handleResendInbound(req: Request, res: Response): Promise<
     const webhookSecret = process.env['RESEND_WEBHOOK_SECRET'];
 
     if (!webhookSecret) {
-      console.error('[Resend Inbound] RESEND_WEBHOOK_SECRET is not set');
+      logger.error('[Resend Inbound] RESEND_WEBHOOK_SECRET is not set');
       res.status(500).json({ error: 'Webhook not configured' });
       return;
     }
@@ -41,7 +52,7 @@ export async function handleResendInbound(req: Request, res: Response): Promise<
         webhookSecret,
       }) as { type: string; data: { email_id: string; subject?: string; from?: string; to?: string[] } };
     } catch (err) {
-      console.error('[Resend Inbound] Webhook verification failed:', err);
+      logger.error('[Resend Inbound] Webhook verification failed', err);
       res.status(400).json({ error: 'Invalid signature' });
       return;
     }
@@ -83,7 +94,7 @@ export async function handleResendInbound(req: Request, res: Response): Promise<
         }
       }
     } catch (attErr) {
-      console.warn('[Resend Inbound] Could not fetch attachments:', attErr);
+      logger.warn('[Resend Inbound] Could not fetch attachments', attErr);
     }
 
     const emailData = email as { subject?: string; from?: string; html?: string; text?: string };
@@ -99,7 +110,7 @@ export async function handleResendInbound(req: Request, res: Response): Promise<
 
     const { error: sendError } = await resend.emails.send({
       from: `plekk Inbound <${FROM_EMAIL}>`,
-      to: [INBOUND_FORWARD_TO],
+      to: [inboundForwardTo],
       subject: `Fwd: ${subject}`,
       html: html || undefined,
       text: text || undefined,
@@ -107,14 +118,14 @@ export async function handleResendInbound(req: Request, res: Response): Promise<
     });
 
     if (sendError) {
-      console.error('[Resend Inbound] Failed to forward email:', sendError);
+      logger.error('[Resend Inbound] Failed to forward email', sendError);
       res.status(500).json({ error: 'Forward failed' });
       return;
     }
 
-    res.status(200).json({ forwarded: true, to: INBOUND_FORWARD_TO });
+    res.status(200).json({ forwarded: true, to: inboundForwardTo });
   } catch (err: any) {
-    console.error('[Resend Inbound] Error:', err);
+    logger.error('[Resend Inbound] Error', err);
     res.status(500).json({ error: err?.message || 'Server error' });
   }
 }
