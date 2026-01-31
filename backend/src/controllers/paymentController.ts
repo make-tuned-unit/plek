@@ -221,7 +221,7 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
     logger.info('[Stripe Connect] Creating new Express account');
     const account = await getStripe().accounts.create({
       type: 'express',
-      country: existingUser?.country || 'US',
+      country: existingUser?.country || 'CA',
       email: existingUser?.email,
       capabilities: {
         card_payments: { requested: true },
@@ -396,10 +396,40 @@ export const getConnectAccountStatus = async (req: Request, res: Response): Prom
       }
     });
   } catch (error: any) {
-    logger.error('Error getting account status', error);
+    logger.error('[Stripe Status] Error', error);
+    res.status(500).json({ success: false, error: error?.message || 'Failed to get Connect status' });
+  }
+};
+
+// @desc    Disconnect Stripe Connect account (clear link so user can reconnect with different country)
+// @route   POST /api/payments/connect/disconnect
+// @access  Private
+export const disconnectConnectAccount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        stripe_account_id: null,
+        stripe_account_status: null,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      logger.error('[Stripe Connect] Disconnect error', error);
+      res.status(500).json({ success: false, error: 'Failed to disconnect payout account' });
+      return;
+    }
+
+    logger.info('[Stripe Connect] Account disconnected for user', userId);
+    res.json({ success: true, data: { disconnected: true } });
+  } catch (error: any) {
+    logger.error('[Stripe Connect] Disconnect error', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get account status',
+      error: 'Failed to disconnect payout account',
       message: error.message,
     });
   }

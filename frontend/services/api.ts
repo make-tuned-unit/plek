@@ -333,6 +333,10 @@ class ApiService {
     return this.request('/payments/connect/status');
   }
 
+  async disconnectConnectAccount(): Promise<ApiResponse<{ disconnected: boolean }>> {
+    return this.request('/payments/connect/disconnect', { method: 'POST' });
+  }
+
   async getHostEarnings(): Promise<ApiResponse<{
     totalGross: number;
     totalPlatformFee: number;

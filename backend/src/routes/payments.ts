@@ -3,6 +3,7 @@ import { protect } from '../middleware/auth';
 import {
   createConnectAccount,
   getConnectAccountStatus,
+  disconnectConnectAccount,
   getHostEarnings,
   createPaymentIntent,
   confirmPayment,
@@ -15,6 +16,7 @@ const router = Router();
 // Stripe Connect routes
 router.post('/connect/create', protect, createConnectAccount);
 router.get('/connect/status', protect, getConnectAccountStatus);
+router.post('/connect/disconnect', protect, disconnectConnectAccount);
 
 // Host earnings (revenue dashboard)
 router.get('/earnings', protect, getHostEarnings);

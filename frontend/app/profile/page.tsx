@@ -183,6 +183,7 @@ function ProfileContent() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<string>('pending');
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
   const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
   const [pendingEarnings, setPendingEarnings] = useState<number>(0);
@@ -933,6 +934,27 @@ function ProfileContent() {
     }
   };
 
+  const handleDisconnectStripe = async () => {
+    if (!confirm('Disconnect your payout account? You can connect again with a different country (e.g. Canada).')) return;
+    setIsDisconnectingStripe(true);
+    try {
+      const response = await apiService.disconnectConnectAccount();
+      if (response.success) {
+        setStripeConnected(false);
+        setStripeStatus('pending');
+        setStripeNeedsVerification(false);
+        setStripeVerificationUrl(null);
+        toast.success('Payout account disconnected. You can add payout details again with your correct country.');
+      } else {
+        toast.error(response.error || 'Failed to disconnect');
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to disconnect');
+    } finally {
+      setIsDisconnectingStripe(false);
+    }
+  };
+
   // Check for Stripe return from URL params
   useEffect(() => {
     const stripeSuccess = searchParams.get('stripe_success');
@@ -1677,6 +1699,23 @@ function ProfileContent() {
                         disabled={!isEditing}
                         className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Country
+                      </label>
+                      <select
+                        {...register('country')}
+                        disabled={!isEditing}
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent disabled:bg-gray-50 bg-white"
+                      >
+                        {COUNTRY_OPTIONS.map((opt) => (
+                          <option key={opt.value || 'empty'} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
@@ -2673,6 +2712,19 @@ function ProfileContent() {
                           </button>
                         </div>
                       )}
+
+                      <p className="text-sm text-gray-500 mt-3">
+                        Wrong country?{' '}
+                        <button
+                          type="button"
+                          onClick={handleDisconnectStripe}
+                          disabled={isDisconnectingStripe}
+                          className="text-accent-600 hover:text-accent-800 font-medium underline disabled:opacity-50"
+                        >
+                          {isDisconnectingStripe ? 'Disconnecting...' : 'Disconnect and start over'}
+                        </button>
+                        {' '}(e.g. to use Canada instead of US)
+                      </p>
 
                       <div className="border-t border-gray-200 pt-6">
                         <h3 className="text-lg font-medium text-gray-900 mb-4">How payouts work</h3>

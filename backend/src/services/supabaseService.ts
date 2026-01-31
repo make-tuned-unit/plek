@@ -125,7 +125,7 @@ export class SupabaseAuthService {
           total_earnings: 0,
           rating: 0,
           review_count: 0,
-          country: 'US',
+          country: 'CA',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         } as any)
@@ -414,7 +414,7 @@ export class SupabaseAuthService {
           total_earnings: 0,
           rating: 0,
           review_count: 0,
-          country: 'US',
+          country: 'CA',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         } as any)
