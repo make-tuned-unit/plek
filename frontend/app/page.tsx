@@ -31,8 +31,8 @@ const stagger = { staggerChildren: 0.08, delayChildren: 0.06 }
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100">
-      {/* Hero Section - fixed height so video fills without letterboxing */}
-      <section className="relative overflow-hidden min-h-[70vh] max-h-[95vh] h-[85vh] flex flex-col">
+      {/* Hero Section - fixed height so video fills; dark bg hides any letterboxing */}
+      <section className="relative overflow-hidden min-h-[70vh] max-h-[95vh] h-[85vh] flex flex-col bg-neutral-900">
         <HeroVideo />
         <div className="absolute inset-0 bg-gradient-to-br from-black/45 via-black/35 to-black/25 backdrop-blur-sm pointer-events-none" />
         {/* Header fade for readability over video */}

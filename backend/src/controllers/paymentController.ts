@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import geoip from 'geoip-lite';
 import { getSupabaseClient } from '../services/supabaseService';
+import { logger } from '../utils/logger';
 
 /** Get country code from request IP (fallback when user profile has no country). */
 function getCountryFromRequest(req: Request): string | null {

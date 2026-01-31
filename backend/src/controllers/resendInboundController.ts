@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Resend } from 'resend';
+import { logger } from '../utils/logger';
 
 function getResend(): Resend {
   const apiKey = process.env['RESEND_API_KEY'];

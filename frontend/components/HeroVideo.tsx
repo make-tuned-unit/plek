@@ -49,11 +49,11 @@ export default function HeroVideo() {
   }
 
   return (
-    <div className="absolute inset-0 min-w-full min-h-full">
+    <div className="absolute inset-0 min-w-full min-h-full overflow-hidden bg-neutral-900">
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover object-center"
-        style={{ objectFit: 'cover' }}
+        className="absolute inset-0 min-w-full min-h-full w-full h-full object-cover object-center scale-105"
+        style={{ objectFit: 'cover', objectPosition: 'center' }}
         autoPlay
         muted
         playsInline
