@@ -95,24 +95,105 @@ export const getBookingMessages = async (req: Request, res: Response): Promise<v
   }
 };
 
-// @desc    Send a message for a booking
+// @desc    Send a message for a booking, or (admin only) direct message to a user
 // @route   POST /api/messages
 // @access  Private
 export const sendMessage = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
-    const { bookingId, content, messageType } = req.body;
+    const role = (req as any).user.role;
+    const isAdmin = role === 'admin' || role === 'super_admin';
+    const { bookingId, receiverId, content, messageType } = req.body;
     const supabase = getSupabaseClient();
 
-    if (!bookingId || !content) {
+    if (!content || !(content as string).trim()) {
       res.status(400).json({
         success: false,
-        error: 'Booking ID and content are required',
+        error: 'Content is required',
       });
       return;
     }
 
-    // Verify user is part of this booking
+    // Admin direct message (no booking)
+    if (!bookingId && receiverId) {
+      if (!isAdmin) {
+        res.status(403).json({
+          success: false,
+          error: 'Only admins can send direct messages',
+        });
+        return;
+      }
+      if (receiverId === userId) {
+        res.status(400).json({
+          success: false,
+          error: 'Cannot message yourself',
+        });
+        return;
+      }
+      const { data: targetUser, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', receiverId)
+        .single();
+      if (userError || !targetUser) {
+        res.status(404).json({
+          success: false,
+          error: 'User not found',
+        });
+        return;
+      }
+
+      const { data: message, error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          booking_id: null,
+          sender_id: userId,
+          receiver_id: receiverId,
+          content: (content as string).trim(),
+          message_type: ((messageType as string) || 'text').toLowerCase(),
+          is_read: false,
+        })
+        .select(`
+          *,
+          sender:users!messages_sender_id_fkey(id, first_name, last_name, email, avatar),
+          receiver:users!messages_receiver_id_fkey(id, first_name, last_name, email, avatar)
+        `)
+        .single();
+
+      if (messageError || !message) {
+        console.error('Error creating direct message:', messageError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to send message',
+        });
+        return;
+      }
+
+      await supabase.from('notifications').insert({
+        user_id: receiverId,
+        type: 'message_received',
+        title: 'Message from support',
+        message: `You have a new message from Plek support`,
+        data: { direct: true, message_id: message.id },
+        is_read: false,
+      } as any);
+
+      res.status(201).json({
+        success: true,
+        data: { message },
+      });
+      return;
+    }
+
+    // Booking-scoped message
+    if (!bookingId) {
+      res.status(400).json({
+        success: false,
+        error: 'Booking ID is required for booking messages',
+      });
+      return;
+    }
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('renter_id, host_id, status')
@@ -135,7 +216,6 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Only allow messaging for confirmed bookings
     if (booking.status !== 'confirmed' && booking.status !== 'completed') {
       res.status(400).json({
         success: false,
@@ -144,18 +224,16 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Determine receiver (opposite of sender)
-    const receiverId = booking.renter_id === userId ? booking.host_id : booking.renter_id;
+    const receiverIdBooking = booking.renter_id === userId ? booking.host_id : booking.renter_id;
 
-    // Create message
     const { data: message, error: messageError } = await supabase
       .from('messages')
       .insert({
         booking_id: bookingId,
         sender_id: userId,
-        receiver_id: receiverId,
-        content: content.trim(),
-        message_type: (messageType || 'text').toLowerCase(),
+        receiver_id: receiverIdBooking,
+        content: (content as string).trim(),
+        message_type: ((messageType as string) || 'text').toLowerCase(),
         is_read: false,
       })
       .select(`
@@ -174,9 +252,8 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Create notification for receiver
     await supabase.from('notifications').insert({
-      user_id: receiverId,
+      user_id: receiverIdBooking,
       type: 'message_received',
       title: 'New Message',
       message: `You have a new message about your booking`,
@@ -186,9 +263,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
 
     res.status(201).json({
       success: true,
-      data: {
-        message,
-      },
+      data: { message },
     });
   } catch (error: any) {
     console.error('Error sending message:', error);
@@ -307,5 +382,90 @@ export const getConversation = async (req: Request, res: Response): Promise<void
   // Reuse getBookingMessages logic
   req.params.bookingId = req.params.id;
   await getBookingMessages(req, res);
+};
+
+// @desc    Get direct message thread between admin and a user (admin only)
+// @route   GET /api/messages/direct/:userId
+// @access  Private (Admin only)
+export const getDirectMessages = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = (req as any).user.id;
+    const { userId: targetUserId } = req.params;
+    const supabase = getSupabaseClient();
+
+    if (!targetUserId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required',
+      });
+      return;
+    }
+
+    // Fetch messages in both directions where booking_id is null
+    const { data: messages1, error: e1 } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:users!messages_sender_id_fkey(id, first_name, last_name, email, avatar),
+        receiver:users!messages_receiver_id_fkey(id, first_name, last_name, email, avatar)
+      `)
+      .is('booking_id', null)
+      .eq('sender_id', adminId)
+      .eq('receiver_id', targetUserId)
+      .order('created_at', { ascending: true });
+
+    const { data: messages2, error: e2 } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:users!messages_sender_id_fkey(id, first_name, last_name, email, avatar),
+        receiver:users!messages_receiver_id_fkey(id, first_name, last_name, email, avatar)
+      `)
+      .is('booking_id', null)
+      .eq('sender_id', targetUserId)
+      .eq('receiver_id', adminId)
+      .order('created_at', { ascending: true });
+
+    if (e1 || e2) {
+      console.error('Error fetching direct messages:', e1 || e2);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch messages',
+      });
+      return;
+    }
+
+    const combined = [...(messages1 || []), ...(messages2 || [])].sort(
+      (a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    let otherUser = combined[0]
+      ? (combined[0].sender_id === adminId ? combined[0].receiver : combined[0].sender)
+      : null;
+    if (!otherUser && targetUserId) {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, avatar')
+        .eq('id', targetUserId)
+        .single();
+      otherUser = userRow || null;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        messages: combined,
+        otherUser,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getting direct messages:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get messages',
+      message: error.message,
+    });
+  }
 };
 

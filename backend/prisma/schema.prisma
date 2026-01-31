@@ -224,11 +224,11 @@ model Payment {
   @@map("payments")
 }
 
-// Message model for communication
+// Message model for communication (bookingId optional for admin direct/support messages)
 model Message {
   id              String   @id @default(cuid())
-  bookingId       String
-  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId       String?
+  booking         Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   senderId        String
   sender          User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiverId      String

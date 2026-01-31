@@ -17,7 +17,14 @@ import {
   Calendar,
   Loader2,
   Trash2,
-  List
+  List,
+  BarChart3,
+  TrendingUp,
+  Receipt,
+  Search,
+  MessageCircle,
+  Send,
+  X
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -31,7 +38,66 @@ export default function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState<{ [key: string]: string }>({})
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users'>('pending')
+  // User search (admin)
+  const [userSearch, setUserSearch] = useState('')
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([])
+  const [userSearchLoading, setUserSearchLoading] = useState(false)
+  const [messageUserId, setMessageUserId] = useState<string | null>(null)
+  const [directMessages, setDirectMessages] = useState<any[]>([])
+  const [directOtherUser, setDirectOtherUser] = useState<any>(null)
+  const [directMessagesLoading, setDirectMessagesLoading] = useState(false)
+  const [newMessageText, setNewMessageText] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+  // KPIs / metrics
+  const [stats, setStats] = useState<{
+    bookings: number;
+    users: number;
+    listings: number;
+    totalRevenue: number;
+    totalFees: number;
+    dateRange: { start: string | null; end: string | null };
+  } | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | 'all'>(() => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 30)
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0],
+    }
+  })
+  const [datePreset, setDatePreset] = useState<string>('last30')
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'paid'>('all')
+
+  const fetchAdminStats = async () => {
+    try {
+      setStatsLoading(true)
+      const params: { startDate?: string; endDate?: string; bookingStatus?: 'all' | 'paid' } = {}
+      if (dateRange !== 'all' && typeof dateRange === 'object') {
+        params.startDate = dateRange.start
+        params.endDate = dateRange.end
+      }
+      if (bookingStatusFilter) params.bookingStatus = bookingStatusFilter
+      const response = await apiService.getAdminStats(params)
+      if (response.success && response.data) {
+        setStats({
+          bookings: response.data.bookings,
+          users: response.data.users,
+          listings: response.data.listings,
+          totalRevenue: response.data.totalRevenue ?? response.data.totalBookingValue ?? 0,
+          totalFees: response.data.totalFees ?? response.data.totalServiceFeeRevenue ?? 0,
+          dateRange: response.data.dateRange || { start: null, end: null },
+        })
+      }
+    } catch (e) {
+      console.error('Failed to fetch admin stats', e)
+      toast.error('Failed to load metrics')
+    } finally {
+      setStatsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!authLoading) {
@@ -49,8 +115,15 @@ export default function AdminDashboardPage() {
       
       fetchPendingProperties()
       fetchAllProperties()
+      fetchAdminStats()
     }
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'super_admin') && !authLoading) {
+      fetchAdminStats()
+    }
+  }, [dateRange, bookingStatusFilter])
 
   const fetchPendingProperties = async () => {
     try {
@@ -80,6 +153,57 @@ export default function AdminDashboardPage() {
       toast.error('Failed to load properties')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const runUserSearch = async () => {
+    try {
+      setUserSearchLoading(true)
+      const response = await apiService.searchUsers(userSearch)
+      if (response.success && response.data) {
+        setUserSearchResults(response.data.users || [])
+      } else {
+        setUserSearchResults([])
+      }
+    } catch (e) {
+      console.error('User search failed', e)
+      toast.error('Failed to search users')
+      setUserSearchResults([])
+    } finally {
+      setUserSearchLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (messageUserId) {
+      setDirectMessagesLoading(true)
+      apiService.getDirectMessages(messageUserId).then((res) => {
+        if (res.success && res.data) {
+          setDirectMessages(res.data.messages || [])
+          setDirectOtherUser(res.data.otherUser || null)
+        }
+      }).finally(() => setDirectMessagesLoading(false))
+    } else {
+      setDirectMessages([])
+      setDirectOtherUser(null)
+    }
+  }, [messageUserId])
+
+  const sendDirectMessage = async () => {
+    if (!messageUserId || !newMessageText.trim()) return
+    try {
+      setSendingMessage(true)
+      const res = await apiService.sendDirectMessage(messageUserId, newMessageText.trim())
+      if (res.success && res.data?.message) {
+        setDirectMessages((prev) => [...prev, res.data.message])
+        setNewMessageText('')
+      } else {
+        throw new Error(res.error || 'Failed to send')
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send message')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -187,6 +311,127 @@ export default function AdminDashboardPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* KPIs & Filters */}
+        <section className="mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-accent-600" />
+              Metrics
+            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Date range</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'last7', label: 'Last 7 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 7); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
+                  { key: 'last30', label: 'Last 30 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 30); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
+                  { key: 'thisMonth', label: 'This month', getValue: () => { const e = new Date(); const s = new Date(e.getFullYear(), e.getMonth(), 1); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
+                  { key: 'all', label: 'All time', getValue: () => 'all' as const },
+                ].map((preset) => (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => {
+                      setDatePreset(preset.key)
+                      setDateRange(preset.getValue() as any)
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      datePreset === preset.key ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              {dateRange !== 'all' && typeof dateRange === 'object' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, start: e.target.value })); }}
+                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, end: e.target.value })); }}
+                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+                <span className="text-sm font-medium text-gray-700">Bookings</span>
+                <select
+                  value={bookingStatusFilter}
+                  onChange={(e) => setBookingStatusFilter(e.target.value as 'all' | 'paid')}
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                >
+                  <option value="all">All (non-cancelled)</option>
+                  <option value="paid">Paid only</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchAdminStats()}
+                disabled={statsLoading}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                title="Refresh metrics"
+              >
+                <Loader2 className={`h-4 w-4 text-gray-600 ${statsLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {statsLoading && !stats ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-8 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
+            </div>
+          ) : stats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <Calendar className="h-4 w-4" />
+                  Bookings
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stats.bookings.toLocaleString()}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <TrendingUp className="h-4 w-4" />
+                  Total Revenue
+                </div>
+                <p className="text-2xl font-bold text-gray-900">${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <Receipt className="h-4 w-4" />
+                  Total Fees
+                </div>
+                <p className="text-2xl font-bold text-gray-900">${stats.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <User className="h-4 w-4" />
+                  Total Users
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stats.users.toLocaleString()}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+                  <List className="h-4 w-4" />
+                  Total Listings
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{stats.listings.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+          {stats && dateRange !== 'all' && typeof dateRange === 'object' && (
+            <p className="text-xs text-gray-500 mt-2">
+              Showing data from {dateRange.start} to {dateRange.end}
+            </p>
+          )}
+        </section>
+
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200">
           <nav className="flex space-x-8">
@@ -211,6 +456,17 @@ export default function AdminDashboardPage() {
             >
               <List className="h-4 w-4 inline mr-2" />
               All Properties ({allProperties.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'users'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
+              }`}
+            >
+              <User className="h-4 w-4 inline mr-2" />
+              Users
             </button>
           </nav>
         </div>
@@ -474,7 +730,143 @@ export default function AdminDashboardPage() {
             )}
           </>
         )}
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Search className="h-5 w-5 text-accent-600" />
+              Search users
+            </h2>
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && runUserSearch()}
+                placeholder="Search by email, first name, or last name..."
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={runUserSearch}
+                disabled={userSearchLoading}
+                className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {userSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Search
+              </button>
+            </div>
+            {userSearchResults.length === 0 && !userSearchLoading && (
+              <p className="text-gray-500 text-sm">
+                {userSearch ? 'No users found. Try a different search.' : 'Enter a search term and click Search.'}
+              </p>
+            )}
+            {userSearchResults.length > 0 && (
+              <ul className="space-y-2">
+                {userSearchResults.map((u: any) => (
+                  <li
+                    key={u.id}
+                    className="flex items-center justify-between py-3 px-4 rounded-lg border border-gray-200 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
+                        {(u.first_name?.[0] || u.email?.[0] || '?').toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {u.first_name} {u.last_name}
+                        </p>
+                        <p className="text-sm text-gray-500">{u.email}</p>
+                        {u.phone && <p className="text-xs text-gray-400">{u.phone}</p>}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMessageUserId(u.id)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 text-sm"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Message
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Direct message modal */}
+      {messageUserId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">
+                {directOtherUser
+                  ? `${directOtherUser.first_name || ''} ${directOtherUser.last_name || ''}`.trim() || directOtherUser.email
+                  : 'Loading...'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => { setMessageUserId(null); setNewMessageText(''); }}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
+              {directMessagesLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
+                </div>
+              ) : directMessages.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No messages yet. Send a message below.</p>
+              ) : (
+                directMessages.map((msg: any) => {
+                  const isAdmin = msg.sender_id === user?.id;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                          isAdmin ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-900'
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                        <p className={`text-xs mt-1 ${isAdmin ? 'text-accent-100' : 'text-gray-500'}`}>
+                          {new Date(msg.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-200 flex gap-2">
+              <input
+                type="text"
+                value={newMessageText}
+                onChange={(e) => setNewMessageText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendDirectMessage()}
+                placeholder="Type a message..."
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={sendDirectMessage}
+                disabled={!newMessageText.trim() || sendingMessage}
+                className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (

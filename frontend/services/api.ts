@@ -314,10 +314,46 @@ class ApiService {
     });
   }
 
+  async searchUsers(search?: string): Promise<ApiResponse<{ users: any[] }>> {
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+    return this.request(`/users${query}`);
+  }
+
+  async getDirectMessages(userId: string): Promise<ApiResponse<{ messages: any[]; otherUser: any }>> {
+    return this.request(`/messages/direct/${encodeURIComponent(userId)}`);
+  }
+
+  async sendDirectMessage(receiverId: string, content: string): Promise<ApiResponse<{ message: any }>> {
+    return this.request('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiverId, content }),
+    });
+  }
+
+  async getAdminStats(params?: { startDate?: string; endDate?: string; bookingStatus?: 'all' | 'paid' }): Promise<ApiResponse<{
+    bookings: number;
+    users: number;
+    listings: number;
+    totalRevenue: number;
+    totalFees: number;
+    totalBookingValue: number;
+    totalServiceFeeRevenue: number;
+    dateRange: { start: string | null; end: string | null };
+    filters?: { bookingStatus: string };
+  }>> {
+    const searchParams = new URLSearchParams();
+    if (params?.startDate) searchParams.set('startDate', params.startDate);
+    if (params?.endDate) searchParams.set('endDate', params.endDate);
+    if (params?.bookingStatus) searchParams.set('bookingStatus', params.bookingStatus);
+    const query = searchParams.toString();
+    return this.request(`/admin/stats${query ? `?${query}` : ''}`);
+  }
+
   // Stripe Connect
-  async createConnectAccount(): Promise<ApiResponse<{ url: string; accountId: string }>> {
+  async createConnectAccount(accountType: 'individual' | 'company' = 'individual'): Promise<ApiResponse<{ url: string; accountId: string }>> {
     return this.request('/payments/connect/create', {
       method: 'POST',
+      body: JSON.stringify({ accountType }),
     });
   }
 

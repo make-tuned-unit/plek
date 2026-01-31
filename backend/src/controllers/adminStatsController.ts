@@ -26,7 +26,9 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
   try {
     const userId = (req as any).user.id;
     const supabase = getSupabaseClient();
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, bookingStatus } = req.query;
+    // bookingStatus: 'all' = non-cancelled count; 'paid' = confirmed+completed only
+    const countPaidBookingsOnly = bookingStatus === 'paid';
 
     // Verify user is admin
     const { data: user, error: userError } = await supabase
@@ -45,19 +47,22 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
 
     const { start, end } = parseDateRange(startDate as string, endDate as string);
 
-    // 1. Total Bookings
+    // 1. Total Bookings (all non-cancelled, or only confirmed+completed if bookingStatus=paid)
     let bookingsCount = 0;
+    const bookingStatusFilter = countPaidBookingsOnly ? ['confirmed', 'completed'] : null;
     if (start || end) {
-      let query = supabase.from('bookings').select('id', { count: 'exact', head: true }).neq('status', 'cancelled');
+      let query = supabase.from('bookings').select('id', { count: 'exact', head: true });
+      if (bookingStatusFilter) query = query.in('status', bookingStatusFilter);
+      else query = query.neq('status', 'cancelled');
       if (start) query = query.gte('created_at', start.toISOString());
       if (end) query = query.lte('created_at', end.toISOString());
       const { count } = await query;
       bookingsCount = count || 0;
     } else {
-      const { count } = await supabase
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .neq('status', 'cancelled');
+      let query = supabase.from('bookings').select('id', { count: 'exact', head: true });
+      if (bookingStatusFilter) query = query.in('status', bookingStatusFilter);
+      else query = query.neq('status', 'cancelled');
+      const { count } = await query;
       bookingsCount = count || 0;
     }
 
@@ -173,12 +178,15 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
         bookings: bookingsCount,
         users: usersCount,
         listings: listingsCount,
+        totalRevenue: Math.round(totalBookingValue * 100) / 100,
+        totalFees: Math.round(totalServiceFeeRevenue * 100) / 100,
         totalBookingValue: Math.round(totalBookingValue * 100) / 100,
         totalServiceFeeRevenue: Math.round(totalServiceFeeRevenue * 100) / 100,
         dateRange: {
           start: start?.toISOString() || null,
           end: end?.toISOString() || null,
         },
+        filters: { bookingStatus: countPaidBookingsOnly ? 'paid' : 'all' },
       },
     });
   } catch (error: any) {
