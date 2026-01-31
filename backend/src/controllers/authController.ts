@@ -239,7 +239,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Return user data and token
+    // Return full user profile (same shape as getMe) so address and profile fields persist in session
     res.json({
       success: true,
       data: {
@@ -250,12 +250,26 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           lastName: user.last_name,
           name: `${user.first_name} ${user.last_name}`,
           phone: user.phone,
+          avatar: user.avatar,
+          bio: user.bio,
+          address: user.address,
+          city: user.city,
+          state: user.state,
+          zipCode: user.zip_code,
+          country: user.country,
           isVerified: user.is_verified,
           isHost: user.is_host,
-          avatar: user.avatar,
           role: user.role,
+          createdAt: user.created_at,
+          rating: user.rating || 0,
+          reviewCount: user.review_count || 0,
+          emailNotificationsBookings: user.email_notifications_bookings ?? true,
+          smsNotifications: user.sms_notifications ?? true,
+          marketingEmails: user.marketing_emails ?? false,
+          profileVisible: user.profile_visible ?? true,
+          allowReviews: user.allow_reviews ?? true,
         },
-        token: token, // Use the actual JWT token from Supabase
+        token: token,
       },
     });
   } catch (error: any) {
