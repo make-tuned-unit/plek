@@ -218,12 +218,18 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
       return;
     }
     
-    // Create new Express account
+    // Create new Express account (individual host, not a business)
     logger.info('[Stripe Connect] Creating new Express account');
+    const platformUrl = process.env['FRONTEND_URL'] || 'https://www.parkplekk.com';
     const account = await getStripe().accounts.create({
       type: 'express',
       country: existingUser?.country || 'CA',
       email: existingUser?.email,
+      business_type: 'individual',
+      business_profile: {
+        url: platformUrl.replace(/\/$/, ''),
+        mcc: '7523', // Parking lots, garages (so Stripe doesn't ask industry)
+      },
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
