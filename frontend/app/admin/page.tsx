@@ -194,8 +194,9 @@ export default function AdminDashboardPage() {
     try {
       setSendingMessage(true)
       const res = await apiService.sendDirectMessage(messageUserId, newMessageText.trim())
-      if (res.success && res.data?.message) {
-        setDirectMessages((prev) => [...prev, res.data.message])
+      const message = res.success && res.data?.message ? res.data.message : null
+      if (message) {
+        setDirectMessages((prev) => [...prev, message])
         setNewMessageText('')
       } else {
         throw new Error(res.error || 'Failed to send')
