@@ -186,6 +186,7 @@ function ProfileContent() {
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
   const [stripeNeedsVerification, setStripeNeedsVerification] = useState(false);
   const [stripeVerificationUrl, setStripeVerificationUrl] = useState<string | null>(null);
+  const [connectAccountType, setConnectAccountType] = useState<'individual' | 'company'>('individual');
   const [pendingEarnings, setPendingEarnings] = useState<number>(0);
   const [hostEarnings, setHostEarnings] = useState<{
     totalGross: number;
@@ -901,7 +902,7 @@ function ProfileContent() {
     setIsConnectingStripe(true);
     try {
       // Use connect account creation endpoint
-      const response = await apiService.createConnectAccount();
+      const response = await apiService.createConnectAccount(connectAccountType);
       if (response.success && response.data?.url) {
         // Show earnings amount in toast if available
         // Note: needsEarnings and pendingEarnings not in current API response
@@ -2627,6 +2628,19 @@ function ProfileContent() {
                           <p className="text-gray-600 mb-4 max-w-md mx-auto">
                             Add your payout details to receive your earnings directly to your bank account.
                           </p>
+                          <div className="mb-4 max-w-md mx-auto text-left">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Receive payouts as</p>
+                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                              <input type="radio" name="connectAccountType" checked={connectAccountType === 'individual'} onChange={() => setConnectAccountType('individual')} className="text-accent-600 border-gray-300 focus:ring-accent-500" />
+                              <span className="text-gray-700">Individual</span>
+                              <span className="text-gray-500 text-sm">(recommended for most hosts)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="connectAccountType" checked={connectAccountType === 'company'} onChange={() => setConnectAccountType('company')} className="text-accent-600 border-gray-300 focus:ring-accent-500" />
+                              <span className="text-gray-700">Business</span>
+                              <span className="text-gray-500 text-sm">(company name, tax ID)</span>
+                            </label>
+                          </div>
                           <button
                             onClick={handleConnectStripe}
                             disabled={isConnectingStripe}
@@ -2637,6 +2651,11 @@ function ProfileContent() {
                           <p className="text-xs text-gray-500 mt-4">
                             Secure setup takes just a few minutes
                           </p>
+                          {connectAccountType === 'individual' && (
+                            <p className="text-xs text-gray-500 mt-2 max-w-md mx-auto">
+                              When Stripe asks for Job title, you can enter &quot;Property Owner&quot; or &quot;Host&quot;.
+                            </p>
+                          )}
                         </>
                       ) : (
                         <>
@@ -2645,6 +2664,19 @@ function ProfileContent() {
                           <p className="text-gray-600 mb-4 max-w-md mx-auto">
                             Add your payout details anytime. When you earn from bookings, funds will go straight to your bank account.
                           </p>
+                          <div className="mb-4 max-w-md mx-auto text-left">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Receive payouts as</p>
+                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                              <input type="radio" name="connectAccountType" checked={connectAccountType === 'individual'} onChange={() => setConnectAccountType('individual')} className="text-accent-600 border-gray-300 focus:ring-accent-500" />
+                              <span className="text-gray-700">Individual</span>
+                              <span className="text-gray-500 text-sm">(recommended for most hosts)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" name="connectAccountType" checked={connectAccountType === 'company'} onChange={() => setConnectAccountType('company')} className="text-accent-600 border-gray-300 focus:ring-accent-500" />
+                              <span className="text-gray-700">Business</span>
+                              <span className="text-gray-500 text-sm">(company name, tax ID)</span>
+                            </label>
+                          </div>
                           <button
                             onClick={handleConnectStripe}
                             disabled={isConnectingStripe}
@@ -2655,6 +2687,11 @@ function ProfileContent() {
                           <p className="text-xs text-gray-500 mt-4">
                             Secure setup takes just a few minutes
                           </p>
+                          {connectAccountType === 'individual' && (
+                            <p className="text-xs text-gray-500 mt-2 max-w-md mx-auto">
+                              When Stripe asks for Job title, you can enter &quot;Property Owner&quot; or &quot;Host&quot;.
+                            </p>
+                          )}
                         </>
                       )}
                     </div>

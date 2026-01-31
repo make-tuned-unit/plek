@@ -185,19 +185,21 @@ function serializeMetadataValue(value: unknown): string {
 
 // @desc    Create Stripe Connect account for host
 // @route   POST /api/payments/connect/create
+// @body    { accountType?: 'individual' | 'company' } – default individual
 // @access  Private
 export const createConnectAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
     const supabase = getSupabaseClient();
-    
+    const accountType = (req.body?.accountType === 'company' ? 'company' : 'individual') as 'individual' | 'company';
+
     // Check if user already has a Stripe account
     const { data: existingUser } = await supabase
       .from('users')
       .select('stripe_account_id, email, first_name, last_name, country')
       .eq('id', userId)
       .single();
-    
+
     if (existingUser?.stripe_account_id) {
       // Account already exists, create new account link for updates
       logger.info('[Stripe Connect] Creating account link for existing account');
@@ -207,28 +209,29 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
         return_url: `${process.env['FRONTEND_URL']}/profile?stripe_success=true`,
         type: 'account_onboarding',
       });
-      
-    res.json({
-      success: true,
-      data: {
-        url: accountLink.url,
-        accountId: existingUser.stripe_account_id,
-      }
-    });
+
+      res.json({
+        success: true,
+        data: {
+          url: accountLink.url,
+          accountId: existingUser.stripe_account_id,
+        }
+      });
       return;
     }
-    
-    // Create new Express account (individual host – prefilled so Stripe doesn't ask business questions)
-    logger.info('[Stripe Connect] Creating new Express account');
+
+    // Create new Express account (individual or company – works for any Stripe-supported country)
+    logger.info('[Stripe Connect] Creating new Express account', { accountType });
     const platformUrl = (process.env['FRONTEND_URL'] || 'https://www.parkplekk.com').replace(/\/$/, '');
-    const account = await getStripe().accounts.create({
-      type: 'express',
-      country: existingUser?.country || 'CA',
+    const country = existingUser?.country || 'CA'; // User's profile country (CA, US, GB, etc.)
+
+    const baseParams = {
+      type: 'express' as const,
+      country,
       email: existingUser?.email,
-      business_type: 'individual',
       business_profile: {
         url: platformUrl,
-        mcc: '7523', // Parking lots, garages (industry)
+        mcc: '7523', // Parking lots, garages
         product_description: 'I list my driveway or parking space for hourly rental through the plekk platform. Customers book and pay through plekk; I receive payouts for completed bookings.',
       },
       capabilities: {
@@ -239,7 +242,21 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
         user_id: userId,
         platform: 'plekk',
       },
-    });
+    };
+
+    const account = accountType === 'company'
+      ? await getStripe().accounts.create({
+          ...baseParams,
+          business_type: 'company',
+        })
+      : await getStripe().accounts.create({
+          ...baseParams,
+          business_type: 'individual',
+          individual: {
+            first_name: existingUser?.first_name ?? undefined,
+            last_name: existingUser?.last_name ?? undefined,
+          },
+        });
     
     // Create account link for onboarding
     const accountLink = await getStripe().accountLinks.create({
