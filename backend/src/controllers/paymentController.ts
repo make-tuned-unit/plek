@@ -218,17 +218,18 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
       return;
     }
     
-    // Create new Express account (individual host, not a business)
+    // Create new Express account (individual host – prefilled so Stripe doesn't ask business questions)
     logger.info('[Stripe Connect] Creating new Express account');
-    const platformUrl = process.env['FRONTEND_URL'] || 'https://www.parkplekk.com';
+    const platformUrl = (process.env['FRONTEND_URL'] || 'https://www.parkplekk.com').replace(/\/$/, '');
     const account = await getStripe().accounts.create({
       type: 'express',
       country: existingUser?.country || 'CA',
       email: existingUser?.email,
       business_type: 'individual',
       business_profile: {
-        url: platformUrl.replace(/\/$/, ''),
-        mcc: '7523', // Parking lots, garages (so Stripe doesn't ask industry)
+        url: platformUrl,
+        mcc: '7523', // Parking lots, garages (industry)
+        product_description: 'I list my driveway or parking space for hourly rental through the plekk platform. Customers book and pay through plekk; I receive payouts for completed bookings.',
       },
       capabilities: {
         card_payments: { requested: true },
