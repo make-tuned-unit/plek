@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { SearchBar } from '@/components/SearchBar'
@@ -15,10 +16,55 @@ import {
   ArrowRight,
   CheckCircle2,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  HelpCircle
 } from 'lucide-react'
 
 const HeroVideo = dynamic(() => import('@/components/HeroVideo'), { ssr: false })
+
+const FAQ_ITEMS = [
+  {
+    question: 'What is plekk?',
+    answer: 'plekk is a parking marketplace that connects drivers who need a spot with homeowners who have space to share. You can find and book hourly or daily parking near your destination, or list your driveway and earn passive income when you’re not using it.',
+  },
+  {
+    question: 'How do I find parking?',
+    answer: 'Search by location on our Find Parking page, choose a date and time, then book a space. You’ll see photos, price, and access instructions. Payment is secure and you get a guaranteed spot—no more circling the block.',
+  },
+  {
+    question: 'How do I list my driveway?',
+    answer: 'Go to List Your Driveway, add your address, upload photos, set your hourly or daily rate, and choose when your space is available. Once your listing is approved, drivers can book and you’ll receive payouts to your connected account.',
+  },
+  {
+    question: 'How much does it cost?',
+    answer: 'Drivers pay the host’s rate plus a small service fee. Hosts set their own prices and receive payouts minus a platform fee. There are no monthly fees to list—you only pay when you earn.',
+  },
+  {
+    question: 'Is my payment secure?',
+    answer: 'Yes. All payments are processed securely through Stripe. Your card details are never stored on our servers, and both drivers and hosts are protected by our payment and cancellation policies.',
+  },
+  {
+    question: 'Can I book by the hour or by the day?',
+    answer: 'Yes. Many spaces offer both hourly parking and daily parking. When you search, you’ll see the options and prices so you can choose what fits your needs.',
+  },
+  {
+    question: 'How do hosts get paid?',
+    answer: 'Hosts connect a Stripe account to receive payouts. After a booking is completed, earnings are transferred according to your payout schedule. You can track earnings in your profile.',
+  },
+  {
+    question: 'What if I need to cancel?',
+    answer: 'Cancellation policies depend on how close to the booking start time you cancel. You can view the specific policy for each listing before you book. Hosts can also set their own cancellation rules.',
+  },
+  {
+    question: 'Where is plekk available?',
+    answer: 'plekk is available in supported regions where hosts have listed spaces. Search by city or address on the Find Parking page to see availability near you.',
+  },
+  {
+    question: 'How are spaces verified?',
+    answer: 'Listings are reviewed to ensure they’re real, accurately described, and meet our standards. We also use secure payments and reviews to help keep the marketplace safe for everyone.',
+  },
+]
 
 const slideUp = {
   hidden: { y: 32, opacity: 0 },
@@ -29,6 +75,8 @@ const viewport = { once: true, amount: 0.12 }
 const stagger = { staggerChildren: 0.08, delayChildren: 0.06 }
 
 export default function HomePage() {
+  const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100">
       {/* Hero Section - fixed height so video fills; dark bg hides any letterboxing */}
@@ -400,6 +448,89 @@ export default function HomePage() {
                 description="Find parking near your destination or list your space in high-demand areas where drivers need it most."
               />
             </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="relative py-20 bg-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            variants={{ visible: { transition: stagger } }}
+          >
+            <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700 text-sm font-medium mb-6 border border-primary-100">
+              <HelpCircle className="w-4 h-4 mr-2" />
+              FAQ
+            </motion.span>
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Frequently Asked Questions
+            </motion.h2>
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-gray-600">
+              Common questions about finding parking and listing your driveway
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            className="space-y-3"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            variants={{ visible: { transition: stagger } }}
+          >
+            {FAQ_ITEMS.map((item, index) => (
+              <motion.div
+                key={index}
+                variants={slideUp}
+                transition={slideUpTransition}
+                className="rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden hover:border-accent-200 transition-colors"
+              >
+                <button
+                  type="button"
+                  onClick={() => setFaqOpenIndex(faqOpenIndex === index ? null : index)}
+                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-gray-900 hover:bg-accent-50/50 transition-colors"
+                >
+                  <span>{item.question}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 flex-shrink-0 text-gray-500 transition-transform duration-200 ${
+                      faqOpenIndex === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                <div
+                  className={`grid transition-[grid-template-rows] duration-200 ${
+                    faqOpenIndex === index ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <p className="px-5 pb-4 pt-0 text-gray-600 leading-relaxed border-t border-gray-100">
+                      {item.answer}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            className="mt-10 text-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            variants={slideUp}
+            transition={slideUpTransition}
+          >
+            <p className="text-gray-600 mb-4">Still have questions?</p>
+            <Link
+              href="/contact"
+              className="inline-flex items-center text-accent-600 font-semibold hover:text-accent-700"
+            >
+              Contact us
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Link>
           </motion.div>
         </div>
       </section>

@@ -1,13 +1,16 @@
 import Link from 'next/link'
-import { Mail, Phone, MapPin } from 'lucide-react'
+import { Mail, Phone, MapPin, BookOpen } from 'lucide-react'
+import { getAllBlogPosts } from '@/data/blogPosts'
 
 export function Footer() {
+  const recentPosts = getAllBlogPosts().slice(0, 5)
+
   return (
     <footer className="bg-gradient-to-b from-primary-900 via-primary-800 to-charcoal-900 text-mist-100 relative overflow-hidden">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 opacity-10 bg-gradient-to-br from-accent-500/20 via-transparent to-primary-600/20 pointer-events-none" />
       <div className="max-w-7xl mx-auto container-padding py-16 md:py-20 relative">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-12 md:gap-16">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-6">
@@ -63,6 +66,12 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/blog" className="hover:text-accent-300 transition-colors duration-200 inline-flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Blog
+                </Link>
+              </li>
+              <li>
                 <Link href="/profile" className="hover:text-accent-300 transition-colors duration-200 inline-block">
                   My Profile
                 </Link>
@@ -72,6 +81,30 @@ export function Footer() {
                   Sign In
                 </Link>
               </li>
+            </ul>
+          </div>
+
+          {/* Blog */}
+          <div>
+            <h3 className="text-lg font-bold mb-6 text-white tracking-wide">
+              Blog
+            </h3>
+            <ul className="space-y-3 text-mist-200/90">
+              <li>
+                <Link href="/blog" className="hover:text-accent-300 transition-colors duration-200 inline-block font-medium">
+                  All articles
+                </Link>
+              </li>
+              {recentPosts.map((post) => (
+                <li key={post.slug}>
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="hover:text-accent-300 transition-colors duration-200 inline-block text-sm line-clamp-2"
+                  >
+                    {post.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
