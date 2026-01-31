@@ -319,6 +319,11 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
           createdAt: user.created_at,
           rating: user.rating || 0,
           reviewCount: user.review_count || 0,
+          emailNotificationsBookings: user.email_notifications_bookings ?? true,
+          smsNotifications: user.sms_notifications ?? true,
+          marketingEmails: user.marketing_emails ?? false,
+          profileVisible: user.profile_visible ?? true,
+          allowReviews: user.allow_reviews ?? true,
           hostProfile: user.is_host ? {
             // You can add host profile data here if needed
             businessName: null,
@@ -448,6 +453,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       zipCode,
       country,
       avatar,
+      emailNotificationsBookings,
+      smsNotifications,
+      marketingEmails,
+      profileVisible,
+      allowReviews,
     } = req.body;
 
     // Update user profile in Supabase
@@ -462,6 +472,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       zip_code: zipCode,
       country,
       avatar,
+      ...(typeof emailNotificationsBookings === 'boolean' && { email_notifications_bookings: emailNotificationsBookings }),
+      ...(typeof smsNotifications === 'boolean' && { sms_notifications: smsNotifications }),
+      ...(typeof marketingEmails === 'boolean' && { marketing_emails: marketingEmails }),
+      ...(typeof profileVisible === 'boolean' && { profile_visible: profileVisible }),
+      ...(typeof allowReviews === 'boolean' && { allow_reviews: allowReviews }),
     });
 
     if (error || !user) {
@@ -496,6 +511,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
           createdAt: user.created_at,
           rating: user.rating || 0,
           reviewCount: user.review_count || 0,
+          emailNotificationsBookings: user.email_notifications_bookings ?? true,
+          smsNotifications: user.sms_notifications ?? true,
+          marketingEmails: user.marketing_emails ?? false,
+          profileVisible: user.profile_visible ?? true,
+          allowReviews: user.allow_reviews ?? true,
         },
       },
     });

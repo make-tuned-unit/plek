@@ -22,6 +22,11 @@ interface User {
   createdAt?: string
   rating?: number
   reviewCount?: number
+  emailNotificationsBookings?: boolean
+  smsNotifications?: boolean
+  marketingEmails?: boolean
+  profileVisible?: boolean
+  allowReviews?: boolean
 }
 
 interface AuthContextType {

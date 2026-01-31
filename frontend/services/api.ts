@@ -189,6 +189,11 @@ class ApiService {
     zipCode: string;
     country: string;
     bio: string;
+    emailNotificationsBookings: boolean;
+    smsNotifications: boolean;
+    marketingEmails: boolean;
+    profileVisible: boolean;
+    allowReviews: boolean;
   }>): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/profile', {
       method: 'PUT',

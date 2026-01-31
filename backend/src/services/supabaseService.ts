@@ -26,6 +26,11 @@ export interface DatabaseUser {
   review_count: number;
   created_at: string;
   updated_at: string;
+  email_notifications_bookings?: boolean;
+  sms_notifications?: boolean;
+  marketing_emails?: boolean;
+  profile_visible?: boolean;
+  allow_reviews?: boolean;
 }
 
 export interface CreateUserData {
@@ -48,6 +53,11 @@ export interface UpdateUserData {
   zip_code?: string;
   country?: string;
   avatar?: string;
+  email_notifications_bookings?: boolean;
+  sms_notifications?: boolean;
+  marketing_emails?: boolean;
+  profile_visible?: boolean;
+  allow_reviews?: boolean;
 }
 
 // Initialize Supabase client

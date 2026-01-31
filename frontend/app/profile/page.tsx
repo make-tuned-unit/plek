@@ -29,7 +29,8 @@ import {
   ChevronUp,
   MessageSquare,
   Bell,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
@@ -226,6 +227,14 @@ function ProfileContent() {
   } | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [accountSettings, setAccountSettings] = useState({
+    emailNotificationsBookings: true,
+    smsNotifications: true,
+    marketingEmails: false,
+    profileVisible: true,
+    allowReviews: true,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [listingFormData, setListingFormData] = useState({
     title: '',
     address: '',
@@ -294,6 +303,19 @@ function ProfileContent() {
       })
     }
   }, [user, reset])
+
+  // Sync account settings from user when loaded
+  useEffect(() => {
+    if (user) {
+      setAccountSettings({
+        emailNotificationsBookings: user.emailNotificationsBookings ?? true,
+        smsNotifications: user.smsNotifications ?? true,
+        marketingEmails: user.marketingEmails ?? false,
+        profileVisible: user.profileVisible ?? true,
+        allowReviews: user.allowReviews ?? true,
+      })
+    }
+  }, [user])
 
   // Handle tab and bookingId from URL parameters
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
@@ -1958,16 +1980,31 @@ function ProfileContent() {
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Notifications</h3>
                       <div className="space-y-3">
-                        <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accountSettings.emailNotificationsBookings}
+                            onChange={(e) => setAccountSettings((s) => ({ ...s, emailNotificationsBookings: e.target.checked }))}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Email notifications for new bookings</span>
                         </label>
-                        <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accountSettings.smsNotifications}
+                            onChange={(e) => setAccountSettings((s) => ({ ...s, smsNotifications: e.target.checked }))}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">SMS notifications for urgent messages</span>
                         </label>
-                        <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accountSettings.marketingEmails}
+                            onChange={(e) => setAccountSettings((s) => ({ ...s, marketingEmails: e.target.checked }))}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Marketing emails and promotions</span>
                         </label>
                       </div>
@@ -1976,15 +2013,64 @@ function ProfileContent() {
                     <div>
                       <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy</h3>
                       <div className="space-y-3">
-                        <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" defaultChecked />
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accountSettings.profileVisible}
+                            onChange={(e) => setAccountSettings((s) => ({ ...s, profileVisible: e.target.checked }))}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Show my profile to other users</span>
                         </label>
-                        <label className="flex items-center">
-                          <input type="checkbox" className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded" />
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accountSettings.allowReviews}
+                            onChange={(e) => setAccountSettings((s) => ({ ...s, allowReviews: e.target.checked }))}
+                            className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                          />
                           <span className="ml-2 text-sm text-gray-700">Allow reviews and ratings</span>
                         </label>
                       </div>
+                    </div>
+
+                    <div className="pt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsSavingSettings(true)
+                          try {
+                            const ok = await updateProfile({
+                              emailNotificationsBookings: accountSettings.emailNotificationsBookings,
+                              smsNotifications: accountSettings.smsNotifications,
+                              marketingEmails: accountSettings.marketingEmails,
+                              profileVisible: accountSettings.profileVisible,
+                              allowReviews: accountSettings.allowReviews,
+                            })
+                            if (ok) {
+                              toast.success('Settings saved')
+                              await refreshUser()
+                            } else {
+                              toast.error('Failed to save settings')
+                            }
+                          } catch {
+                            toast.error('Failed to save settings')
+                          } finally {
+                            setIsSavingSettings(false)
+                          }
+                        }}
+                        disabled={isSavingSettings}
+                        className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isSavingSettings ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save settings'
+                        )}
+                      </button>
                     </div>
 
                     <div className="pt-6 border-t">
