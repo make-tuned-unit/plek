@@ -931,15 +931,26 @@ function ProfileContent() {
         // Redirect to Stripe onboarding
         window.location.href = response.data.url;
       } else {
-        // If no URL, show error
-        toast.error(response.error || 'Failed to start payout setup');
+        // If no URL, show error (e.g. country_required)
+        const errMsg = response.error || 'Failed to start payout setup';
+        const code = (response as any).code;
+        if (code === 'country_required') {
+          toast.error(errMsg, { duration: 6000 });
+          setActiveTab('profile');
+          setTimeout(() => document.getElementById('profile-edit-form')?.scrollIntoView({ behavior: 'smooth' }), 300);
+        } else {
+          toast.error(errMsg);
+        }
       }
     } catch (error: any) {
       const data = error.response?.data;
       const code = data?.code;
-      const message = data?.message || error.message;
-      // Payout setup not yet available (platform must enable Stripe Connect in Dashboard)
-      if (code === 'connect_not_enabled' || message?.toLowerCase().includes('temporarily unavailable')) {
+      const message = data?.error || data?.message || error.message;
+      if (code === 'country_required') {
+        toast.error(message || 'Please set your country in your profile first (Profile → Country).', { duration: 6000 });
+        setActiveTab('profile');
+        setTimeout(() => document.getElementById('profile-edit-form')?.scrollIntoView({ behavior: 'smooth' }), 300);
+      } else if (code === 'connect_not_enabled' || message?.toLowerCase().includes('temporarily unavailable')) {
         toast('Payout setup is not available yet. Please try again later or contact support.', {
           icon: 'ℹ️',
           duration: 5000,
@@ -1563,7 +1574,7 @@ function ProfileContent() {
           <div className="lg:col-span-3">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
+              <div id="profile-edit-form" className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6">
                 {/* Complete your profile banner - show when key fields missing, dismissible */}
                 <ProfileCompleteBanner user={user} onEditProfile={() => setIsEditing(true)} />
 
@@ -2702,7 +2713,28 @@ function ProfileContent() {
                     <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
                     Payout account
                   </h2>
-                  
+                  {(() => {
+                    const hasPayoutCountry = !!user?.country?.trim();
+                    const payoutCountryLabel = hasPayoutCountry && COUNTRY_OPTIONS.find(o => o.value === (user?.country || '').trim())?.label;
+                    return !hasPayoutCountry ? (
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-6">
+                        <p className="text-sm text-amber-800">
+                          <strong>Set your country first.</strong> We use your profile country for payout setup (e.g. Canada or US). It cannot be changed later without disconnecting. Go to the Profile tab above and set <strong>Country</strong>, then return here to add payout details.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => { setActiveTab('profile'); document.getElementById('profile-edit-form')?.scrollIntoView({ behavior: 'smooth' }); }}
+                          className="mt-3 text-sm font-semibold text-amber-700 hover:text-amber-900 underline"
+                        >
+                          Edit profile and set country →
+                        </button>
+                      </div>
+                    ) : payoutCountryLabel ? (
+                      <p className="text-sm text-gray-500 mb-4">
+                        Payout country: <strong>{payoutCountryLabel}</strong>. To change it you must disconnect and add payout details again.
+                      </p>
+                    ) : null;
+                  })()}
                   {!stripeConnected ? (
                     <div className="text-center py-12">
                       {pendingEarnings > 0 ? (
@@ -2729,7 +2761,7 @@ function ProfileContent() {
                           </div>
                           <button
                             onClick={handleConnectStripe}
-                            disabled={isConnectingStripe}
+                            disabled={isConnectingStripe || !user?.country?.trim()}
                             className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
                           >
                             {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}
@@ -2765,7 +2797,7 @@ function ProfileContent() {
                           </div>
                           <button
                             onClick={handleConnectStripe}
-                            disabled={isConnectingStripe}
+                            disabled={isConnectingStripe || !user?.country?.trim()}
                             className="w-full sm:w-auto px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
                           >
                             {isConnectingStripe ? 'Setting up...' : 'Add Payout Details'}

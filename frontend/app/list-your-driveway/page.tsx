@@ -14,10 +14,12 @@ import {
   ArrowLeft,
   ArrowRight,
   Upload,
-  X
+  X,
+  PartyPopper
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { apiService } from '@/services/api'
 
 const propertySchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -71,7 +73,10 @@ export default function ListYourDrivewayPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
+  const [uploadedImageFiles, setUploadedImageFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [publishedListingId, setPublishedListingId] = useState<string | null>(null)
+  const [publishError, setPublishError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -122,23 +127,105 @@ export default function ListYourDrivewayPage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (files) {
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file))
-      setUploadedImages(prev => [...prev, ...newImages])
+      const fileList = Array.from(files)
+      const newPreviews = fileList.map(file => URL.createObjectURL(file))
+      setUploadedImages(prev => [...prev, ...newPreviews])
+      setUploadedImageFiles(prev => [...prev, ...fileList])
     }
+    event.target.value = ''
   }
 
   const removeImage = (index: number) => {
+    URL.revokeObjectURL(uploadedImages[index])
     setUploadedImages(prev => prev.filter((_, i) => i !== index))
+    setUploadedImageFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const uploadPhotos = async (propertyId: string, files: File[]): Promise<void> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    if (!token) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL
+    const apiBase = apiUrl && (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))
+      ? (apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl) + '/api'
+      : (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000/api')
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('photo', file)
+      const res = await fetch(`${apiBase}/properties/${propertyId}/photos`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || err.error || 'Photo upload failed')
+      }
+    }
   }
 
   const onSubmit = async (data: PropertyForm) => {
     setIsSubmitting(true)
+    setPublishError(null)
     try {
-      // TODO: Implement property listing logic
-      console.log('Property data:', data)
-      console.log('Uploaded images:', uploadedImages)
-    } catch (error) {
-      console.error('Error creating listing:', error)
+      let coordinates: [number, number] | undefined
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      const queryParts = [data.address, data.city, data.state, data.zipCode].filter(Boolean).map(String)
+      if (token && queryParts.length > 0) {
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(queryParts.join(', '))}.json?access_token=${token}&limit=1&types=address,place`
+          )
+          const geo = await res.json()
+          if (geo?.features?.length && geo.features[0].center?.length >= 2) {
+            coordinates = geo.features[0].center as [number, number]
+          }
+        } catch (_) {
+          // continue without coordinates
+        }
+      }
+
+      const availability = data.availability
+      const propertyData = {
+        title: data.title,
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zip_code: data.zipCode,
+        price: data.hourlyRate,
+        property_type: data.propertyType,
+        max_vehicles: 1,
+        features: data.features || [],
+        restrictions: [],
+        require_approval: data.requireApproval,
+        instant_booking: !data.requireApproval,
+        coordinates: coordinates || undefined,
+        start_time: data.startTime,
+        end_time: data.endTime,
+        monday_available: availability.monday,
+        tuesday_available: availability.tuesday,
+        wednesday_available: availability.wednesday,
+        thursday_available: availability.thursday,
+        friday_available: availability.friday,
+        saturday_available: availability.saturday,
+        sunday_available: availability.sunday,
+      }
+
+      const response = await apiService.createProperty(propertyData)
+      if (!response.success || !response.data?.property?.id) {
+        throw new Error(response.error || 'Failed to create listing')
+      }
+
+      const propertyId = response.data.property.id
+
+      if (uploadedImageFiles.length > 0) {
+        await uploadPhotos(propertyId, uploadedImageFiles)
+      }
+
+      setPublishedListingId(propertyId)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      setPublishError(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -160,6 +247,43 @@ export default function ListYourDrivewayPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
+      </div>
+    )
+  }
+
+  // Confirmation / success view after listing is published — no going back to steps
+  if (publishedListingId) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900">List Your Driveway</h1>
+              <p className="mt-2 text-gray-600">Start earning money from your parking space</p>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-10 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
+              <PartyPopper className="h-8 w-8 text-green-600" aria-hidden />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Listing published successfully</h2>
+            <p className="text-gray-600 mb-6">
+              Your listing has been submitted and is now under review. It will appear in the Admin Dashboard as pending and will go live once approved—usually within 24 hours.
+            </p>
+            <p className="text-sm text-gray-500 mb-8">
+              You can view and edit it anytime from your profile.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/profile')}
+              className="inline-flex items-center px-6 py-3 bg-accent-500 text-white font-medium rounded-lg hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
+            >
+              Go to My Profile
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -578,6 +702,13 @@ export default function ListYourDrivewayPage() {
                   Your listing will be reviewed and published within 24 hours. You can edit it anytime from your dashboard.
                 </p>
               </div>
+
+            </div>
+          )}
+
+          {publishError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-red-800 text-sm mt-4" role="alert">
+              {publishError}
             </div>
           )}
 

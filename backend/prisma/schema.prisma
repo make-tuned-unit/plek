@@ -30,7 +30,7 @@ model User {
   city          String?
   state         String?
   zipCode       String?
-  country       String?   @default("US")
+  country       String?   // No default – set in profile; used for Stripe Connect and currency
   
   // Host-specific fields
   hostProfile   HostProfile?

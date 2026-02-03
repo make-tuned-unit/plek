@@ -29,6 +29,17 @@ export function Navigation() {
     }
   }, [])
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen && typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prev
+      }
+    }
+  }, [isMenuOpen])
+
   const handleLogout = () => {
     logout()
     toast.success('Successfully logged out')
@@ -196,108 +207,135 @@ export function Navigation() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - full-screen overlay */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/20 bg-accent-600 animate-slide-down">
-            <div className="space-y-1">
-              <Link 
-                href="/find-parking" 
-                className="block px-4 py-3 text-white hover:bg-white/10 flex items-center gap-3 rounded-lg transition-all duration-150 font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <MapPin className="h-5 w-5" />
-                Find Parking
+          <div
+            className="fixed inset-0 z-[100] md:hidden bg-accent-500 flex flex-col min-h-[100dvh] animate-fade-in"
+            style={{ minHeight: '100dvh' }}
+            aria-modal="true"
+            role="dialog"
+            aria-label="Main menu"
+          >
+            {/* Header: logo + close */}
+            <div className="flex justify-between items-center flex-shrink-0 px-4 py-4 border-b border-white/20 pt-[max(1rem,env(safe-area-inset-top))]">
+              <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center">
+                <img
+                  src="/PlekkLogoWhite.png"
+                  alt="plekk logo"
+                  className="h-10 w-auto object-contain"
+                  style={{ maxHeight: '48px', maxWidth: '300px' }}
+                />
               </Link>
-              <button 
-                type="button"
-                onClick={handleListDrivewayClick}
-                className="block text-left w-full px-4 py-3 text-white hover:bg-white/10 rounded-lg transition-all duration-150 font-medium"
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="p-2.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors touch-target focus-ring"
+                aria-label="Close menu"
               >
-                List Your Driveway
+                <X className="h-6 w-6" />
               </button>
-              {user && (
-                <>
-                  <div className="pt-4 border-t border-white/20">
-                    <div className="flex items-center space-x-3 px-4 py-3 mb-2 bg-white/10 rounded-xl border-2 border-white">
-                      {user.avatar && (
-                        <img 
-                          src={user.avatar} 
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full ring-2 ring-white"
-                        />
-                      )}
-                      <span className="text-sm text-white font-semibold">{user.name}</span>
-                    </div>
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="h-5 w-5" />
-                      Profile
-                    </Link>
-                    <Link
-                      href="/profile?tab=bookings"
-                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Calendar className="h-5 w-5" />
-                      My Bookings
-                    </Link>
-                    <Link
-                      href="/profile?tab=listings"
-                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Car className="h-5 w-5" />
-                      My Listings
-                    </Link>
-                    <Link
-                      href="/profile?tab=payments"
-                      className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <CreditCard className="h-5 w-5" />
-                      Payments
-                    </Link>
-                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+            </div>
+            {/* Scrollable menu content */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              <div className="space-y-1">
+                <Link
+                  href="/find-parking"
+                  className="block px-4 py-3.5 text-white hover:bg-white/10 flex items-center gap-3 rounded-xl transition-all duration-150 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <MapPin className="h-5 w-5 flex-shrink-0" />
+                  Find Parking
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleListDrivewayClick}
+                  className="block text-left w-full px-4 py-3.5 text-white hover:bg-white/10 rounded-xl transition-all duration-150 font-medium"
+                >
+                  List Your Driveway
+                </button>
+                {user && (
+                  <>
+                    <div className="pt-6 border-t border-white/20 mt-4">
+                      <div className="flex items-center space-x-3 px-4 py-3 mb-3 bg-white/10 rounded-xl border-2 border-white">
+                        {user.avatar && (
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-full ring-2 ring-white flex-shrink-0"
+                          />
+                        )}
+                        <span className="text-sm text-white font-semibold truncate">{user.name}</span>
+                      </div>
                       <Link
-                        href="/admin"
-                        className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg flex items-center gap-3 transition-all duration-150 font-semibold"
+                        href="/profile"
+                        className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 transition-all duration-150"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Shield className="h-5 w-5" />
-                        Admin Dashboard
+                        <User className="h-5 w-5 flex-shrink-0" />
+                        Profile
                       </Link>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-3 text-white hover:bg-red-500/30 rounded-lg flex items-center gap-3 transition-all duration-150"
+                      <Link
+                        href="/profile?tab=bookings"
+                        className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 transition-all duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Calendar className="h-5 w-5 flex-shrink-0" />
+                        My Bookings
+                      </Link>
+                      <Link
+                        href="/profile?tab=listings"
+                        className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 transition-all duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Car className="h-5 w-5 flex-shrink-0" />
+                        My Listings
+                      </Link>
+                      <Link
+                        href="/profile?tab=payments"
+                        className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 transition-all duration-150"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <CreditCard className="h-5 w-5 flex-shrink-0" />
+                        Payments
+                      </Link>
+                      {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 transition-all duration-150 font-semibold"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <Shield className="h-5 w-5 flex-shrink-0" />
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-3.5 text-white hover:bg-red-500/30 rounded-xl flex items-center gap-3 transition-all duration-150 mt-1"
+                      >
+                        <LogOut className="h-5 w-5 flex-shrink-0" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+                {!user && (
+                  <div className="pt-6 border-t border-white/20 mt-4 space-y-2">
+                    <Link
+                      href="/auth/signin"
+                      className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl font-medium text-center transition-all duration-150"
+                      onClick={() => setIsMenuOpen(false)}
                     >
-                      <LogOut className="h-5 w-5" />
-                      Sign Out
-                    </button>
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      className="block bg-white text-accent-600 font-semibold py-3.5 rounded-xl text-center shadow-md hover:bg-white/90 transition-all duration-150"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
                   </div>
-                </>
-              )}
-              {!user && (
-                <div className="pt-4 border-t border-white/20 space-y-2">
-                  <Link 
-                    href="/auth/signin" 
-                    className="block px-4 py-3 text-white hover:bg-white/10 rounded-lg font-medium text-center transition-all duration-150"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link 
-                    href="/auth/signup" 
-                    className="block bg-white text-accent-600 font-semibold py-3 rounded-lg text-center shadow-md hover:bg-white/90 transition-all duration-150"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}

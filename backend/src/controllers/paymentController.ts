@@ -221,9 +221,19 @@ export const createConnectAccount = async (req: Request, res: Response): Promise
     }
 
     // Create new Express account (individual or company – works for any Stripe-supported country)
-    logger.info('[Stripe Connect] Creating new Express account', { accountType });
+    // Require profile country so we never create a Connect account with the wrong country (e.g. US when user is in CA)
+    const profileCountry = (existingUser?.country ?? '').trim().toUpperCase();
+    if (!profileCountry) {
+      res.status(400).json({
+        success: false,
+        error: 'Please set your country in your profile first (Profile → edit → Country). We use it for payout setup and cannot change it later without disconnecting.',
+        code: 'country_required',
+      });
+      return;
+    }
+    logger.info('[Stripe Connect] Creating new Express account', { accountType, country: profileCountry });
     const platformUrl = (process.env['FRONTEND_URL'] || 'https://www.parkplekk.com').replace(/\/$/, '');
-    const country = existingUser?.country || 'CA'; // User's profile country (CA, US, GB, etc.)
+    const country = profileCountry; // User's profile country (CA, US, GB, etc.)
 
     const baseParams = {
       type: 'express' as const,
