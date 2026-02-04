@@ -212,6 +212,7 @@ function ProfileContent() {
   const [refundActionBookingId, setRefundActionBookingId] = useState<string | null>(null);
   const [partialRefundAmounts, setPartialRefundAmounts] = useState<Record<string, string>>({});
   const [pendingBookingActionId, setPendingBookingActionId] = useState<string | null>(null);
+  const [cancelBookingConfirmId, setCancelBookingConfirmId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
@@ -1142,7 +1143,7 @@ function ProfileContent() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('Cancel this booking? The other party will be notified. Refunds follow the 24-hour policy (full refund if 24+ hours before start).')) return;
+    setCancelBookingConfirmId(null);
     setPendingBookingActionId(bookingId);
     try {
       const response = await apiService.cancelBooking(bookingId);
@@ -2333,6 +2334,8 @@ function ProfileContent() {
                       const isHostView = user?.id === booking.host_id
                       const otherUser = isHostView ? booking.renter : booking.host
                       const otherUserInfo = otherUser || {}
+                      const bookingEndTime = endDate ? endDate.getTime() : 0
+                      const bookingHasEnded = bookingEndTime > 0 && bookingEndTime < Date.now()
                       
                       return (
                         <div id={`booking-${booking.id}`} key={booking.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-white">
@@ -2451,9 +2454,9 @@ function ProfileContent() {
                                     <span>Message {isHostView ? 'Guest' : 'Host'}</span>
                                   </button>
                                 )}
-                                {(booking.status === 'pending' && !isHostView) && (
+                                {(booking.status === 'pending' && !isHostView && !bookingHasEnded) && (
                                   <button
-                                    onClick={() => handleCancelBooking(booking.id)}
+                                    onClick={() => setCancelBookingConfirmId(booking.id)}
                                     disabled={pendingBookingActionId === booking.id}
                                     className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target border border-gray-300"
                                   >
@@ -2464,9 +2467,9 @@ function ProfileContent() {
                                     )}
                                   </button>
                                 )}
-                                {booking.status === 'confirmed' && (
+                                {booking.status === 'confirmed' && !bookingHasEnded && (
                                   <button
-                                    onClick={() => handleCancelBooking(booking.id)}
+                                    onClick={() => setCancelBookingConfirmId(booking.id)}
                                     disabled={pendingBookingActionId === booking.id}
                                     className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target border border-gray-300"
                                   >
@@ -4021,6 +4024,36 @@ function ProfileContent() {
                   } : undefined
                 })()}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel booking confirm modal (on-brand) */}
+      {cancelBookingConfirmId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border-t-4 border-accent-500 overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Cancel booking?</h3>
+              <p className="text-gray-600 mb-6">
+                The other party will be notified. Refunds follow the 24-hour policy: full refund if cancelled at least 24 hours before the start time; otherwise refunds are at the host&apos;s discretion.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCancelBookingConfirmId(null)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                >
+                  Keep booking
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCancelBooking(cancelBookingConfirmId)}
+                  className="flex-1 px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 font-semibold transition-colors"
+                >
+                  Yes, cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -46,9 +46,9 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 const ZERO_DECIMAL_CURRENCIES = new Set(['jpy', 'krw', 'vnd', 'clp', 'pyg', 'jod', 'kwd', 'bif', 'djf', 'gnf', 'kmf', 'mga', 'rwf', 'xof', 'xpf']);
 
 function countryToCurrency(country: string | null | undefined): string {
-  if (!country || typeof country !== 'string') return 'usd';
+  if (!country || typeof country !== 'string') return 'cad';
   const code = country.toUpperCase().trim();
-  return COUNTRY_TO_CURRENCY[code] || 'usd';
+  return COUNTRY_TO_CURRENCY[code] ?? 'cad';
 }
 
 /** Infer country code from province/state name when profile has no country set. */
@@ -730,14 +730,14 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     };
 
     const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
-      amount: Math.round(totalAmount * 100), // Convert to cents
-      currency: 'usd',
+      amount: amountInSmallestUnit(totalAmount, currency),
+      currency,
       metadata,
       automatic_payment_methods: { enabled: true },
     };
 
     if (hostHasConnect) {
-      paymentIntentParams.application_fee_amount = Math.round(applicationFee * 100);
+      paymentIntentParams.application_fee_amount = amountInSmallestUnit(applicationFee, currency);
       paymentIntentParams.transfer_data = {
         destination: property.host!.stripe_account_id!,
       };
