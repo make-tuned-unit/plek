@@ -660,7 +660,7 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
         is_read: false,
       } as any);
     } else if (status === 'completed') {
-      // Get property and user details for review reminders
+      // Get property and host details for review reminders and payout email
       const { data: property } = await supabase
         .from('properties')
         .select('title')
@@ -668,6 +668,31 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
         .single();
 
       const propertyTitle = property?.title || 'property';
+
+      // Send "your payout is on the way" to host only when booking is completed (not when payment is first confirmed)
+      const { data: hostUser } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, stripe_account_id, stripe_account_status')
+        .eq('id', existingBooking.host_id)
+        .single();
+      if (hostUser?.email) {
+        const bookerServiceFee = Number(existingBooking.service_fee) || 0;
+        const baseAmount = Number(existingBooking.total_amount) - bookerServiceFee;
+        const hostServiceFee = (baseAmount * 5) / 100;
+        const hostPayoutAmount = Math.round((baseAmount - hostServiceFee) * 100) / 100;
+        const hasConnectAccount = !!(hostUser as any).stripe_account_id && (hostUser as any).stripe_account_status === 'active';
+        const { sendHostPayoutOnTheWayEmail } = await import('../services/emailService');
+        sendHostPayoutOnTheWayEmail({
+          hostName: `${hostUser.first_name || ''} ${hostUser.last_name || ''}`.trim() || 'Host',
+          hostEmail: hostUser.email,
+          propertyTitle,
+          bookingId: id,
+          amount: hostPayoutAmount,
+          hasConnectAccount,
+        }).catch((err: Error) => {
+          console.error('[Booking] Failed to send host payout-on-the-way email', err);
+        });
+      }
 
       // Check if reviews already exist for this booking
       const { data: existingReviews } = await supabase

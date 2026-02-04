@@ -634,7 +634,7 @@ export async function sendBookingMessageEmail(data: BookingMessageEmailData): Pr
 }
 
 /**
- * Tell the host their payout is on the way (sent when payment is confirmed for a booking)
+ * Tell the host their payout is on the way (sent when the booking is marked completed, not when payment is first confirmed)
  */
 export async function sendHostPayoutOnTheWayEmail(data: HostPayoutEmailData): Promise<void> {
   try {
@@ -657,7 +657,7 @@ export async function sendHostPayoutOnTheWayEmail(data: HostPayoutEmailData): Pr
               ${getEmailHeader('Your payout is on the way')}
               <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
                 <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
-                <p style="font-size: 16px; margin: 0 0 20px 0;">A driver just paid for a booking at <strong>${data.propertyTitle}</strong>. Your earnings are on the way.</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Your booking at <strong>${data.propertyTitle}</strong> has been completed. Your earnings are on the way.</p>
                 <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
                   <p style="margin: 0 0 8px 0; font-size: 15px;">Your earnings (after platform fee):</p>
                   <p style="margin: 0; font-size: 24px; font-weight: 600; color: ${BRAND_COLORS.accent};">$${data.amount.toFixed(2)}</p>

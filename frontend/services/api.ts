@@ -258,6 +258,13 @@ class ApiService {
     return this.request(`/bookings${queryParam}`);
   }
 
+  async updateBooking(bookingId: string, data: { status?: string; paymentStatus?: string }): Promise<ApiResponse<{ booking?: any }>> {
+    return this.request(`/bookings/${bookingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async cancelBooking(bookingId: string): Promise<ApiResponse> {
     return this.request(`/bookings/${bookingId}`, {
       method: 'DELETE',

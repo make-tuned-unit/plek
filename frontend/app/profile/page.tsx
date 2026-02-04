@@ -211,6 +211,7 @@ function ProfileContent() {
   const [isLoadingRefundEligible, setIsLoadingRefundEligible] = useState(false);
   const [refundActionBookingId, setRefundActionBookingId] = useState<string | null>(null);
   const [partialRefundAmounts, setPartialRefundAmounts] = useState<Record<string, string>>({});
+  const [pendingBookingActionId, setPendingBookingActionId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
@@ -324,7 +325,17 @@ function ProfileContent() {
 
   // Handle tab and bookingId from URL parameters
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
-  
+
+  // Sync expand/collapse with URL: when user collapses, clear bookingId so the effect below doesn't re-expand
+  const setExpandedBookingIdWithUrl = useCallback((id: string | null) => {
+    setExpandedBookingId(id)
+    const tab = searchParams.get('tab') || 'profile'
+    const params = new URLSearchParams()
+    if (tab !== 'profile') params.set('tab', tab)
+    if (id) params.set('bookingId', id)
+    router.replace(`/profile${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
+  }, [router, searchParams])
+
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     const bookingIdParam = searchParams.get('bookingId')
@@ -333,10 +344,9 @@ function ProfileContent() {
       setActiveTab(tabParam)
     }
     
-    // If bookingId is in URL, expand that booking
+    // If bookingId is in URL, expand that booking (only URL drives initial expand; user collapse clears URL)
     if (bookingIdParam) {
       setExpandedBookingId(bookingIdParam)
-      // Ensure bookings tab is active
       if (tabParam !== 'bookings') {
         setActiveTab('bookings')
       }
@@ -1090,6 +1100,43 @@ function ProfileContent() {
       toast.error(msg);
     } finally {
       setRefundActionBookingId(null);
+    }
+  };
+
+  const handleApproveBooking = async (bookingId: string) => {
+    setPendingBookingActionId(bookingId);
+    try {
+      const response = await apiService.updateBooking(bookingId, { status: 'confirmed' });
+      if (response.success) {
+        toast.success('Booking approved. The guest has been notified.');
+        if (activeTab === 'bookings') fetchBookings();
+      } else {
+        toast.error(response.error || 'Failed to approve booking');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Failed to approve booking';
+      toast.error(msg);
+    } finally {
+      setPendingBookingActionId(null);
+    }
+  };
+
+  const handleDeclineBooking = async (bookingId: string) => {
+    if (!confirm('Decline this booking? The guest will be notified and any payment will be refunded.')) return;
+    setPendingBookingActionId(bookingId);
+    try {
+      const response = await apiService.cancelBooking(bookingId);
+      if (response.success) {
+        toast.success('Booking declined.');
+        if (activeTab === 'bookings') fetchBookings();
+      } else {
+        toast.error(response.error || 'Failed to decline booking');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Failed to decline booking';
+      toast.error(msg);
+    } finally {
+      setPendingBookingActionId(null);
     }
   };
 
@@ -2349,7 +2396,29 @@ function ProfileContent() {
                               </div>
                               
                               {/* Action Buttons */}
-                              <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+                              <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 flex-wrap">
+                                {isHostView && booking.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApproveBooking(booking.id)}
+                                      disabled={pendingBookingActionId === booking.id}
+                                      className="flex items-center justify-center px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 active:bg-accent-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target shadow-sm"
+                                    >
+                                      {pendingBookingActionId === booking.id ? (
+                                        <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Approving…</span>
+                                      ) : (
+                                        <span>Approve booking</span>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeclineBooking(booking.id)}
+                                      disabled={pendingBookingActionId === booking.id}
+                                      className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target border border-gray-300"
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
+                                )}
                                 {(booking.status === 'confirmed' || booking.status === 'completed') && (
                                   <button
                                     onClick={() => {
@@ -2363,7 +2432,7 @@ function ProfileContent() {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
+                                  onClick={() => setExpandedBookingIdWithUrl(isExpanded ? null : booking.id)}
                                   className="flex items-center justify-center text-sm text-accent-600 hover:text-accent-700 active:text-accent-800 font-medium min-h-[44px] px-3 py-2 touch-target"
                                 >
                                   {isExpanded ? (

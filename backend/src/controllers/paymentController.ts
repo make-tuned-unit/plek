@@ -965,7 +965,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       is_read: false,
     } as any);
 
-    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail, sendHostPayoutOnTheWayEmail } =
+    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail } =
       await import('../services/emailService');
 
     const vehicleInfoText = vehicleInfoMetadata || undefined;
@@ -1017,19 +1017,6 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         specialRequests: specialRequestsMetadata || undefined,
       }).catch((error) => {
         logger.error('Failed to send booking notification email', error);
-      });
-
-      const hostPayoutAmount = baseAmount - hostServiceFee;
-      const hasConnectAccount = !!(property.host as any)?.stripe_account_id && (property.host as any)?.stripe_account_status === 'active';
-      sendHostPayoutOnTheWayEmail({
-        hostName: `${booking.host.first_name} ${booking.host.last_name}`,
-        hostEmail: booking.host.email,
-        propertyTitle: booking.property?.title || 'Parking Space',
-        bookingId: booking.id,
-        amount: Math.round(hostPayoutAmount * 100) / 100,
-        hasConnectAccount,
-      }).catch((error) => {
-        logger.error('Failed to send host payout email', error);
       });
     }
 
