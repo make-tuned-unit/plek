@@ -37,12 +37,13 @@ export default function DrivewayDetailPage() {
       setLoading(false)
       return
     }
+    const propertyId: string = id
     let cancelled = false
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const res = await apiService.getProperty(id)
+        const res = await apiService.getProperty(propertyId)
         if (!cancelled && res.success && res.data?.property) {
           const p = res.data.property
           setProperty(p)
