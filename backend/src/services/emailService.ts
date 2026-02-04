@@ -21,14 +21,14 @@ function getResendClient(): Resend {
   return resend;
 }
 
-// Get the from email address
+// Get the from address (display name + email). Resend accepts "Name <email@domain.com>".
 // Note: For Resend test mode, you can only send to your verified email address
 // To send to any email, verify a domain at resend.com/domains and use that domain
 function getFromEmail(): string {
-  // Check if FROM_EMAIL is set, otherwise use a default
+  const email = process.env['FROM_EMAIL'] || 'onboarding@resend.dev';
   // IMPORTANT: If using onboarding@resend.dev, you can only send to your verified email
   // For production, verify a domain and use: noreply@yourdomain.com
-  return process.env['FROM_EMAIL'] || 'onboarding@resend.dev';
+  return `plekk <${email}>`;
 }
 
 // Get the frontend URL for links (confirm email, reset password, etc.). In production, set FRONTEND_URL to your public app URL.
@@ -131,7 +131,7 @@ export interface BookingCancelledEmailData {
   recipientEmail: string;
   propertyTitle: string;
   bookingId: string;
-  /** Who cancelled: "The host" or "The guest" */
+  /** Who cancelled: "the host" or "the guest" */
   cancelledByName: string;
   /** True if this recipient is the one who cancelled */
   recipientIsCanceller: boolean;
@@ -468,7 +468,7 @@ export async function sendHostBookingRequestEmail(data: BookingEmailData): Promi
               ${getEmailHeader('Booking request to approve')}
               <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
                 <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
-                <p style="font-size: 16px; margin: 0 0 30px 0;">You have a new booking request for <strong>${data.propertyTitle}</strong>. The guest has already paid; please approve or decline from your dashboard.</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">You have a new booking request for <strong>${data.propertyTitle}</strong>. Payment has already been received from the guest; please approve or decline from your dashboard.</p>
                 <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
                   <p style="margin: 8px 0; font-size: 15px;"><strong>Guest:</strong> ${data.renterName}</p>
                   <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>

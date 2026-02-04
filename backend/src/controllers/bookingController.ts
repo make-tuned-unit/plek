@@ -693,7 +693,7 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
       const hostEmail = (updatedBooking?.host as any)?.email;
       const renterName = updatedBooking?.renter ? `${(updatedBooking.renter as any).first_name || ''} ${(updatedBooking.renter as any).last_name || ''}`.trim() || 'Guest' : 'Guest';
       const renterEmail = (updatedBooking?.renter as any)?.email;
-      const cancelledByName = isHost ? 'The host' : 'The guest';
+      const cancelledByName = isHost ? 'the host' : 'the guest';
       const { sendBookingCancelledEmail } = await import('../services/emailService');
       if (hostEmail) {
         sendBookingCancelledEmail({
@@ -957,7 +957,7 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
     const hostEmail = (updatedBooking?.host as any)?.email;
     const renterName = updatedBooking?.renter ? `${(updatedBooking.renter as any).first_name || ''} ${(updatedBooking.renter as any).last_name || ''}`.trim() || 'Guest' : 'Guest';
     const renterEmail = (updatedBooking?.renter as any)?.email;
-    const cancelledByName = isHost ? 'The host' : 'The guest';
+    const cancelledByName = isHost ? 'the host' : 'the guest';
     const { sendBookingCancelledEmail } = await import('../services/emailService');
     if (hostEmail) {
       sendBookingCancelledEmail({
