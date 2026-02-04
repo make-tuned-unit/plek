@@ -126,6 +126,29 @@ export interface HostPayoutEmailData {
   hasConnectAccount: boolean; // true if transfer was sent to their Stripe Connect account
 }
 
+export interface BookingCancelledEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  propertyTitle: string;
+  bookingId: string;
+  /** Who cancelled: "The host" or "The guest" */
+  cancelledByName: string;
+  /** True if this recipient is the one who cancelled */
+  recipientIsCanceller: boolean;
+  refundMessage?: string;
+}
+
+export interface BookingApprovedEmailData {
+  renterName: string;
+  renterEmail: string;
+  propertyTitle: string;
+  propertyAddress?: string;
+  bookingId: string;
+  startTime: string;
+  endTime: string;
+  totalHours?: number;
+}
+
 /**
  * Send email confirmation email to new user
  */
@@ -420,6 +443,145 @@ export async function sendBookingNotificationEmail(
     logger.info('[Email] Booking notification sent');
   } catch (error: any) {
     console.error('[Email] Error sending booking notification:', error);
+  }
+}
+
+/**
+ * Send email to host when they have a booking request to approve (non-instant booking)
+ */
+export async function sendHostBookingRequestEmail(data: BookingEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const startDate = new Date(data.startTime).toLocaleString();
+    const endDate = new Date(data.endTime).toLocaleString();
+    const bookingsUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.hostEmail,
+      subject: `Booking request for ${data.propertyTitle} – please approve or decline`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Booking request to approve')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">You have a new booking request for <strong>${data.propertyTitle}</strong>. The guest has already paid; please approve or decline from your dashboard.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Guest:</strong> ${data.renterName}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${endDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Duration:</strong> ${data.totalHours} hour${data.totalHours !== 1 ? 's' : ''}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Amount:</strong> $${data.totalAmount.toFixed(2)}</p>
+                  ${data.vehicleInfo ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Vehicle:</strong> ${data.vehicleInfo}</p>` : ''}
+                </div>
+                ${data.specialRequests ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;"><p style="margin: 0; font-size: 15px;"><strong>Special requests:</strong> ${data.specialRequests}</p></div>` : ''}
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${bookingsUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Approve or decline booking</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Host booking request email sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending host booking request email', error);
+  }
+}
+
+/**
+ * Send email to guest when the host approves their booking request
+ */
+export async function sendRenterBookingApprovedEmail(data: BookingApprovedEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const startDate = new Date(data.startTime).toLocaleString();
+    const endDate = new Date(data.endTime).toLocaleString();
+    const viewUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.renterEmail,
+      subject: `Your booking was approved – ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Booking approved')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.renterName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">Good news – the host has approved your booking request for <strong>${data.propertyTitle}</strong>. You're all set.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Property:</strong> ${data.propertyTitle}</p>
+                  ${data.propertyAddress ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Address:</strong> ${data.propertyAddress}</p>` : ''}
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${endDate}</p>
+                  ${data.totalHours != null ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Duration:</strong> ${data.totalHours} hour${data.totalHours !== 1 ? 's' : ''}</p>` : ''}
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${viewUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View booking</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Renter booking approved email sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending renter booking approved email', error);
+  }
+}
+
+/**
+ * Send booking cancelled email to one party (host or guest). Call once per recipient.
+ */
+export async function sendBookingCancelledEmail(data: BookingCancelledEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const viewUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
+    const intro = data.recipientIsCanceller
+      ? `You have cancelled the booking at <strong>${data.propertyTitle}</strong>.`
+      : `The booking at <strong>${data.propertyTitle}</strong> has been cancelled by ${data.cancelledByName}.`;
+    const refundLine = data.refundMessage ? `<p style="font-size: 16px; margin: 20px 0 0 0;">${data.refundMessage}</p>` : '';
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.recipientEmail,
+      subject: data.recipientIsCanceller ? `Booking cancelled – ${data.propertyTitle}` : `Booking cancelled – ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Booking cancelled')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.recipientName},</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;">${intro}</p>
+                ${refundLine}
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${viewUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View bookings</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Booking cancelled email sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending booking cancelled email', error);
   }
 }
 

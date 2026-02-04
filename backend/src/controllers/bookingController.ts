@@ -646,19 +646,77 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
         data: { booking_id: id, property_id: existingBooking.property_id },
         is_read: false,
       } as any);
+      // Email guest that their booking request was approved
+      const renterEmail = (updatedBooking?.renter as any)?.email;
+      if (renterEmail) {
+        const renterName = updatedBooking?.renter
+          ? `${(updatedBooking.renter as any).first_name || ''} ${(updatedBooking.renter as any).last_name || ''}`.trim() || 'Guest'
+          : 'Guest';
+        const propertyTitle = existingBooking.property?.title || 'property';
+        const propertyAddress = existingBooking.property?.address;
+        const { sendRenterBookingApprovedEmail } = await import('../services/emailService');
+        sendRenterBookingApprovedEmail({
+          renterName,
+          renterEmail,
+          propertyTitle,
+          propertyAddress,
+          bookingId: id,
+          startTime: existingBooking.start_time,
+          endTime: existingBooking.end_time,
+          totalHours: existingBooking.total_hours,
+        }).catch((err: Error) => console.error('[Booking] Failed to send booking approved email to renter', err));
+      }
     } else if (status === 'cancelled') {
       // Notify the other party
       const notifyUserId = isHost ? existingBooking.renter_id : existingBooking.host_id;
+      const startTimeMs = new Date(existingBooking.start_time).getTime();
+      const hoursUntilStart = (startTimeMs - Date.now()) / (1000 * 60 * 60);
+      const autoFullRefund = existingBooking.payment_status === 'completed' && hoursUntilStart >= 24;
+      const refundMessage = autoFullRefund
+        ? ' You will receive a full refund.'
+        : (existingBooking.payment_status === 'completed'
+          ? ' Refunds for cancellations within 24 hours are at the host\'s discretion.'
+          : '');
       await supabase.from('notifications').insert({
         user_id: notifyUserId,
         type: 'booking_cancelled',
         title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
-        message: isHost 
-          ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected. You will receive a full refund.`
-          : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
+        message: isHost
+          ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected.${refundMessage}`
+          : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled.${refundMessage}`,
         data: { booking_id: id, property_id: existingBooking.property_id },
         is_read: false,
       } as any);
+      // Email both host and guest
+      const propertyTitle = existingBooking.property?.title || 'property';
+      const hostName = updatedBooking?.host ? `${(updatedBooking.host as any).first_name || ''} ${(updatedBooking.host as any).last_name || ''}`.trim() || 'Host' : 'Host';
+      const hostEmail = (updatedBooking?.host as any)?.email;
+      const renterName = updatedBooking?.renter ? `${(updatedBooking.renter as any).first_name || ''} ${(updatedBooking.renter as any).last_name || ''}`.trim() || 'Guest' : 'Guest';
+      const renterEmail = (updatedBooking?.renter as any)?.email;
+      const cancelledByName = isHost ? 'The host' : 'The guest';
+      const { sendBookingCancelledEmail } = await import('../services/emailService');
+      if (hostEmail) {
+        sendBookingCancelledEmail({
+          recipientName: hostName,
+          recipientEmail: hostEmail,
+          propertyTitle,
+          bookingId: id,
+          cancelledByName,
+          recipientIsCanceller: isHost,
+          refundMessage: refundMessage.trim() || undefined,
+        }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to host', err));
+      }
+      if (renterEmail) {
+        sendBookingCancelledEmail({
+          recipientName: renterName,
+          recipientEmail: renterEmail,
+          propertyTitle,
+          bookingId: id,
+          cancelledByName,
+          recipientIsCanceller: !isHost,
+          refundMessage: refundMessage.trim() || undefined,
+        }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to renter', err));
+      }
     } else if (status === 'completed') {
       // Get property and host details for review reminders and payout email
       const { data: property } = await supabase
@@ -892,6 +950,37 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
       data: { booking_id: id, property_id: existingBooking.property_id },
       is_read: false,
     } as any);
+
+    // Email both host and guest
+    const propertyTitle = existingBooking.property?.title || 'property';
+    const hostName = updatedBooking?.host ? `${(updatedBooking.host as any).first_name || ''} ${(updatedBooking.host as any).last_name || ''}`.trim() || 'Host' : 'Host';
+    const hostEmail = (updatedBooking?.host as any)?.email;
+    const renterName = updatedBooking?.renter ? `${(updatedBooking.renter as any).first_name || ''} ${(updatedBooking.renter as any).last_name || ''}`.trim() || 'Guest' : 'Guest';
+    const renterEmail = (updatedBooking?.renter as any)?.email;
+    const cancelledByName = isHost ? 'The host' : 'The guest';
+    const { sendBookingCancelledEmail } = await import('../services/emailService');
+    if (hostEmail) {
+      sendBookingCancelledEmail({
+        recipientName: hostName,
+        recipientEmail: hostEmail,
+        propertyTitle,
+        bookingId: id,
+        cancelledByName,
+        recipientIsCanceller: isHost,
+        refundMessage: refundMessage.trim() || undefined,
+      }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to host', err));
+    }
+    if (renterEmail) {
+      sendBookingCancelledEmail({
+        recipientName: renterName,
+        recipientEmail: renterEmail,
+        propertyTitle,
+        bookingId: id,
+        cancelledByName,
+        recipientIsCanceller: !isHost,
+        refundMessage: refundMessage.trim() || undefined,
+      }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to renter', err));
+    }
 
     res.json({
       success: true,

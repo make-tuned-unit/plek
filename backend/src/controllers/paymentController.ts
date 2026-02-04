@@ -965,7 +965,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       is_read: false,
     } as any);
 
-    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail } =
+    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendHostBookingRequestEmail, sendPaymentReceiptEmail } =
       await import('../services/emailService');
 
     const vehicleInfoText = vehicleInfoMetadata || undefined;
@@ -996,7 +996,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
     }
 
     if (booking.host?.email) {
-      sendBookingNotificationEmail({
+      const hostBookingEmailPayload = {
         bookingId: booking.id,
         renterName: `${booking.renter.first_name} ${booking.renter.last_name}`,
         renterEmail: booking.renter.email,
@@ -1015,9 +1015,16 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         securityDeposit: 0,
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
-      }).catch((error) => {
-        logger.error('Failed to send booking notification email', error);
-      });
+      };
+      if (instantBooking) {
+        sendBookingNotificationEmail(hostBookingEmailPayload).catch((error) => {
+          logger.error('Failed to send booking notification email', error);
+        });
+      } else {
+        sendHostBookingRequestEmail(hostBookingEmailPayload).catch((error) => {
+          logger.error('Failed to send host booking request email', error);
+        });
+      }
     }
 
     if (booking.renter?.email) {

@@ -325,9 +325,11 @@ function ProfileContent() {
 
   // Handle tab and bookingId from URL parameters
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
+  const userJustCollapsedRef = useRef(false)
 
-  // Sync expand/collapse with URL: when user collapses, clear bookingId so the effect below doesn't re-expand
+  // Sync expand/collapse with URL: when user collapses, clear bookingId so the effect doesn't re-expand
   const setExpandedBookingIdWithUrl = useCallback((id: string | null) => {
+    if (id === null) userJustCollapsedRef.current = true
     setExpandedBookingId(id)
     const tab = searchParams.get('tab') || 'profile'
     const params = new URLSearchParams()
@@ -344,9 +346,13 @@ function ProfileContent() {
       setActiveTab(tabParam)
     }
     
-    // If bookingId is in URL, expand that booking (only URL drives initial expand; user collapse clears URL)
+    // If bookingId is in URL, expand that booking — unless user just clicked Hide (URL not updated yet)
     if (bookingIdParam) {
-      setExpandedBookingId(bookingIdParam)
+      if (userJustCollapsedRef.current) {
+        userJustCollapsedRef.current = false
+      } else {
+        setExpandedBookingId(bookingIdParam)
+      }
       if (tabParam !== 'bookings') {
         setActiveTab('bookings')
       }
@@ -379,22 +385,17 @@ function ProfileContent() {
     }
   }, [activeTab, user])
 
-  // Auto-expand booking when bookingId is in URL and bookings are loaded
+  // Auto-expand booking when bookingId is in URL and bookings are loaded (skip if user just clicked Hide)
   useEffect(() => {
     const bookingIdParam = searchParams.get('bookingId')
-    if (bookingIdParam && bookings.length > 0 && !expandedBookingId) {
-      // Check if the booking exists in the loaded bookings
-      const bookingExists = bookings.some((b: any) => b.id === bookingIdParam)
-      if (bookingExists) {
-        setExpandedBookingId(bookingIdParam)
-        // Scroll to the booking after a short delay to ensure it's rendered
-        setTimeout(() => {
-          const element = document.getElementById(`booking-${bookingIdParam}`)
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }
-        }, 100)
-      }
+    if (userJustCollapsedRef.current || !bookingIdParam || bookings.length === 0 || expandedBookingId) return
+    const bookingExists = bookings.some((b: any) => b.id === bookingIdParam)
+    if (bookingExists) {
+      setExpandedBookingId(bookingIdParam)
+      setTimeout(() => {
+        const element = document.getElementById(`booking-${bookingIdParam}`)
+        if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
     }
   }, [bookings, searchParams, expandedBookingId])
 
@@ -1134,6 +1135,25 @@ function ProfileContent() {
       }
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.message || 'Failed to decline booking';
+      toast.error(msg);
+    } finally {
+      setPendingBookingActionId(null);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Cancel this booking? The other party will be notified. Refunds follow the 24-hour policy (full refund if 24+ hours before start).')) return;
+    setPendingBookingActionId(bookingId);
+    try {
+      const response = await apiService.cancelBooking(bookingId);
+      if (response.success) {
+        toast.success('Booking cancelled.');
+        if (activeTab === 'bookings') fetchBookings();
+      } else {
+        toast.error(response.error || 'Failed to cancel booking');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Failed to cancel booking';
       toast.error(msg);
     } finally {
       setPendingBookingActionId(null);
@@ -2431,6 +2451,32 @@ function ProfileContent() {
                                     <span>Message {isHostView ? 'Guest' : 'Host'}</span>
                                   </button>
                                 )}
+                                {(booking.status === 'pending' && !isHostView) && (
+                                  <button
+                                    onClick={() => handleCancelBooking(booking.id)}
+                                    disabled={pendingBookingActionId === booking.id}
+                                    className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target border border-gray-300"
+                                  >
+                                    {pendingBookingActionId === booking.id ? (
+                                      <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Cancelling…</span>
+                                    ) : (
+                                      'Cancel request'
+                                    )}
+                                  </button>
+                                )}
+                                {booking.status === 'confirmed' && (
+                                  <button
+                                    onClick={() => handleCancelBooking(booking.id)}
+                                    disabled={pendingBookingActionId === booking.id}
+                                    className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium min-h-[44px] touch-target border border-gray-300"
+                                  >
+                                    {pendingBookingActionId === booking.id ? (
+                                      <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Cancelling…</span>
+                                    ) : (
+                                      'Cancel booking'
+                                    )}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => setExpandedBookingIdWithUrl(isExpanded ? null : booking.id)}
                                   className="flex items-center justify-center text-sm text-accent-600 hover:text-accent-700 active:text-accent-800 font-medium min-h-[44px] px-3 py-2 touch-target"
@@ -2559,22 +2605,6 @@ function ProfileContent() {
                                         {otherUserInfo.email && ` (${otherUserInfo.email})`}
                                         {otherUserInfo.phone && ` - ${otherUserInfo.phone}`}
                                       </p>
-                                    </div>
-                                  )}
-
-                                  {/* Message Button - Always visible for confirmed/completed bookings */}
-                                  {(booking.status === 'confirmed' || booking.status === 'completed') && (
-                                    <div className="pt-2 sm:pt-3">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedBookingForMessages(booking.id)
-                                          setShowMessagesModal(true)
-                                        }}
-                                        className="flex items-center justify-center w-full sm:w-auto px-4 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 active:bg-accent-700 transition-colors text-sm font-medium min-h-[44px] touch-target shadow-sm"
-                                      >
-                                        <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
-                                        <span>Message {isHostView ? 'Guest' : 'Host'}</span>
-                                      </button>
                                     </div>
                                   )}
                                 </div>
