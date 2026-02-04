@@ -476,6 +476,13 @@ class ApiService {
     const query = params.toString();
     return this.request(`/reviews${query ? `?${query}` : ''}`);
   }
+
+  /** Get reviews for a user (e.g. host) – public endpoint. Backend returns { success, data: reviews[] }. */
+  async getReviewsByUser(userId: string): Promise<ApiResponse<{ reviews: any[] }>> {
+    const res = await this.request<any>(`/reviews/user/${userId}`);
+    const list = Array.isArray(res.data) ? res.data : [];
+    return { success: res.success ?? true, data: { reviews: list }, error: res.error };
+  }
 }
 
 export const apiService = new ApiService();

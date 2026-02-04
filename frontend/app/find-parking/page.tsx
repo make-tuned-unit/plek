@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Search, MapPin, Calendar, Clock, Car, Filter, Star, Map as MapIcon, Navigation } from 'lucide-react'
 import { MapboxAutocomplete } from '@/components/MapboxAutocomplete'
 import { PropertiesMap } from '@/components/PropertiesMap'
@@ -787,7 +788,7 @@ function FindParkingContent() {
 
                       return (
                   <div key={property.id} className="property-card group">
-                    <div className="relative overflow-hidden">
+                    <Link href={`/driveway/${property.id}`} className="block relative overflow-hidden">
                       {property.photos && property.photos.length > 0 && property.photos[0]?.url ? (
                         <img
                           src={property.photos[0].url}
@@ -814,11 +815,13 @@ function FindParkingContent() {
                       <div className="absolute top-3 left-3 bg-gradient-accent text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg shadow-accent-500/40">
                         ${property.hourly_rate || 0}/hr
                       </div>
-                    </div>
+                    </Link>
                     
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-bold text-charcoal-900 pr-2 group-hover:text-accent-700 transition-colors">{property.title || 'Parking Space'}</h3>
+                        <Link href={`/driveway/${property.id}`}>
+                          <h3 className="text-lg font-bold text-charcoal-900 pr-2 group-hover:text-accent-700 transition-colors">{property.title || 'Parking Space'}</h3>
+                        </Link>
                         {(property.rating || property.review_count) > 0 && (
                           <div className="flex items-center flex-shrink-0 bg-white px-2 py-1 rounded-full shadow-sm border border-mist-200">
                             <Star className="h-4 w-4 text-yellow-400 fill-current" />
