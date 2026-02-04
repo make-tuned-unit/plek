@@ -397,6 +397,21 @@ class ApiService {
     return this.request('/payments/earnings');
   }
 
+  async getRefundEligibleBookings(): Promise<ApiResponse<{ bookings: any[] }>> {
+    return this.request('/payments/refund-eligible');
+  }
+
+  async processRefund(bookingId: string, payload: { type: 'full' | 'partial'; amount?: number }): Promise<ApiResponse<{ refundId?: string; paymentStatus?: string }>> {
+    return this.request(`/payments/refund/${bookingId}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async declineRefund(bookingId: string): Promise<ApiResponse<unknown>> {
+    return this.request(`/payments/refund/${bookingId}/decline`, { method: 'POST' });
+  }
+
   // Payments
   async createPaymentIntent(payload: {
     propertyId: string;

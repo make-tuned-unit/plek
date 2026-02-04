@@ -583,63 +583,43 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
     if (status) updateData.status = status;
     if (paymentStatus) updateData.payment_status = paymentStatus;
     
-    // If host is cancelling (rejecting) a paid booking, process refund first
+    // Refund policy: auto full refund only when cancelled 24+ hours before start (host or renter)
     if (status === 'cancelled' && existingBooking.payment_status === 'completed') {
-      const isHostCancelling = existingBooking.host_id === userId;
-      if (isHostCancelling) {
+      const startTime = new Date(existingBooking.start_time).getTime();
+      const hoursUntilStart = (startTime - Date.now()) / (1000 * 60 * 60);
+      const autoFullRefund = hoursUntilStart >= 24;
+      if (autoFullRefund) {
         try {
-          // Get payment record
           const { data: paymentRecord } = await supabase
             .from('payments')
             .select('*')
             .eq('booking_id', id)
             .eq('status', 'completed')
             .single();
-          
-          if (paymentRecord && paymentRecord.stripe_payment_id) {
-            // Import Stripe and process refund
+          if (paymentRecord?.stripe_payment_id) {
             const Stripe = await import('stripe').then(m => m.default);
             const stripeSecretKey = process.env['STRIPE_SECRET_KEY'];
-            if (!stripeSecretKey) {
-              console.error('[Booking] STRIPE_SECRET_KEY not set, cannot process refund');
-            } else {
-              const cleanKey = stripeSecretKey.replace(/^["']|["']$/g, '');
-              const stripeInstance = new Stripe(cleanKey, {
-                apiVersion: '2023-10-16',
-              });
-              
+            if (stripeSecretKey) {
+              const stripeInstance = new Stripe(stripeSecretKey.replace(/^["']|["']$/g, ''), { apiVersion: '2023-10-16' });
               try {
                 const refund = await stripeInstance.refunds.create({
                   payment_intent: paymentRecord.stripe_payment_id,
                   reason: 'requested_by_customer',
                 });
-                
-                // Update payment record with refund info
-                await supabase
-                  .from('payments')
-                  .update({
-                    status: 'refunded',
-                    stripe_refund_id: refund.id,
-                  })
-                  .eq('id', paymentRecord.id);
-                
-                // Update booking payment status to refunded
+                await supabase.from('payments').update({ status: 'refunded', stripe_refund_id: refund.id }).eq('id', paymentRecord.id);
                 updateData.payment_status = 'refunded';
-                
-                console.log(`[Booking] Refund processed for booking ${id}: ${refund.id}`);
+                console.log(`[Booking] Auto full refund (24h+ before start) for booking ${id}: ${refund.id}`);
               } catch (refundError: any) {
                 console.error(`[Booking] Failed to process refund for booking ${id}:`, refundError);
-                // Continue with cancellation even if refund fails - admin can handle manually
               }
             }
           }
         } catch (error: any) {
           console.error(`[Booking] Error processing refund for booking ${id}:`, error);
-          // Continue with cancellation even if refund fails
         }
       }
     }
-    
+
     // Update booking
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
@@ -813,64 +793,49 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
       });
       return;
     }
-    
-    // If host is cancelling and payment was completed, process refund
-    if (isHost && existingBooking.payment_status === 'completed') {
+
+    // Refund policy: full refund only when cancelled 24+ hours before start; otherwise host manages refunds in Payments
+    const startTime = new Date(existingBooking.start_time).getTime();
+    const hoursUntilStart = (startTime - Date.now()) / (1000 * 60 * 60);
+    const autoFullRefund = existingBooking.payment_status === 'completed' && hoursUntilStart >= 24;
+
+    if (autoFullRefund) {
       try {
-        // Get payment record
         const { data: paymentRecord } = await supabase
           .from('payments')
           .select('*')
           .eq('booking_id', id)
           .eq('status', 'completed')
           .single();
-        
+
         if (paymentRecord && paymentRecord.stripe_payment_id) {
-          // Import Stripe and process refund
           const Stripe = await import('stripe').then(m => m.default);
           const stripeSecretKey = process.env['STRIPE_SECRET_KEY'];
-          if (!stripeSecretKey) {
-            console.error('[Booking] STRIPE_SECRET_KEY not set, cannot process refund');
-          } else {
+          if (stripeSecretKey) {
             const cleanKey = stripeSecretKey.replace(/^["']|["']$/g, '');
-            const stripeInstance = new Stripe(cleanKey, {
-              apiVersion: '2023-10-16',
-            });
-            
+            const stripeInstance = new Stripe(cleanKey, { apiVersion: '2023-10-16' });
             try {
               const refund = await stripeInstance.refunds.create({
                 payment_intent: paymentRecord.stripe_payment_id,
                 reason: 'requested_by_customer',
               });
-              
-              // Update payment record with refund info
               await supabase
                 .from('payments')
-                .update({
-                  status: 'refunded',
-                  stripe_refund_id: refund.id,
-                })
+                .update({ status: 'refunded', stripe_refund_id: refund.id })
                 .eq('id', paymentRecord.id);
-              
-              // Update booking payment status to refunded
-              await supabase
-                .from('bookings')
-                .update({ payment_status: 'refunded' })
-                .eq('id', id);
-              
-              console.log(`[Booking] Refund processed for booking ${id}: ${refund.id}`);
+              await supabase.from('bookings').update({ payment_status: 'refunded' }).eq('id', id);
+              console.log(`[Booking] Auto full refund (24h+ before start) for booking ${id}: ${refund.id}`);
             } catch (refundError: any) {
               console.error(`[Booking] Failed to process refund for booking ${id}:`, refundError);
-              // Continue with cancellation even if refund fails - admin can handle manually
             }
           }
         }
       } catch (error: any) {
         console.error(`[Booking] Error processing refund for booking ${id}:`, error);
-        // Continue with cancellation even if refund fails
       }
     }
-    
+    // If within 24h of start and paid: no auto refund; host can issue full/partial/none from Payments → Refunds
+
     // Update booking status
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
@@ -886,19 +851,23 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
     
     if (updateError) throw updateError;
     
-    // Create notification for the other party
     const notifyUserId = isHost ? existingBooking.renter_id : existingBooking.host_id;
-      await supabase.from('notifications').insert({
-        user_id: notifyUserId,
-        type: 'booking_cancelled',
-        title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
-        message: isHost 
-          ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected. You will receive a full refund.`
-          : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled`,
-        data: { booking_id: id, property_id: existingBooking.property_id },
-        is_read: false,
-      } as any);
-    
+    const refundMessage = autoFullRefund
+      ? ' You will receive a full refund.'
+      : (existingBooking.payment_status === 'completed'
+        ? ' Refunds for cancellations within 24 hours are at the host\'s discretion.'
+        : '');
+    await supabase.from('notifications').insert({
+      user_id: notifyUserId,
+      type: 'booking_cancelled',
+      title: isHost ? 'Booking Rejected' : 'Booking Cancelled',
+      message: isHost
+        ? `Your booking request for ${existingBooking.property?.title || 'property'} was rejected.${refundMessage}`
+        : `Booking for ${existingBooking.property?.title || 'property'} has been cancelled.${refundMessage}`,
+      data: { booking_id: id, property_id: existingBooking.property_id },
+      is_read: false,
+    } as any);
+
     res.json({
       success: true,
       data: updatedBooking,

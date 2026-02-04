@@ -17,6 +17,36 @@ const faqs = [
       'Drivers can search for nearby spaces, review availability, and complete bookings through plekk. Hosts confirm the reservation and provide arrival instructions. Payment is handled securely through our platform and passed along to the host after the stay.',
   },
   {
+    question: 'Refunds and cancellations',
+    answer:
+      'plekk automatically issues a full refund when a booking is cancelled at least 24 hours before the start time. For cancellations within 24 hours of the start time, it is at the host’s discretion whether to issue a full refund, partial refund, or no refund—there is no obligation under the plekk platform. Hosts manage refund decisions (full, partial, or decline) from Profile → Payments → Refunds. As a driver, review each listing’s details before booking; if you cancel, the host may or may not offer a refund depending on timing and their choice.',
+  },
+  {
+    question: 'Can I book by the hour or by the day?',
+    answer:
+      'Yes. Many spaces offer both hourly and daily parking. When you search, you’ll see the options and prices so you can choose what fits your needs.',
+  },
+  {
+    question: 'How do hosts get paid?',
+    answer:
+      'Hosts connect a Stripe account to receive payouts. After a booking is completed, earnings are transferred according to the payout schedule. Hosts can track earnings and manage refunds in Profile → Payments.',
+  },
+  {
+    question: 'What if I need to cancel?',
+    answer:
+      'Cancellation policies depend on how close to the booking start time you cancel. You can view the specific policy for each listing before you book. If you cancel at least 24 hours before start, you receive a full refund automatically; within 24 hours, any refund is at the host’s discretion.',
+  },
+  {
+    question: 'Where is plekk available?',
+    answer:
+      'plekk is available in supported regions where hosts have listed spaces. Search by city or address on the Find Parking page to see availability near you.',
+  },
+  {
+    question: 'How are spaces verified?',
+    answer:
+      'Listings are reviewed to ensure they’re real, accurately described, and meet our standards. We also use secure payments and reviews to help keep the marketplace safe for everyone.',
+  },
+  {
     question: 'Who is responsible for the vehicle while parked?',
     answer:
       'Hosts and drivers are responsible for ensuring the space is safe and the vehicle is secure. plekk does not provide insurance or accept liability for damage, theft, or disputes between users.',
@@ -25,11 +55,6 @@ const faqs = [
     question: 'How can I contact support?',
     answer:
       'You can reach us at support@parkplekk.com. We typically respond within one business day.',
-  },
-  {
-    question: 'Can I cancel a booking?',
-    answer:
-      'Each listing includes a cancellation policy defined by the host. Review the policy before booking and contact the host directly through the messaging tools for any changes.',
   },
 ]
 

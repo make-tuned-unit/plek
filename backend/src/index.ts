@@ -18,6 +18,7 @@ import { paymentRoutes } from './routes/payments';
 import { userRoutes } from './routes/users';
 import { notificationRoutes } from './routes/notifications';
 import { webhooksRoutes } from './routes/webhooks';
+import { cronRoutes } from './routes/cron';
 import { contactRoutes } from './routes/contact';
 import { adminRoutes } from './routes/admin';
 import { initializeSupabase } from './services/supabaseService';
@@ -98,6 +99,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cron', cronRoutes);
 
 // Error handling middleware
 app.use(notFound);

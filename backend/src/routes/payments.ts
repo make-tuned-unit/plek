@@ -5,6 +5,9 @@ import {
   getConnectAccountStatus,
   disconnectConnectAccount,
   getHostEarnings,
+  getRefundEligibleBookings,
+  processRefund,
+  declineRefund,
   createPaymentIntent,
   confirmPayment,
   getPaymentHistory,
@@ -20,6 +23,11 @@ router.post('/connect/disconnect', protect, disconnectConnectAccount);
 
 // Host earnings (revenue dashboard)
 router.get('/earnings', protect, getHostEarnings);
+
+// Host refund management (cancelled bookings where host can issue full/partial/no refund)
+router.get('/refund-eligible', protect, getRefundEligibleBookings);
+router.post('/refund/:bookingId', protect, processRefund);
+router.post('/refund/:bookingId/decline', protect, declineRefund);
 
 // Payment routes
 router.route('/').get(protect, getPaymentHistory).post(protect, createPaymentIntent);

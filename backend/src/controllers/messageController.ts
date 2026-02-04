@@ -196,7 +196,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
 
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('renter_id, host_id, status')
+      .select('renter_id, host_id, status, property:properties(title)')
       .eq('id', bookingId)
       .single();
 
@@ -260,6 +260,33 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       data: { booking_id: bookingId, message_id: message.id },
       is_read: false,
     } as any);
+
+    // Only send "new message" email when this is the first message in the thread (not on every reply)
+    const { count } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('booking_id', bookingId);
+    const isFirstMessageInThread = count === 1;
+
+    if (isFirstMessageInThread) {
+      const receiver = message.receiver as { first_name?: string; last_name?: string; email?: string } | undefined;
+      const sender = message.sender as { first_name?: string; last_name?: string } | undefined;
+      const propertyTitle = (booking as any).property?.title || 'your booking';
+      if (receiver?.email) {
+        const { sendBookingMessageEmail } = await import('../services/emailService');
+        const recipientName = [receiver.first_name, receiver.last_name].filter(Boolean).join(' ') || 'there';
+        const senderName = [sender?.first_name, sender?.last_name].filter(Boolean).join(' ') || 'Someone';
+        const messagePreview = (content as string).trim();
+        sendBookingMessageEmail({
+          recipientName,
+          recipientEmail: receiver.email,
+          senderName,
+          propertyTitle,
+          bookingId,
+          messagePreview,
+        }).catch((err) => console.error('Failed to send booking message email:', err));
+      }
+    }
 
     res.status(201).json({
       success: true,

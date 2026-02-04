@@ -165,7 +165,7 @@ function PaymentForm({
               <span className="font-medium">{formatMoney(priceBreakdown.subtotal, currency)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-accent-100">Service Fee (5%)</span>
+              <span className="text-accent-100">Fee</span>
               <span className="font-medium">{formatMoney(priceBreakdown.bookerServiceFee, currency)}</span>
             </div>
           </div>
@@ -730,7 +730,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   <span className="font-medium">${priceBreakdown.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-accent-100">Service Fee (5%)</span>
+                  <span className="text-accent-100">Fee</span>
                   <span className="font-medium">${priceBreakdown.bookerServiceFee.toFixed(2)}</span>
                 </div>
               </div>

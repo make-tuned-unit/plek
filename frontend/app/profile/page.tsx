@@ -30,7 +30,8 @@ import {
   MessageSquare,
   Bell,
   Shield,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
@@ -206,6 +207,10 @@ function ProfileContent() {
     }>;
   } | null>(null);
   const [isLoadingEarnings, setIsLoadingEarnings] = useState(false);
+  const [refundEligibleBookings, setRefundEligibleBookings] = useState<any[]>([]);
+  const [isLoadingRefundEligible, setIsLoadingRefundEligible] = useState(false);
+  const [refundActionBookingId, setRefundActionBookingId] = useState<string | null>(null);
+  const [partialRefundAmounts, setPartialRefundAmounts] = useState<Record<string, string>>({});
   const [bookings, setBookings] = useState<any[]>([]);
   const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
@@ -891,31 +896,46 @@ function ProfileContent() {
     };
   }, [user?.id]);
 
-  // Fetch host earnings when on Payments tab (so pendingEarnings and revenue dashboard are correct)
+  // Fetch host earnings and refund-eligible bookings when on Payments tab
   useEffect(() => {
     let isMounted = true;
-    const fetchEarnings = async () => {
+    const run = async () => {
       if (!user?.id || activeTab !== 'payments') return;
       setIsLoadingEarnings(true);
+      setIsLoadingRefundEligible(true);
       try {
-        const response = await apiService.getHostEarnings();
-        if (isMounted && response.success && response.data) {
-          setHostEarnings(response.data);
-          setPendingEarnings(response.data.netEarnings);
-        } else if (isMounted) {
-          setHostEarnings(null);
-          setPendingEarnings(0);
+        const [earningsRes, refundRes] = await Promise.all([
+          apiService.getHostEarnings(),
+          apiService.getRefundEligibleBookings(),
+        ]);
+        if (isMounted) {
+          if (earningsRes.success && earningsRes.data) {
+            setHostEarnings(earningsRes.data);
+            setPendingEarnings(earningsRes.data.netEarnings);
+          } else {
+            setHostEarnings(null);
+            setPendingEarnings(0);
+          }
+          if (refundRes.success && refundRes.data?.bookings) {
+            setRefundEligibleBookings(refundRes.data.bookings);
+          } else {
+            setRefundEligibleBookings([]);
+          }
         }
       } catch {
         if (isMounted) {
           setHostEarnings(null);
           setPendingEarnings(0);
+          setRefundEligibleBookings([]);
         }
       } finally {
-        if (isMounted) setIsLoadingEarnings(false);
+        if (isMounted) {
+          setIsLoadingEarnings(false);
+          setIsLoadingRefundEligible(false);
+        }
       }
     };
-    fetchEarnings();
+    run();
     return () => { isMounted = false; };
   }, [user?.id, activeTab]);
 
@@ -986,6 +1006,90 @@ function ProfileContent() {
       toast.error(error?.message || 'Failed to disconnect');
     } finally {
       setIsDisconnectingStripe(false);
+    }
+  };
+
+  const refreshRefundEligibleAndEarnings = useCallback(async () => {
+    try {
+      const [earningsRes, refundRes] = await Promise.all([
+        apiService.getHostEarnings(),
+        apiService.getRefundEligibleBookings(),
+      ]);
+      if (earningsRes.success && earningsRes.data) {
+        setHostEarnings(earningsRes.data);
+        setPendingEarnings(earningsRes.data.netEarnings);
+      }
+      if (refundRes.success && refundRes.data?.bookings) {
+        setRefundEligibleBookings(refundRes.data.bookings);
+      } else {
+        setRefundEligibleBookings((prev) => prev);
+      }
+    } catch {
+      // Keep existing state on refresh failure
+    }
+  }, []);
+
+  const handleFullRefund = async (bookingId: string) => {
+    setRefundActionBookingId(bookingId);
+    try {
+      const response = await apiService.processRefund(bookingId, { type: 'full' });
+      if (response.success) {
+        toast.success('Full refund processed. The renter will receive the full amount back.');
+        await refreshRefundEligibleAndEarnings();
+      } else {
+        toast.error(response.error || 'Refund failed');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Refund failed';
+      toast.error(msg);
+    } finally {
+      setRefundActionBookingId(null);
+    }
+  };
+
+  const handlePartialRefund = async (bookingId: string) => {
+    const raw = partialRefundAmounts[bookingId]?.trim();
+    const amount = raw ? parseFloat(raw) : NaN;
+    const booking = refundEligibleBookings.find((b) => b.id === bookingId);
+    const maxAmount = booking?.total_amount != null ? Number(booking.total_amount) : 0;
+    if (!Number.isFinite(amount) || amount <= 0 || amount > maxAmount) {
+      toast.error(`Enter an amount between $0.01 and $${maxAmount.toFixed(2)}`);
+      return;
+    }
+    setRefundActionBookingId(bookingId);
+    try {
+      const response = await apiService.processRefund(bookingId, { type: 'partial', amount });
+      if (response.success) {
+        toast.success(`Partial refund of $${amount.toFixed(2)} processed.`);
+        setPartialRefundAmounts((prev) => ({ ...prev, [bookingId]: '' }));
+        await refreshRefundEligibleAndEarnings();
+      } else {
+        toast.error(response.error || 'Refund failed');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Refund failed';
+      toast.error(msg);
+    } finally {
+      setRefundActionBookingId(null);
+    }
+  };
+
+  const handleDeclineRefund = async (bookingId: string) => {
+    if (!confirm('Mark this booking as “No refund”? The renter will not receive a refund and this will no longer appear in your refund list.')) return;
+    setRefundActionBookingId(bookingId);
+    try {
+      const response = await apiService.declineRefund(bookingId);
+      if (response.success) {
+        toast.success('Noted. This booking will no longer appear in the refund list.');
+        await refreshRefundEligibleAndEarnings();
+      } else {
+        toast.error(response.error || 'Action failed');
+      }
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'Action failed';
+      toast.error(msg);
+    } finally {
+      setRefundActionBookingId(null);
     }
   };
 
@@ -1491,37 +1595,6 @@ function ProfileContent() {
                       <span className="ml-1 text-sm text-gray-600">{user?.rating || 0}</span>
                       <span className="ml-1 text-sm text-gray-500">({user?.reviewCount || 0} reviews)</span>
                     </div>
-                    {activeTab === 'profile' && (
-                      <div className="mt-4">
-                        {!isEditing ? (
-                          <button
-                            onClick={() => setIsEditing(true)}
-                            className="w-full flex items-center justify-center px-4 py-2 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Profile
-                          </button>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={handleCancelEdit}
-                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleSubmit(onSubmit)}
-                              disabled={isLoading}
-                              className="flex-1 flex items-center justify-center px-3 py-2 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
-                            >
-                              <Save className="h-4 w-4 mr-1" />
-                              Save
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -1580,37 +1653,6 @@ function ProfileContent() {
 
                 <div className="mb-5 sm:mb-6">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Personal Information</h2>
-                </div>
-
-                {/* Mobile Edit Button */}
-                <div className="lg:hidden mb-6">
-                  {!isEditing ? (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="w-full flex items-center justify-center px-4 py-2.5 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Profile
-                    </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleCancelEdit}
-                        className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSubmit(onSubmit)}
-                        disabled={isLoading}
-                        className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {isLoading ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {isEditing ? (
@@ -1764,6 +1806,25 @@ function ProfileContent() {
                       />
                     </div>
                   </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-gray-700 border border-mist-300 rounded-lg hover:bg-mist-100 min-h-[44px]"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit(onSubmit)}
+                      disabled={isLoading}
+                      className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 min-h-[44px]"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                   </form>
                 ) : (
                   <div className="space-y-6">
@@ -1808,6 +1869,15 @@ function ProfileContent() {
                         <label className="block text-sm font-medium text-gray-500 mb-1">Postal/Zip Code</label>
                         <p className="text-sm text-gray-900">{watch('zipCode') || user?.zipCode || '—'}</p>
                       </div>
+                    </div>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center justify-center px-4 py-2.5 text-sm text-accent-700 border border-accent-300/60 rounded-lg hover:bg-accent-500/10 backdrop-blur-sm transition-all min-h-[44px]"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2373,12 +2443,6 @@ function ProfileContent() {
                                             <span className="font-bold text-lg sm:text-base text-gray-900">${booking.total_amount.toFixed(2)}</span>
                                           </div>
                                         )}
-                                        {booking.service_fee && (
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-gray-500 font-medium sm:font-normal">Service Fee:</span>
-                                            <span className="text-gray-900">${booking.service_fee.toFixed(2)}</span>
-                                          </div>
-                                        )}
                                         {booking.payment_status && (
                                           <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
                                             <span className="text-gray-500 font-medium sm:font-normal">Payment Status:</span>
@@ -2625,7 +2689,7 @@ function ProfileContent() {
             {/* Payments Tab */}
             {activeTab === 'payments' && (
               <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-4 sm:p-6 space-y-8">
-                {/* Host revenue dashboard – shows gross, platform fee, net so they expect payout = net */}
+                {/* Host revenue dashboard – show earnings only, no cumulative fee breakdown */}
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
                     <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
@@ -2638,20 +2702,13 @@ function ProfileContent() {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-mist-200 bg-mist-50/50 overflow-hidden">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-mist-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-mist-200">
                         <div className="p-4 sm:p-5 text-center sm:text-left">
-                          <p className="text-sm font-medium text-gray-500">Total from bookings</p>
+                          <p className="text-sm font-medium text-gray-500">From bookings</p>
                           <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">
                             ${(hostEarnings?.totalGross ?? 0).toFixed(2)}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">Amount renters paid (before fees)</p>
-                        </div>
-                        <div className="p-4 sm:p-5 text-center sm:text-left">
-                          <p className="text-sm font-medium text-gray-500">Platform service fee (5%)</p>
-                          <p className="text-xl sm:text-2xl font-semibold text-gray-900 mt-1">
-                            −${(hostEarnings?.totalPlatformFee ?? 0).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">Deducted before payout</p>
+                          <p className="text-xs text-gray-500 mt-1">Total from confirmed bookings</p>
                         </div>
                         <div className="p-4 sm:p-5 text-center sm:text-left bg-accent-50/50">
                           <p className="text-sm font-medium text-accent-800">Your earnings (payout)</p>
@@ -2663,7 +2720,7 @@ function ProfileContent() {
                       </div>
                       <div className="px-4 py-3 bg-mist-100 border-t border-mist-200">
                         <p className="text-sm text-gray-600">
-                          Payouts are the booking total minus the renter’s service fee and our 5% platform fee. You receive <strong>your earnings</strong> above, not the full amount the renter paid.
+                          You receive the amount above. Payouts are sent to your connected account.
                         </p>
                       </div>
                       {hostEarnings?.breakdown && hostEarnings.breakdown.length > 0 && (
@@ -2675,11 +2732,10 @@ function ProfileContent() {
                                 <div>
                                   <p className="font-medium text-gray-900">{row.propertyTitle}</p>
                                   <p className="text-xs text-gray-500">
-                                    {new Date(row.startTime).toLocaleDateString()} · Renter paid ${row.totalAmount.toFixed(2)} (incl. their fee)
+                                    {new Date(row.startTime).toLocaleDateString()} · Renter paid ${row.totalAmount.toFixed(2)}
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-sm text-gray-500">−${row.platformFee.toFixed(2)} fee</p>
                                   <p className="font-semibold text-accent-700">${row.yourEarnings.toFixed(2)} to you</p>
                                 </div>
                               </li>
@@ -2688,6 +2744,102 @@ function ProfileContent() {
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
+
+                {/* Refunds – host can issue full/partial or decline for cancelled bookings (after 24h policy) */}
+                <div className="pt-6 border-t border-gray-200">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 flex items-center">
+                    <RefreshCw className="h-5 w-5 mr-2 text-accent-500" />
+                    Refunds
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-4">
+                    plekk automatically issues a full refund when a booking is cancelled at least 24 hours before the start time. For cancellations within 24 hours of the start time, it is at your discretion whether to issue a full refund, partial refund, or no refund — there is no obligation under the plekk platform.
+                  </p>
+                  {isLoadingRefundEligible ? (
+                    <div className="rounded-xl border border-mist-200 bg-mist-50/50 p-6 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500" />
+                      <span className="ml-3 text-gray-600">Loading refund requests…</span>
+                    </div>
+                  ) : refundEligibleBookings.length === 0 ? (
+                    <div className="rounded-xl border border-mist-200 bg-mist-50/50 p-6 text-center">
+                      <p className="text-gray-500">No cancelled bookings pending a refund decision.</p>
+                      <p className="text-xs text-gray-400 mt-1">When a renter cancels within 24 hours of the start time, you can choose to issue a full or partial refund or decline here.</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-4">
+                      {refundEligibleBookings.map((b) => {
+                        const property = b.property;
+                        const renter = b.renter;
+                        const renterName = renter ? [renter.first_name, renter.last_name].filter(Boolean).join(' ') || 'Renter' : 'Renter';
+                        const totalAmount = b.total_amount != null ? Number(b.total_amount) : 0;
+                        const startTime = b.start_time ? new Date(b.start_time) : null;
+                        const isBusy = refundActionBookingId === b.id;
+                        const partialVal = partialRefundAmounts[b.id] ?? '';
+                        return (
+                          <li key={b.id} className="rounded-xl border border-mist-200 bg-white p-4 sm:p-5">
+                            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{property?.title ?? 'Listing'}</p>
+                                <p className="text-sm text-gray-500">{renterName}</p>
+                                {startTime && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {startTime.toLocaleDateString('en-US', { dateStyle: 'medium' })} · ${totalAmount.toFixed(2)} paid
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-gray-700">${totalAmount.toFixed(2)}</p>
+                                <p className="text-xs text-gray-500">Total paid</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-mist-100">
+                              <button
+                                type="button"
+                                onClick={() => handleFullRefund(b.id)}
+                                disabled={isBusy}
+                                className="px-3 py-1.5 text-sm font-medium text-white bg-accent-500 rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isBusy ? (
+                                  <span className="flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing…</span>
+                                ) : (
+                                  'Full refund'
+                                )}
+                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  max={totalAmount}
+                                  placeholder="Amount"
+                                  value={partialVal}
+                                  onChange={(e) => setPartialRefundAmounts((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                                  className="w-24 rounded-lg border border-mist-200 px-2 py-1.5 text-sm"
+                                  aria-label="Partial refund amount"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handlePartialRefund(b.id)}
+                                  disabled={isBusy || !partialVal.trim()}
+                                  className="px-3 py-1.5 text-sm font-medium text-accent-700 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Partial refund
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeclineRefund(b.id)}
+                                disabled={isBusy}
+                                className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-mist-100 border border-mist-200 rounded-lg hover:bg-mist-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                No refund
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </div>
 
@@ -2890,7 +3042,7 @@ function ProfileContent() {
                           </div>
                           <div className="flex items-start">
                             <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">2</div>
-                            <p>We transfer your earnings (minus platform fee) to your Stripe account</p>
+                            <p>We transfer your earnings to your connected account</p>
                           </div>
                           <div className="flex items-start">
                             <div className="flex-shrink-0 w-6 h-6 bg-accent-50 text-accent-600 rounded-full flex items-center justify-center text-xs font-semibold mr-3 mt-0.5">3</div>

@@ -20,6 +20,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService } from '@/services/api'
+import toast from 'react-hot-toast'
 
 const propertySchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -29,8 +30,8 @@ const propertySchema = z.object({
   state: z.string().min(2, 'Province/State is required'),
   zipCode: z.string().min(3, 'Valid postal/zip code is required'),
   propertyType: z.enum(['driveway', 'garage', 'warehouse', 'barn', 'storage', 'other']),
-  hourlyRate: z.number().min(1, 'Hourly rate must be at least $1'),
-  dailyRate: z.number().min(1, 'Daily rate must be at least $1'),
+  hourlyRate: z.preprocess((v) => (v === '' || v === undefined || Number.isNaN(v) ? undefined : Number(v)), z.number().min(1, 'Hourly rate must be at least $1').default(1)),
+  dailyRate: z.preprocess((v) => (v === '' || v === undefined || Number.isNaN(v) ? undefined : Number(v)), z.number().min(1, 'Daily rate must be at least $1').default(1)),
   maxVehicleSize: z.enum(['compact', 'sedan', 'suv', 'truck', 'any']),
   features: z.array(z.string()).min(1, 'Select at least one feature'),
   availability: z.object({
@@ -144,10 +145,13 @@ export default function ListYourDrivewayPage() {
   const uploadPhotos = async (propertyId: string, files: File[]): Promise<void> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
     if (!token) return
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL
-    const apiBase = apiUrl && (apiUrl.startsWith('http://') || apiUrl.startsWith('https://'))
-      ? (apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl) + '/api'
-      : (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000/api')
+    const apiBase = (() => {
+      const url = process.env.NEXT_PUBLIC_API_URL || ''
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        return url.endsWith('/api') ? url.replace(/\/$/, '') : url.replace(/\/$/, '') + '/api'
+      }
+      return typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000/api'
+    })()
     for (const file of files) {
       const formData = new FormData()
       formData.append('photo', file)
@@ -223,9 +227,11 @@ export default function ListYourDrivewayPage() {
       }
 
       setPublishedListingId(propertyId)
+      toast.success('Listing sent for review!')
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       setPublishError(message)
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -241,6 +247,22 @@ export default function ListYourDrivewayPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
+  }
+
+  const stepForField: Record<string, number> = {
+    title: 1, description: 1, address: 1, city: 1, state: 1, zipCode: 1, propertyType: 1, maxVehicleSize: 1, features: 1,
+    hourlyRate: 2, dailyRate: 2, startTime: 2, endTime: 2, requireApproval: 2, leadTimeHours: 2,
+    availability: 2,
+  }
+
+  const onValidationError = (errors: Record<string, { message?: string }>) => {
+    const firstKey = Object.keys(errors)[0]
+    const step = firstKey
+      ? (stepForField[firstKey] ?? (firstKey.startsWith('availability') ? 2 : 1))
+      : 1
+    setCurrentStep(step)
+    const msg = firstKey && errors[firstKey]?.message ? errors[firstKey].message : 'Please complete all required fields'
+    toast.error(msg)
   }
 
   if (authLoading || !user) {
@@ -345,7 +367,7 @@ export default function ListYourDrivewayPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow-sm p-8">
+        <form onSubmit={handleSubmit(onSubmit, onValidationError)} className="bg-white rounded-lg shadow-sm p-8">
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -697,9 +719,9 @@ export default function ListYourDrivewayPage() {
               </div>
 
               <div className="bg-accent-50 rounded-lg p-4">
-                <h3 className="font-medium text-primary-800 mb-2">Ready to publish?</h3>
+                <h3 className="font-medium text-primary-800 mb-2">Ready to send for review?</h3>
                 <p className="text-sm text-accent-700">
-                  Your listing will be reviewed and published within 24 hours. You can edit it anytime from your dashboard.
+                  Your listing will be sent for review and published within 24 hours once approved. You can edit it anytime from your profile.
                 </p>
               </div>
 
@@ -739,7 +761,7 @@ export default function ListYourDrivewayPage() {
                 disabled={isSubmitting}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Publishing...' : 'Publish Listing'}
+                {isSubmitting ? 'Sending...' : 'Send for review'}
               </button>
             )}
           </div>

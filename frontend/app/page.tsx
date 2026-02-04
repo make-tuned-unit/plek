@@ -23,6 +23,7 @@ import {
 
 const HeroVideo = dynamic(() => import('@/components/HeroVideo'), { ssr: false })
 
+// Homepage: 6 most critical FAQs. More answers live on the Help Center (/help).
 const FAQ_ITEMS = [
   {
     question: 'What is plekk?',
@@ -45,24 +46,8 @@ const FAQ_ITEMS = [
     answer: 'Yes. All payments are processed securely through Stripe. Your card details are never stored on our servers, and both drivers and hosts are protected by our payment and cancellation policies.',
   },
   {
-    question: 'Can I book by the hour or by the day?',
-    answer: 'Yes. Many spaces offer both hourly parking and daily parking. When you search, you’ll see the options and prices so you can choose what fits your needs.',
-  },
-  {
-    question: 'How do hosts get paid?',
-    answer: 'Hosts connect a Stripe account to receive payouts. After a booking is completed, earnings are transferred according to your payout schedule. You can track earnings in your profile.',
-  },
-  {
-    question: 'What if I need to cancel?',
-    answer: 'Cancellation policies depend on how close to the booking start time you cancel. You can view the specific policy for each listing before you book. Hosts can also set their own cancellation rules.',
-  },
-  {
-    question: 'Where is plekk available?',
-    answer: 'plekk is available in supported regions where hosts have listed spaces. Search by city or address on the Find Parking page to see availability near you.',
-  },
-  {
-    question: 'How are spaces verified?',
-    answer: 'Listings are reviewed to ensure they’re real, accurately described, and meet our standards. We also use secure payments and reviews to help keep the marketplace safe for everyone.',
+    question: 'What is your refund policy?',
+    answer: 'If a booking is cancelled at least 24 hours before the start time, plekk automatically issues a full refund. For cancellations within 24 hours of the start time, refunds are at the host’s discretion—hosts can choose to issue a full refund, partial refund, or no refund from their Payments tab. See our Help Center for more details.',
   },
 ]
 
@@ -523,14 +508,22 @@ export default function HomePage() {
             variants={slideUp}
             transition={slideUpTransition}
           >
-            <p className="text-gray-600 mb-4">Still have questions?</p>
-            <Link
-              href="/contact"
-              className="inline-flex items-center text-accent-600 font-semibold hover:text-accent-700"
-            >
-              Contact us
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
+            <p className="text-gray-600 mb-4">More answers in the Help Center</p>
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+              <Link
+                href="/help"
+                className="inline-flex items-center text-accent-600 font-semibold hover:text-accent-700"
+              >
+                Help Center
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center text-gray-600 font-medium hover:text-gray-900"
+              >
+                Contact us
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

@@ -563,14 +563,14 @@ CREATE POLICY "Only admins can manage system settings" ON public.system_settings
 -- FUNCTIONS AND TRIGGERS
 -- =====================================================
 
--- Function to update updated_at timestamp
+-- Function to update updated_at timestamp (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Apply updated_at trigger to all tables
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
@@ -613,7 +613,7 @@ DROP TRIGGER IF EXISTS update_system_settings_updated_at ON public.system_settin
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON public.system_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Function to calculate property rating
+-- Function to calculate property rating (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION calculate_property_rating(property_uuid UUID)
 RETURNS DECIMAL(3,2) AS $$
 DECLARE
@@ -625,9 +625,9 @@ BEGIN
   
   RETURN COALESCE(avg_rating, 0.00);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
--- Function to calculate user rating
+-- Function to calculate user rating (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION calculate_user_rating(user_uuid UUID)
 RETURNS DECIMAL(3,2) AS $$
 DECLARE
@@ -639,9 +639,9 @@ BEGIN
   
   RETURN COALESCE(avg_rating, 0.00);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
--- Function to update user stats after booking completion
+-- Function to update user stats after booking completion (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION update_user_stats_after_booking()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -659,7 +659,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Apply booking stats trigger
 DROP TRIGGER IF EXISTS update_user_stats_after_booking_trigger ON public.bookings;
@@ -667,7 +667,7 @@ CREATE TRIGGER update_user_stats_after_booking_trigger
   AFTER UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION update_user_stats_after_booking();
 
--- Function to create notification
+-- Function to create notification (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION create_notification(
   user_uuid UUID,
   notif_type notification_type,
@@ -685,9 +685,9 @@ BEGIN
   
   RETURN notification_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
--- Function to log admin actions
+-- Function to log admin actions (search_path set for linter 0011)
 CREATE OR REPLACE FUNCTION log_admin_action(
   admin_uuid UUID,
   action_text TEXT,
@@ -706,7 +706,7 @@ BEGIN
   
   RETURN log_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- =====================================================
 -- INITIAL DATA
@@ -729,8 +729,8 @@ SET value = EXCLUDED.value,
 -- VIEWS FOR COMMON QUERIES
 -- =====================================================
 
--- View for property search results
-CREATE OR REPLACE VIEW property_search_results AS
+-- View for property search results (security_invoker so RLS on properties/users/reviews applies)
+CREATE OR REPLACE VIEW property_search_results WITH (security_invoker = on) AS
 SELECT 
   p.id,
   p.title,
@@ -769,8 +769,8 @@ LEFT JOIN (
 ) avg_reviews ON p.id = avg_reviews.property_id
 WHERE p.status = 'active' AND p.is_available = true;
 
--- View for user dashboard stats
-CREATE OR REPLACE VIEW user_dashboard_stats AS
+-- View for user dashboard stats (security_invoker so RLS applies)
+CREATE OR REPLACE VIEW user_dashboard_stats WITH (security_invoker = on) AS
 SELECT 
   u.id,
   u.first_name,
@@ -790,8 +790,8 @@ LEFT JOIN public.properties p ON u.id = p.host_id AND p.status = 'active'
 LEFT JOIN public.bookings b ON u.id = b.renter_id
 GROUP BY u.id, u.first_name, u.last_name, u.email, u.is_host, u.total_bookings, u.total_earnings, u.rating, u.review_count;
 
--- View for admin dashboard
-CREATE OR REPLACE VIEW admin_dashboard AS
+-- View for admin dashboard (security_invoker so RLS applies)
+CREATE OR REPLACE VIEW admin_dashboard WITH (security_invoker = on) AS
 SELECT 
   COUNT(*) as total_users,
   COUNT(CASE WHEN is_host = true THEN 1 END) as total_hosts,

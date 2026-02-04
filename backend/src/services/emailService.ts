@@ -108,6 +108,24 @@ export interface PaymentEmailData {
   transactionId: string;
 }
 
+export interface BookingMessageEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  senderName: string;
+  propertyTitle: string;
+  bookingId: string;
+  messagePreview: string; // First ~100 chars of the message
+}
+
+export interface HostPayoutEmailData {
+  hostName: string;
+  hostEmail: string;
+  propertyTitle: string;
+  bookingId: string;
+  amount: number; // Host's earnings (after platform fee)
+  hasConnectAccount: boolean; // true if transfer was sent to their Stripe Connect account
+}
+
 /**
  * Send email confirmation email to new user
  */
@@ -402,6 +420,263 @@ export async function sendBookingNotificationEmail(
     logger.info('[Email] Booking notification sent');
   } catch (error: any) {
     console.error('[Email] Error sending booking notification:', error);
+  }
+}
+
+/**
+ * Send upcoming booking reminder to renter (e.g. 24h before start)
+ */
+export async function sendRenterUpcomingBookingReminder(data: BookingEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const startDate = new Date(data.startTime).toLocaleString();
+    const endDate = new Date(data.endTime).toLocaleString();
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.renterEmail,
+      subject: `Reminder: Your parking reservation tomorrow – ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Upcoming reservation')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.renterName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">This is a reminder that your parking reservation is coming up.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <h2 style="margin-top: 0; color: ${BRAND_COLORS.accent}; font-size: 20px; font-weight: 600;">${data.propertyTitle}</h2>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Address:</strong> ${data.propertyAddress}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${endDate}</p>
+                  ${data.vehicleInfo ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Vehicle:</strong> ${data.vehicleInfo}</p>` : ''}
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View booking</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Renter upcoming booking reminder sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending renter upcoming reminder', error);
+  }
+}
+
+/**
+ * Send upcoming booking reminder to host (e.g. 24h before start)
+ */
+export async function sendHostUpcomingBookingReminder(data: BookingEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const startDate = new Date(data.startTime).toLocaleString();
+    const endDate = new Date(data.endTime).toLocaleString();
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.hostEmail,
+      subject: `Reminder: Booking tomorrow – ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Upcoming booking')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">A reminder that you have a booking at your space tomorrow.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <h2 style="margin-top: 0; color: ${BRAND_COLORS.accent}; font-size: 20px; font-weight: 600;">${data.propertyTitle}</h2>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Renter:</strong> ${data.renterName}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${endDate}</p>
+                  ${data.vehicleInfo ? `<p style="margin: 8px 0; font-size: 15px;"><strong>Vehicle:</strong> ${data.vehicleInfo}</p>` : ''}
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Manage booking</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Host upcoming booking reminder sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending host upcoming reminder', error);
+  }
+}
+
+/**
+ * Ask renter to leave a review after the booking has ended
+ */
+export async function sendRenterReviewRequestEmail(data: BookingEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const reviewUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}&review=1`;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.renterEmail,
+      subject: `How was your parking at ${data.propertyTitle}?`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Leave a review')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.renterName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">Your parking reservation at <strong>${data.propertyTitle}</strong> has ended. Your experience helps other drivers and your host.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${reviewUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Leave a review</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Renter review request sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending renter review request', error);
+  }
+}
+
+/**
+ * Ask host to leave a review of the renter after the booking has ended
+ */
+export async function sendHostReviewRequestEmail(data: BookingEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const reviewUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}&review=1`;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.hostEmail,
+      subject: `How did ${data.renterName} do? Leave a review`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Leave a review')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
+                <p style="font-size: 16px; margin: 0 0 30px 0;">Your booking with <strong>${data.renterName}</strong> at ${data.propertyTitle} has ended. A quick review helps build trust on plekk.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${reviewUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">Review ${data.renterName}</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Host review request sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending host review request', error);
+  }
+}
+
+/**
+ * Send email when the other party messages about a booking (host or guest)
+ */
+export async function sendBookingMessageEmail(data: BookingMessageEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const messagesUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
+    const preview = data.messagePreview.length > 120 ? data.messagePreview.slice(0, 120) + '…' : data.messagePreview;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.recipientEmail,
+      subject: `${data.senderName} sent you a message about ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('New message about your booking')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.recipientName},</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;"><strong>${data.senderName}</strong> sent you a message about your booking at <strong>${data.propertyTitle}</strong>.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <p style="margin: 0; font-size: 15px; color: ${BRAND_COLORS.textLight}; font-style: italic;">"${preview.replace(/"/g, '&quot;')}"</p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${messagesUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View message & reply</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Booking message notification sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending booking message email', error);
+  }
+}
+
+/**
+ * Tell the host their payout is on the way (sent when payment is confirmed for a booking)
+ */
+export async function sendHostPayoutOnTheWayEmail(data: HostPayoutEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const earningsUrl = `${getFrontendUrl()}/profile?tab=payments`;
+    const bodyConnect =
+      data.hasConnectAccount
+        ? `We've transferred <strong>$${data.amount.toFixed(2)}</strong> to your connected account. It will reach your bank according to your Stripe payout schedule (often within 2 business days).`
+        : `Your earnings of <strong>$${data.amount.toFixed(2)}</strong> are ready. Connect your bank account in the Payments tab to receive payouts.`;
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.hostEmail,
+      subject: `Your payout for ${data.propertyTitle} is on the way`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Your payout is on the way')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.hostName},</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;">A driver just paid for a booking at <strong>${data.propertyTitle}</strong>. Your earnings are on the way.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <p style="margin: 0 0 8px 0; font-size: 15px;">Your earnings (after platform fee):</p>
+                  <p style="margin: 0; font-size: 24px; font-weight: 600; color: ${BRAND_COLORS.accent};">$${data.amount.toFixed(2)}</p>
+                  <p style="margin: 12px 0 0 0; font-size: 14px; color: ${BRAND_COLORS.textLight};">${bodyConnect}</p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${earningsUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View earnings & payouts</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Host payout-on-the-way email sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending host payout email', error);
   }
 }
 

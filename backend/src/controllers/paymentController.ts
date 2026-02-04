@@ -965,7 +965,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
       is_read: false,
     } as any);
 
-    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail } =
+    const { sendBookingConfirmationEmail, sendBookingNotificationEmail, sendPaymentReceiptEmail, sendHostPayoutOnTheWayEmail } =
       await import('../services/emailService');
 
     const vehicleInfoText = vehicleInfoMetadata || undefined;
@@ -1017,6 +1017,19 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         specialRequests: specialRequestsMetadata || undefined,
       }).catch((error) => {
         logger.error('Failed to send booking notification email', error);
+      });
+
+      const hostPayoutAmount = baseAmount - hostServiceFee;
+      const hasConnectAccount = !!(property.host as any)?.stripe_account_id && (property.host as any)?.stripe_account_status === 'active';
+      sendHostPayoutOnTheWayEmail({
+        hostName: `${booking.host.first_name} ${booking.host.last_name}`,
+        hostEmail: booking.host.email,
+        propertyTitle: booking.property?.title || 'Parking Space',
+        bookingId: booking.id,
+        amount: Math.round(hostPayoutAmount * 100) / 100,
+        hasConnectAccount,
+      }).catch((error) => {
+        logger.error('Failed to send host payout email', error);
       });
     }
 
@@ -1089,6 +1102,182 @@ export const getPaymentHistory = async (req: Request, res: Response): Promise<vo
       success: false,
       error: 'Failed to get payment history',
       message: error.message,
+    });
+  }
+};
+
+// @desc    Get cancelled bookings (host's listings) where payment is still completed — host can issue full/partial/no refund
+// @route   GET /api/payments/refund-eligible
+// @access  Private (host)
+export const getRefundEligibleBookings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const supabase = getSupabaseClient();
+    const { data: bookings, error } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        start_time,
+        end_time,
+        total_amount,
+        service_fee,
+        status,
+        payment_status,
+        host_declined_refund,
+        property:properties(id, title, address),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email)
+      `)
+      .eq('host_id', userId)
+      .eq('status', 'cancelled')
+      .eq('payment_status', 'completed')
+      .or('host_declined_refund.is.null', 'host_declined_refund.eq.false')
+      .order('start_time', { ascending: false });
+
+    if (error) throw error;
+    res.json({
+      success: true,
+      data: { bookings: bookings || [] },
+    });
+  } catch (error: any) {
+    logger.error('Error fetching refund-eligible bookings', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch list',
+      message: (error as Error).message,
+    });
+  }
+};
+
+// @desc    Issue full or partial refund for a cancelled booking (host only)
+// @route   POST /api/payments/refund/:bookingId
+// @access  Private (host)
+export const processRefund = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { bookingId } = req.params;
+    const { type, amount } = req.body as { type: 'full' | 'partial'; amount?: number };
+    const supabase = getSupabaseClient();
+
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('id, host_id, payment_status, status')
+      .eq('id', bookingId)
+      .single();
+
+    if (fetchErr || !booking || booking.host_id !== userId) {
+      res.status(booking?.host_id !== userId ? 403 : 404).json({
+        success: false,
+        error: booking?.host_id !== userId ? 'Not authorized' : 'Booking not found',
+      });
+      return;
+    }
+    if (booking.status !== 'cancelled' || booking.payment_status !== 'completed') {
+      res.status(400).json({
+        success: false,
+        error: 'Booking is not eligible for refund (must be cancelled with payment still completed)',
+      });
+      return;
+    }
+
+    const { data: paymentRecord } = await supabase
+      .from('payments')
+      .select('id, stripe_payment_id, amount')
+      .eq('booking_id', bookingId)
+      .eq('status', 'completed')
+      .single();
+
+    if (!paymentRecord?.stripe_payment_id) {
+      res.status(400).json({
+        success: false,
+        error: 'No completed payment found for this booking',
+      });
+      return;
+    }
+
+    const isFull = type === 'full' || (type === 'partial' && (amount == null || amount <= 0));
+    const amountCents = isFull ? undefined : Math.round((amount ?? 0) * 100);
+    const maxCents = Math.round(Number(paymentRecord.amount) * 100);
+    if (!isFull && (amountCents == null || amountCents <= 0 || amountCents > maxCents)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid partial refund amount',
+      });
+      return;
+    }
+
+    const refund = await getStripe().refunds.create({
+      payment_intent: paymentRecord.stripe_payment_id,
+      reason: 'requested_by_customer',
+      reverse_transfer: true, // Pull refund amount back from host's Stripe balance (destination charge)
+      ...(amountCents != null && { amount: amountCents }),
+    });
+
+    const paymentStatus = isFull ? 'refunded' : 'partially_refunded';
+    await supabase.from('payments').update({
+      status: paymentStatus,
+      stripe_refund_id: refund.id,
+    }).eq('id', paymentRecord.id);
+    await supabase.from('bookings').update({ payment_status: paymentStatus }).eq('id', bookingId);
+
+    res.json({
+      success: true,
+      data: { refundId: refund.id, paymentStatus },
+      message: isFull ? 'Full refund processed' : 'Partial refund processed',
+    });
+  } catch (error: any) {
+    logger.error('Error processing refund', error);
+    res.status(500).json({
+      success: false,
+      error: error?.message ?? 'Refund failed',
+    });
+  }
+};
+
+// @desc    Host declines to issue a refund (removes from refund-eligible list)
+// @route   POST /api/payments/refund/:bookingId/decline
+// @access  Private (host)
+export const declineRefund = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { bookingId } = req.params;
+    const supabase = getSupabaseClient();
+
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('id, host_id, payment_status, status')
+      .eq('id', bookingId)
+      .single();
+
+    if (fetchErr || !booking || booking.host_id !== userId) {
+      res.status(booking?.host_id !== userId ? 403 : 404).json({
+        success: false,
+        error: booking?.host_id !== userId ? 'Not authorized' : 'Booking not found',
+      });
+      return;
+    }
+    if (booking.status !== 'cancelled' || booking.payment_status !== 'completed') {
+      res.status(400).json({
+        success: false,
+        error: 'Booking is not in refund-eligible state',
+      });
+      return;
+    }
+
+    const { error: updateErr } = await supabase
+      .from('bookings')
+      .update({ host_declined_refund: true })
+      .eq('id', bookingId);
+
+    if (updateErr) throw updateErr;
+    res.json({
+      success: true,
+      message: 'Refund declined; this booking will no longer appear in the refund list.',
+    });
+  } catch (error: any) {
+    logger.error('Error declining refund', error);
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
     });
   }
 };
