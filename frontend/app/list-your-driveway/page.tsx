@@ -17,7 +17,7 @@ import {
   X,
   PartyPopper
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService } from '@/services/api'
 import toast from 'react-hot-toast'
@@ -71,6 +71,8 @@ const features = [
 
 export default function ListYourDrivewayPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('edit')
   const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
@@ -78,6 +80,7 @@ export default function ListYourDrivewayPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [publishedListingId, setPublishedListingId] = useState<string | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [editLoadDone, setEditLoadDone] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -91,6 +94,7 @@ export default function ListYourDrivewayPage() {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<PropertyForm>({
     resolver: zodResolver(propertySchema),
@@ -115,6 +119,54 @@ export default function ListYourDrivewayPage() {
   })
 
   const watchedFeatures = watch('features')
+
+  // Load property for edit mode
+  useEffect(() => {
+    if (!editId || !user) {
+      setEditLoadDone(true)
+      return
+    }
+    let cancelled = false
+    apiService.getProperty(editId).then((res) => {
+      if (cancelled || !res.success || !res.data?.property) {
+        setEditLoadDone(true)
+        return
+      }
+      const p = res.data.property
+      const availability = {
+        monday: p.monday_available ?? true,
+        tuesday: p.tuesday_available ?? true,
+        wednesday: p.wednesday_available ?? true,
+        thursday: p.thursday_available ?? true,
+        friday: p.friday_available ?? true,
+        saturday: p.saturday_available ?? true,
+        sunday: p.sunday_available ?? true,
+      }
+      reset({
+        title: p.title || '',
+        description: p.description || '',
+        address: p.address || '',
+        city: p.city || '',
+        state: p.state || '',
+        zipCode: p.zip_code || '',
+        propertyType: (p.property_type as PropertyForm['propertyType']) || 'driveway',
+        hourlyRate: Number(p.hourly_rate ?? p.price ?? 0) || 1,
+        dailyRate: Number(p.daily_rate) || 1,
+        maxVehicleSize: (p.max_vehicle_size as PropertyForm['maxVehicleSize']) || 'sedan',
+        features: Array.isArray(p.features) ? p.features : [],
+        availability,
+        startTime: p.start_time ? String(p.start_time).slice(11, 16) : '00:00',
+        endTime: p.end_time ? String(p.end_time).slice(11, 16) : '23:59',
+        requireApproval: p.require_approval === true,
+        leadTimeHours: Number(p.lead_time_hours) ?? 24,
+      })
+      if (Array.isArray(p.photos) && p.photos.length > 0) {
+        setUploadedImages(p.photos.map((ph: { url?: string }) => ph.url).filter(Boolean) as string[])
+      }
+      setEditLoadDone(true)
+    }).catch(() => setEditLoadDone(true))
+    return () => { cancelled = true }
+  }, [editId, user, reset])
 
   const handleFeatureToggle = (featureId: string) => {
     const currentFeatures = watchedFeatures || []
@@ -215,19 +267,31 @@ export default function ListYourDrivewayPage() {
         sunday_available: availability.sunday,
       }
 
-      const response = await apiService.createProperty(propertyData)
-      if (!response.success || !response.data?.property?.id) {
-        throw new Error(response.error || 'Failed to create listing')
+      let propertyId: string
+
+      if (editId) {
+        const response = await apiService.updateProperty(editId, propertyData)
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to update listing')
+        }
+        propertyId = editId
+        if (uploadedImageFiles.length > 0) {
+          await uploadPhotos(propertyId, uploadedImageFiles)
+        }
+        toast.success('Listing updated!')
+        router.push('/profile?tab=listings')
+      } else {
+        const response = await apiService.createProperty(propertyData)
+        if (!response.success || !response.data?.property?.id) {
+          throw new Error(response.error || 'Failed to create listing')
+        }
+        propertyId = response.data.property.id
+        if (uploadedImageFiles.length > 0) {
+          await uploadPhotos(propertyId, uploadedImageFiles)
+        }
+        setPublishedListingId(propertyId)
+        toast.success('Listing sent for review!')
       }
-
-      const propertyId = response.data.property.id
-
-      if (uploadedImageFiles.length > 0) {
-        await uploadPhotos(propertyId, uploadedImageFiles)
-      }
-
-      setPublishedListingId(propertyId)
-      toast.success('Listing sent for review!')
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       setPublishError(message)

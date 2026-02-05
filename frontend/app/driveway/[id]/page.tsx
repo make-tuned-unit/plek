@@ -18,6 +18,7 @@ import { ImageCarousel } from '@/components/ImageCarousel'
 import { BookingModal } from '@/components/BookingModal'
 import { apiService } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { listingFeatures } from '@/data/listingFeatures'
 
 export default function DrivewayDetailPage() {
   const params = useParams()
@@ -247,20 +248,28 @@ export default function DrivewayDetailPage() {
           </section>
         )}
 
-        {/* Features if any */}
+        {/* Features – show all tags the host added, with canonical labels */}
         {property.features && property.features.length > 0 && (
           <section className="mb-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Features</h2>
             <ul className="flex flex-wrap gap-2">
-              {property.features.map((f: string, i: number) => (
-                <li
-                  key={i}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-50 text-accent-800 rounded-lg text-sm"
-                >
-                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                  {f}
-                </li>
-              ))}
+              {property.features.map((f: string, i: number) => {
+                const resolved = listingFeatures.find(
+                  (x) => x.id === f || x.label.toLowerCase() === String(f).toLowerCase()
+                )
+                const label = resolved ? resolved.label : f
+                const icon = resolved?.icon
+                return (
+                  <li
+                    key={`${f}-${i}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-50 text-accent-800 rounded-lg text-sm"
+                  >
+                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                    {icon && <span aria-hidden>{icon}</span>}
+                    {label}
+                  </li>
+                )
+              })}
             </ul>
           </section>
         )}
