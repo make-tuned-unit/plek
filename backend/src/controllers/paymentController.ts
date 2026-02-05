@@ -89,6 +89,35 @@ function amountInSmallestUnit(amount: number, currency: string): number {
     : Math.round(amount * 100);
 }
 
+/**
+ * Resolve whether a Connect account is active for payouts by asking Stripe.
+ * If DB status is stale (e.g. still 'pending'), this ensures we use destination charge when Stripe says ready.
+ * Optionally updates the user's stripe_account_status in the DB when Stripe says active.
+ */
+async function ensureConnectStatusFromStripe(
+  stripeAccountId: string,
+  options: { userId?: string; supabase?: any }
+): Promise<{ active: boolean }> {
+  const account = await getStripe().accounts.retrieve(stripeAccountId);
+  const active =
+    !!account.details_submitted && !!account.charges_enabled && !!account.payouts_enabled;
+  if (active && options.userId && options.supabase) {
+    try {
+      await options.supabase
+        .from('users')
+        .update({ stripe_account_status: 'active' })
+        .eq('stripe_account_id', stripeAccountId);
+      logger.info('[Stripe] Synced Connect status to active from Stripe', {
+        stripeAccountId: stripeAccountId.slice(0, 12) + '…',
+        userId: options.userId,
+      });
+    } catch (e: any) {
+      logger.warn('[Stripe] Could not update stripe_account_status', { message: e?.message });
+    }
+  }
+  return { active };
+}
+
 function calculateBookingPriceForProperty(
   property: any,
   startTime: Date,
@@ -704,9 +733,35 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       calculateBookingPriceForProperty(property, startDate, endDate);
 
     const applicationFee = bookerServiceFee + hostServiceFee;
-    const hostHasConnect =
+    let hostHasConnect =
       property.host?.stripe_account_id && property.host?.stripe_account_status === 'active';
+
+    // If host has Connect account but DB status is not 'active', sync from Stripe so we always
+    // send payout when Stripe says the account is ready (avoids stale DB blocking host payouts).
+    if (property.host?.stripe_account_id && !hostHasConnect) {
+      const { active } = await ensureConnectStatusFromStripe(property.host.stripe_account_id, {
+        userId: property.host.id,
+        supabase,
+      });
+      if (active) hostHasConnect = true;
+    }
+
     const hostPayoutAmount = baseAmount - hostServiceFee;
+
+    if (!hostHasConnect) {
+      logger.info('[Stripe] Payment intent will go to platform only (no transfer to host)', {
+        propertyId,
+        hostId: property.host_id,
+        hasStripeAccountId: !!property.host?.stripe_account_id,
+        stripeAccountStatus: property.host?.stripe_account_status ?? 'missing',
+      });
+    } else {
+      logger.info('[Stripe] Destination charge: host will receive payout', {
+        propertyId,
+        hostId: property.host_id,
+        hostPayoutAmount,
+      });
+    }
 
     const metadata: Record<string, string> = {
       renter_id: renterId,
@@ -952,6 +1007,36 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
 
     if (paymentRecordError) {
       console.error('[Payments] Failed to record payment', paymentRecordError);
+    }
+
+    // Update host total_earnings and renter total_bookings so profile totals are correct
+    const hostPayoutAmount = baseAmount - hostServiceFee;
+    try {
+      const { data: hostUser } = await supabase
+        .from('users')
+        .select('total_earnings')
+        .eq('id', property.host_id)
+        .single();
+      const newHostEarnings = (Number((hostUser as any)?.total_earnings) || 0) + hostPayoutAmount;
+      await supabase
+        .from('users')
+        .update({ total_earnings: newHostEarnings })
+        .eq('id', property.host_id);
+
+      const { data: renterUser } = await supabase
+        .from('users')
+        .select('total_bookings')
+        .eq('id', userId)
+        .single();
+      const newRenterBookings = (Number((renterUser as any)?.total_bookings) || 0) + 1;
+      await supabase
+        .from('users')
+        .update({ total_bookings: newRenterBookings })
+        .eq('id', userId);
+    } catch (statsError: any) {
+      logger.warn('[Payments] Could not update user stats (total_earnings/total_bookings)', {
+        message: statsError?.message,
+      });
     }
 
     await supabase.from('notifications').insert({

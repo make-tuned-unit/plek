@@ -21,6 +21,7 @@ import { webhooksRoutes } from './routes/webhooks';
 import { cronRoutes } from './routes/cron';
 import { contactRoutes } from './routes/contact';
 import { adminRoutes } from './routes/admin';
+import { reviewRoutes } from './routes/reviews';
 import { initializeSupabase } from './services/supabaseService';
 
 // Load environment variables
@@ -98,6 +99,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cron', cronRoutes);
 

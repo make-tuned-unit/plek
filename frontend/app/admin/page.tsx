@@ -284,21 +284,21 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 min-w-0">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-primary-700" />
-                Admin Dashboard
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3 truncate">
+                <Shield className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 text-primary-700" />
+                <span className="truncate">Admin Dashboard</span>
               </h1>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-1 sm:mt-2 text-gray-600 text-sm sm:text-base">
                 Review and approve property listings
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 flex-shrink-0">
               <span className="px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-sm font-medium">
                 {pendingProperties.length} Pending
               </span>
@@ -311,17 +311,17 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-w-0 w-full overflow-x-hidden">
         {/* KPIs & Filters */}
-        <section className="mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <section className="mb-8 min-w-0">
+          <div className="flex flex-col gap-4 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 flex-shrink-0">
               <BarChart3 className="h-5 w-5 text-accent-600" />
               Metrics
             </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">Date range</span>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+              <span className="text-sm font-medium text-gray-700 w-full sm:w-auto">Date range</span>
+              <div className="flex flex-wrap gap-2 min-w-0">
                 {[
                   { key: 'last7', label: 'Last 7 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 7); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
                   { key: 'last30', label: 'Last 30 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 30); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
@@ -344,28 +344,28 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
               {dateRange !== 'all' && typeof dateRange === 'object' && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0 w-full sm:w-auto">
                   <input
                     type="date"
                     value={dateRange.start}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, start: e.target.value })); }}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                    className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
                   />
-                  <span className="text-gray-500">to</span>
+                  <span className="text-gray-500 flex-shrink-0">to</span>
                   <input
                     type="date"
                     value={dateRange.end}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, end: e.target.value })); }}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                    className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
                   />
                 </div>
               )}
-              <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+              <div className="flex flex-wrap items-center gap-2 border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-3 min-w-0">
                 <span className="text-sm font-medium text-gray-700">Bookings</span>
                 <select
                   value={bookingStatusFilter}
                   onChange={(e) => setBookingStatusFilter(e.target.value as 'all' | 'paid')}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
                 >
                   <option value="all">All (non-cancelled)</option>
                   <option value="paid">Paid only</option>
@@ -388,7 +388,7 @@ export default function AdminDashboardPage() {
               <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
             </div>
           ) : stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 min-w-0">
               <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                   <Calendar className="h-4 w-4" />
@@ -434,8 +434,8 @@ export default function AdminDashboardPage() {
         </section>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
-          <nav className="flex space-x-8">
+        <div className="mb-6 border-b border-gray-200 min-w-0 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto overflow-y-hidden">
+          <nav className="flex gap-4 sm:space-x-8 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('pending')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -486,17 +486,17 @@ export default function AdminDashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             {pendingProperties.map((property) => (
               <div
                 key={property.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-w-0"
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <h3 className="text-xl font-semibold text-gray-900">
+                <div className="p-4 sm:p-6 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
                           {property.title}
                         </h3>
                         <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
@@ -506,28 +506,28 @@ export default function AdminDashboardPage() {
 
                       <p className="text-gray-600 mb-4">{property.description}</p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <MapPin className="h-4 w-4" />
-                          <span className="text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
+                        <div className="flex items-start gap-2 text-gray-600 min-w-0">
+                          <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm break-words min-w-0">
                             {property.address}, {property.city}, {property.state} {property.zip_code}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                          <DollarSign className="h-4 w-4" />
+                          <DollarSign className="h-4 w-4 flex-shrink-0" />
                           <span className="text-sm">
                             ${property.hourly_rate}/hour
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span className="text-sm">
                             Submitted {new Date(property.created_at).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                          <User className="h-4 w-4" />
-                          <span className="text-sm">
+                          <User className="h-4 w-4 flex-shrink-0" />
+                          <span className="text-sm break-words min-w-0">
                             {property.host?.first_name} {property.host?.last_name}
                           </span>
                         </div>
@@ -535,7 +535,7 @@ export default function AdminDashboardPage() {
 
                       {/* Host Contact Info */}
                       {property.host && (
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4 min-w-0">
                           <h4 className="text-sm font-semibold text-gray-900 mb-2">Host Information</h4>
                           <div className="space-y-1 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
@@ -572,7 +572,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => handleApprove(property.id)}
                       disabled={processingId === property.id}
@@ -616,17 +616,17 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 min-w-0">
                 {allProperties.map((property) => (
                   <div
                     key={property.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-w-0"
                   >
-                    <div className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-4">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                    <div className="p-4 sm:p-6 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 min-w-0">
+                            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
                               {property.title}
                             </h3>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -644,28 +644,28 @@ export default function AdminDashboardPage() {
 
                           <p className="text-gray-600 mb-4">{property.description}</p>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <MapPin className="h-4 w-4" />
-                              <span className="text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
+                            <div className="flex items-start gap-2 text-gray-600 min-w-0">
+                              <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                              <span className="text-sm break-words min-w-0">
                                 {property.address}, {property.city}, {property.state} {property.zip_code}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                              <DollarSign className="h-4 w-4" />
+                              <DollarSign className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm">
                                 ${property.hourly_rate}/hour
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                              <Calendar className="h-4 w-4" />
+                              <Calendar className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm">
                                 Created {new Date(property.created_at).toLocaleDateString()}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
-                              <User className="h-4 w-4" />
-                              <span className="text-sm">
+                              <User className="h-4 w-4 flex-shrink-0" />
+                              <span className="text-sm break-words min-w-0">
                                 {property.host?.first_name} {property.host?.last_name}
                               </span>
                             </div>
@@ -673,7 +673,7 @@ export default function AdminDashboardPage() {
 
                           {/* Host Contact Info */}
                           {property.host && (
-                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                            <div className="bg-gray-50 rounded-lg p-4 mb-4 min-w-0">
                               <h4 className="text-sm font-semibold text-gray-900 mb-2">Host Information</h4>
                               <div className="space-y-1 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
@@ -710,7 +710,7 @@ export default function AdminDashboardPage() {
                       </div>
 
                       {/* Delete Button */}
-                      <div className="flex items-center justify-end pt-4 border-t border-gray-200">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-gray-200">
                         <button
                           onClick={() => setShowDeleteModal(property.id)}
                           disabled={processingId === property.id}
@@ -734,19 +734,19 @@ export default function AdminDashboardPage() {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 min-w-0">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Search className="h-5 w-5 text-accent-600" />
               Search users
             </h2>
-            <div className="flex gap-2 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2 mb-6 min-w-0">
               <input
                 type="text"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && runUserSearch()}
                 placeholder="Search by email, first name, or last name..."
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -800,8 +800,8 @@ export default function AdminDashboardPage() {
 
       {/* Direct message modal */}
       {messageUserId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col min-w-0">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">
                 {directOtherUser
@@ -871,8 +871,8 @@ export default function AdminDashboardPage() {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md min-w-0">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Reject Property</h3>
             <p className="text-sm text-gray-600 mb-4">
               Please provide a reason for rejecting this property (optional):
@@ -908,8 +908,8 @@ export default function AdminDashboardPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md min-w-0">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Property</h3>
             <p className="text-sm text-gray-600 mb-4">
               Are you sure you want to delete this property? This action cannot be undone.
