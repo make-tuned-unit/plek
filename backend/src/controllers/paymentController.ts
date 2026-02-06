@@ -680,6 +680,9 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       return;
     }
 
+    // Normalize host: Supabase can return FK relation as object or array
+    const host = Array.isArray(property.host) ? property.host[0] : property.host;
+
     if (!property.is_available) {
       res.status(400).json({
         success: false,
@@ -734,13 +737,13 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
 
     const applicationFee = bookerServiceFee + hostServiceFee;
     let hostHasConnect =
-      property.host?.stripe_account_id && property.host?.stripe_account_status === 'active';
+      host?.stripe_account_id && host?.stripe_account_status === 'active';
 
     // If host has Connect account but DB status is not 'active', sync from Stripe so we always
     // send payout when Stripe says the account is ready (avoids stale DB blocking host payouts).
-    if (property.host?.stripe_account_id && !hostHasConnect) {
-      const { active } = await ensureConnectStatusFromStripe(property.host.stripe_account_id, {
-        userId: property.host.id,
+    if (host?.stripe_account_id && !hostHasConnect) {
+      const { active } = await ensureConnectStatusFromStripe(host.stripe_account_id, {
+        userId: host.id,
         supabase,
       });
       if (active) hostHasConnect = true;
@@ -748,20 +751,26 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
 
     const hostPayoutAmount = baseAmount - hostServiceFee;
 
+    // Require active Connect so we only ever create destination charges. That way Stripe only credits
+    // the platform with our application fee; the host's share is transferred to their Connect
+    // account and never lands in our balance (so we never accidentally receive a host's payout).
     if (!hostHasConnect) {
-      logger.info('[Stripe] Payment intent will go to platform only (no transfer to host)', {
-        propertyId,
-        hostId: property.host_id,
-        hasStripeAccountId: !!property.host?.stripe_account_id,
-        stripeAccountStatus: property.host?.stripe_account_status ?? 'missing',
+      const message = host?.stripe_account_id
+        ? 'This host has not completed their payout setup yet. They need to finish connecting their bank account in Profile → Payout account before this listing can accept payments.'
+        : 'This listing cannot accept payments until the host has set up their payout account (Profile → Payout account).';
+      res.status(400).json({
+        success: false,
+        error: message,
+        code: 'host_payout_required',
       });
-    } else {
-      logger.info('[Stripe] Destination charge: host will receive payout', {
-        propertyId,
-        hostId: property.host_id,
-        hostPayoutAmount,
-      });
+      return;
     }
+
+    logger.info('[Stripe] Destination charge: host will receive payout', {
+      propertyId,
+      hostId: property.host_id,
+      hostPayoutAmount,
+    });
 
     const metadata: Record<string, string> = {
       renter_id: renterId,
@@ -780,7 +789,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       special_requests: serializeMetadataValue(specialRequests),
       instant_booking: serializeMetadataValue(property.instant_booking),
       platform: 'plekk',
-      host_connect_pending: hostHasConnect ? 'false' : 'true',
+      host_connect_pending: 'false',
       host_payout_amount: serializeMetadataValue(hostPayoutAmount),
     };
 
@@ -791,13 +800,11 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       automatic_payment_methods: { enabled: true },
     };
 
-    if (hostHasConnect) {
-      paymentIntentParams.application_fee_amount = amountInSmallestUnit(applicationFee, currency);
-      paymentIntentParams.transfer_data = {
-        destination: property.host!.stripe_account_id!,
-      };
-    }
-    // If host has not set up Connect yet, charge goes to platform; host can connect later to receive payouts
+    // We only reach here when host has active Connect, so every charge is a destination charge.
+    paymentIntentParams.application_fee_amount = amountInSmallestUnit(applicationFee, currency);
+    paymentIntentParams.transfer_data = {
+      destination: host!.stripe_account_id!,
+    };
 
     const paymentIntent = await getStripe().paymentIntents.create(paymentIntentParams);
 
@@ -1421,26 +1428,39 @@ async function handlePaymentSuccess(
   paymentIntent: Stripe.PaymentIntent,
   supabase: any
 ): Promise<void> {
-  const bookingId = paymentIntent.metadata['booking_id'];
-  
+  let bookingId = paymentIntent.metadata['booking_id'];
+
+  // Booking is created in confirmPayment (after client confirms), so webhook often runs before booking_id exists.
+  // Resolve booking_id from payments table in case confirmPayment already ran (idempotent).
   if (!bookingId) {
-    logger.error('No booking_id in payment intent metadata');
+    const { data: paymentByStripeId } = await supabase
+      .from('payments')
+      .select('booking_id')
+      .eq('stripe_payment_id', paymentIntent.id)
+      .maybeSingle();
+    bookingId = paymentByStripeId?.booking_id ?? null;
+  }
+
+  if (!bookingId) {
+    logger.info('[Stripe Webhook] payment_intent.succeeded: no booking_id yet (confirmPayment may not have run)', {
+      paymentIntentId: paymentIntent.id,
+    });
     return;
   }
-  
-  // Update booking status
+
+  // Update booking status (idempotent)
   await supabase
     .from('bookings')
     .update({ payment_status: 'completed' })
     .eq('id', bookingId);
-  
-  // Create or update payment record
+
+  // Create payment record only if not already present (confirmPayment may have inserted it)
   const { data: existingPayment } = await supabase
     .from('payments')
     .select('id')
     .eq('stripe_payment_id', paymentIntent.id)
-    .single();
-  
+    .maybeSingle();
+
   if (!existingPayment) {
     await supabase.from('payments').insert({
       booking_id: bookingId,
@@ -1453,7 +1473,7 @@ async function handlePaymentSuccess(
       type: 'booking',
     });
   }
-  
+
   // Get booking details for email
   const { data: bookingData } = await supabase
     .from('bookings')
@@ -1464,7 +1484,7 @@ async function handlePaymentSuccess(
     `)
     .eq('id', bookingId)
     .single();
-  
+
   // Send payment receipt email (don't wait - fire and forget)
   if (bookingData && bookingData.renter) {
     const { sendPaymentReceiptEmail } = await import('../services/emailService');
@@ -1480,8 +1500,8 @@ async function handlePaymentSuccess(
       console.error('Failed to send payment receipt email:', error);
     });
   }
-  
-  logger.info('Payment succeeded for booking');
+
+  logger.info('[Stripe Webhook] Payment succeeded for booking', { bookingId });
 }
 
 // Helper function to handle failed payment

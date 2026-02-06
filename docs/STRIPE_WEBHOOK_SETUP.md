@@ -54,10 +54,10 @@ Keep that terminal window open while testing. It will forward webhook events fro
 
 ### Step 3: Select Events
 After creating the endpoint, you'll see a list of events. Select these:
-- ✅ `payment_intent.succeeded`
+- ✅ `payment_intent.succeeded` (required: updates booking/payment; idempotent and resolves `booking_id` from payments table when missing)
 - ✅ `payment_intent.payment_failed`
-- ✅ `account.updated`
-- ✅ `transfer.created`
+- ✅ `account.updated` (required: keeps host `stripe_account_status` in sync so destination charges are used when host is ready)
+- ✅ `transfer.created` (optional: for logging transfers to hosts)
 
 Click **"Add events"**
 

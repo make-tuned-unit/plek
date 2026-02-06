@@ -70,4 +70,4 @@ Host connected accounts have their **own** payout schedule in Stripe (per connec
 - [ ] At least one **successful payment** has been made for a booking on my listing **after** my Connect was active.
 - [ ] If I completed onboarding **after** a payment was already made, that earlier payment went to the platform; only **new** payments will go to my connected account.
 
-If all of the above are true and the host still sees $0, check backend logs for `[Stripe] Payment intent will go to platform only` vs `Destination charge: host will receive payout` for the relevant booking to confirm whether the payment was created with or without a destination.
+If all of the above are true and the host still sees $0, check backend logs for `[Stripe] Destination charge: host will receive payout` for the relevant booking (we only create destination charges now, so every payment should show that log).
