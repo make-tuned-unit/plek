@@ -44,7 +44,7 @@ export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerPro
       return (
         <div className={className} ref={containerRef}>
           {label && (
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-charcoal-700 mb-2">
               {label}
             </label>
           )}
@@ -58,7 +58,7 @@ export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerPro
               min={min}
               required={required}
               placeholder={placeholder || 'Select date'}
-              className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 font-medium hover:border-accent-300 text-base"
+              className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-charcoal-900 font-medium hover:border-accent-300 text-base"
             />
           </div>
         </div>
@@ -69,7 +69,7 @@ export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerPro
     return (
       <div className={className} ref={containerRef}>
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-charcoal-700 mb-2">
             {label}
           </label>
         )}
@@ -82,9 +82,9 @@ export const ModernDatePicker = forwardRef<HTMLInputElement, ModernDatePickerPro
             dateFormat="EEE, MMM d"
             placeholderText={placeholder || 'Select date'}
             required={required}
-            className="w-full pl-12 pr-4 py-3 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 cursor-pointer font-medium hover:border-accent-300"
+            className="w-full pl-12 pr-4 py-3 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-charcoal-900 cursor-pointer font-medium hover:border-accent-300"
             wrapperClassName="w-full"
-            calendarClassName="!border-2 !border-gray-200 !rounded-xl !shadow-2xl !p-4"
+            calendarClassName="!border-2 !border-mist-200 !rounded-xl !shadow-2xl !p-4"
             dayClassName={(date) => {
               const baseClass = '!min-h-[44px] !min-w-[44px] !rounded-lg !transition-all !text-sm !font-medium'
               const today = new Date()

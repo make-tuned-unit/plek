@@ -66,13 +66,13 @@ export default function ApiTest() {
         </button>
         
         {status && (
-          <div className="p-3 bg-gray-100 rounded text-sm">
+          <div className="p-3 bg-mist-100 rounded text-sm">
             <strong>Status:</strong> {status}
           </div>
         )}
       </div>
       
-      <div className="mt-4 text-xs text-gray-600">
+      <div className="mt-4 text-xs text-charcoal-600">
         <p>• Backend should be running on port 8000</p>
         <p>• Check your backend terminal for request logs</p>
         <p>• This helps verify CORS and API connectivity</p>

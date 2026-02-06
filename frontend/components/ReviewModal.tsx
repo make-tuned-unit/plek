@@ -87,7 +87,7 @@ export function ReviewModal({
     label: string
   }) => (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-charcoal-700 mb-2">{label}</label>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
@@ -102,13 +102,13 @@ export function ReviewModal({
               className={`h-6 w-6 ${
                 star <= (hoveredRating || rating)
                   ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-gray-300'
+                  : 'text-mist-300'
               }`}
             />
           </button>
         ))}
         {rating > 0 && (
-          <span className="ml-2 text-sm text-gray-600">{rating}/5</span>
+          <span className="ml-2 text-sm text-charcoal-600">{rating}/5</span>
         )}
       </div>
     </div>
@@ -121,10 +121,10 @@ export function ReviewModal({
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900">Leave a Review</h3>
+            <h3 className="text-xl font-semibold text-charcoal-900">Leave a Review</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-mist-500 hover:text-charcoal-600 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -133,7 +133,7 @@ export function ReviewModal({
           <form onSubmit={handleSubmit}>
             {/* Overall Rating */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-charcoal-700 mb-2">
                 Overall Rating <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-1">
@@ -150,13 +150,13 @@ export function ReviewModal({
                       className={`h-8 w-8 ${
                         star <= (hoveredRating || rating)
                           ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300'
+                          : 'text-mist-300'
                       }`}
                     />
                   </button>
                 ))}
                 {rating > 0 && (
-                  <span className="ml-3 text-lg font-medium text-gray-700">
+                  <span className="ml-3 text-lg font-medium text-charcoal-700">
                     {rating}/5
                   </span>
                 )}
@@ -165,21 +165,21 @@ export function ReviewModal({
 
             {/* Comment */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-charcoal-700 mb-2">
                 Your Review
               </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-transparent resize-none"
                 placeholder={`Share your experience with ${reviewedUserName}...`}
               />
             </div>
 
             {/* Detailed Ratings (Optional) */}
             <div className="mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-3">Detailed Ratings (Optional)</p>
+              <p className="text-sm font-medium text-charcoal-700 mb-3">Detailed Ratings (Optional)</p>
               <div className="space-y-3">
                 <StarRating
                   rating={cleanliness}
@@ -220,7 +220,7 @@ export function ReviewModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

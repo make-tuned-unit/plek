@@ -40,7 +40,7 @@ export function AvailabilityDisplay({ availability, className = "" }: Availabili
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="text-sm font-medium text-gray-700">
+      <div className="text-sm font-medium text-charcoal-700">
         📅 {getAvailabilitySummary()}
       </div>
       
@@ -50,9 +50,9 @@ export function AvailabilityDisplay({ availability, className = "" }: Availabili
           if (!schedule?.available) return null;
           
           return (
-            <div key={day} className="flex justify-between items-center text-gray-600">
+            <div key={day} className="flex justify-between items-center text-charcoal-600">
               <span className="capitalize">{day}</span>
-              <span className="text-gray-500">
+              <span className="text-mist-600">
                 {formatTime(schedule.start)} - {formatTime(schedule.end)}
               </span>
             </div>

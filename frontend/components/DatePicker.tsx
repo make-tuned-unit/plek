@@ -18,7 +18,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     return (
       <div className={className}>
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-charcoal-700 mb-2">
             {label}
           </label>
         )}
@@ -32,7 +32,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             min={min}
             required={required}
             placeholder={placeholder}
-            className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-gray-900 font-medium hover:border-accent-300 text-base"
+            className="w-full pl-12 pr-4 py-3.5 border-2 border-mist-300 rounded-xl focus:ring-2 focus:ring-accent-400 focus:border-accent-400 transition-all bg-white text-charcoal-900 font-medium hover:border-accent-300 text-base"
           />
         </div>
       </div>

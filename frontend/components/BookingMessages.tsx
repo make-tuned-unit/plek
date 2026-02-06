@@ -143,7 +143,7 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
-        <span className="ml-3 text-gray-600">Loading messages...</span>
+        <span className="ml-3 text-charcoal-600">Loading messages...</span>
       </div>
     )
   }
@@ -153,24 +153,24 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
     : messages[0]?.sender)
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-lg border border-mist-200 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-mist-200 bg-mist-50 flex-shrink-0">
         <div className="flex items-center min-w-0 flex-1">
           <MessageSquare className="h-5 w-5 text-accent-500 mr-2 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+            <h3 className="font-semibold text-charcoal-900 text-sm sm:text-base truncate">
               {displayOtherUser 
                 ? `${displayOtherUser.first_name || displayOtherUser.firstName} ${displayOtherUser.last_name || displayOtherUser.lastName}`
                 : 'Messages'}
             </h3>
-            <p className="text-xs text-gray-500">Booking conversation</p>
+            <p className="text-xs text-mist-600">Booking conversation</p>
           </div>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-2 p-1 -mr-1 touch-target"
+            className="text-mist-500 hover:text-charcoal-600 transition-colors flex-shrink-0 ml-2 p-1 -mr-1 touch-target"
             aria-label="Close messages"
           >
             <X className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -181,7 +181,7 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-mist-50"
         style={{ 
           maxHeight: 'calc(100vh - 200px)',
           minHeight: '300px'
@@ -189,9 +189,9 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       >
         {messages.length === 0 ? (
           <div className="text-center py-8">
-            <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No messages yet</p>
-            <p className="text-sm text-gray-400 mt-1">Start the conversation!</p>
+            <MessageSquare className="h-12 w-12 text-mist-400 mx-auto mb-3" />
+            <p className="text-mist-600">No messages yet</p>
+            <p className="text-sm text-mist-500 mt-1">Start the conversation!</p>
           </div>
         ) : (
           messages.map((message) => {
@@ -217,20 +217,20 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
                           className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                          <User className="h-4 w-4 text-gray-600" />
+                        <div className="w-8 h-8 rounded-full bg-mist-300 flex items-center justify-center">
+                          <User className="h-4 w-4 text-charcoal-600" />
                         </div>
                       )}
                     </div>
                   )}
 
                   {/* Message bubble */}
-                  <div className={`rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 max-w-full ${isOwnMessage ? 'bg-accent-500 text-white' : 'bg-white text-gray-900 border border-gray-200 shadow-sm'}`}>
+                  <div className={`rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 max-w-full ${isOwnMessage ? 'bg-accent-500 text-white' : 'bg-white text-charcoal-900 border border-mist-200 shadow-sm'}`}>
                     {!isOwnMessage && (
                       <p className="text-xs font-medium mb-1 opacity-75 truncate">{senderName}</p>
                     )}
                     <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
-                    <p className={`text-xs mt-1.5 ${isOwnMessage ? 'text-accent-100' : 'text-gray-400'}`}>
+                    <p className={`text-xs mt-1.5 ${isOwnMessage ? 'text-accent-100' : 'text-mist-500'}`}>
                       {formatTime(message.created_at || message.createdAt)}
                     </p>
                   </div>
@@ -243,7 +243,7 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-gray-200 bg-white flex-shrink-0">
+      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-mist-200 bg-white flex-shrink-0">
         <div className="flex items-end space-x-2 sm:space-x-3">
           <textarea
             value={messageContent}
@@ -256,7 +256,7 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
             }}
             placeholder="Type your message..."
             rows={2}
-            className="flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent resize-none min-h-[44px]"
+            className="flex-1 px-3 py-2.5 sm:px-4 sm:py-2 text-sm sm:text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent resize-none min-h-[44px]"
             disabled={isSending}
           />
           <button

@@ -468,19 +468,19 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
   if (!isTokenConfigured) {
     return (
       <div className={`relative ${className}`}>
-        <div className="w-full h-full min-h-[400px] rounded-lg bg-gray-100 flex items-center justify-center">
+        <div className="w-full h-full min-h-[400px] rounded-lg bg-mist-100 flex items-center justify-center">
           <div className="text-center p-8">
-            <Map className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Map View</h3>
-            <p className="text-gray-600 mb-4">Mapbox token not configured</p>
+            <Map className="h-12 w-12 text-mist-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-charcoal-900 mb-2">Map View</h3>
+            <p className="text-charcoal-600 mb-4">Mapbox token not configured</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl">
               {properties.slice(0, 6).map((property) => (
                 <div key={property.id} className="bg-white p-4 rounded-lg shadow-sm">
-                  <h4 className="font-medium text-gray-900">{property.title}</h4>
-                  <p className="text-sm text-gray-600">{property.address}</p>
+                  <h4 className="font-medium text-charcoal-900">{property.title}</h4>
+                  <p className="text-sm text-charcoal-600">{property.address}</p>
                   <p className="text-sm font-medium text-accent-600">${property.hourly_rate}/hr</p>
                   {property.distance && (
-                    <p className="text-xs text-gray-500">{property.distance.toFixed(1)} km away</p>
+                    <p className="text-xs text-mist-600">{property.distance.toFixed(1)} km away</p>
                   )}
                 </div>
               ))}
@@ -495,8 +495,8 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
     <div className={`relative w-full h-full ${className}`}>
       <div ref={mapContainer} className="w-full h-full rounded-lg" />
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
-          <div className="text-gray-500">Loading map...</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-mist-100 rounded-lg">
+          <div className="text-mist-600">Loading map...</div>
         </div>
       )}
     </div>

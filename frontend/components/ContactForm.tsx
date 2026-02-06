@@ -55,7 +55,7 @@ export function ContactForm() {
   return (
     <form onSubmit={handleSubmit} className="grid gap-6">
       <div className="grid gap-2">
-        <label htmlFor="name" className="text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="text-sm font-medium text-charcoal-700">
           Full name
         </label>
         <input
@@ -70,7 +70,7 @@ export function ContactForm() {
         />
       </div>
       <div className="grid gap-2">
-        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+        <label htmlFor="email" className="text-sm font-medium text-charcoal-700">
           Email address
         </label>
         <input
@@ -85,7 +85,7 @@ export function ContactForm() {
         />
       </div>
       <div className="grid gap-2">
-        <label htmlFor="topic" className="text-sm font-medium text-gray-700">
+        <label htmlFor="topic" className="text-sm font-medium text-charcoal-700">
           Topic
         </label>
         <select
@@ -103,7 +103,7 @@ export function ContactForm() {
         </select>
       </div>
       <div className="grid gap-2">
-        <label htmlFor="message" className="text-sm font-medium text-gray-700">
+        <label htmlFor="message" className="text-sm font-medium text-charcoal-700">
           Message
         </label>
         <textarea
@@ -123,7 +123,7 @@ export function ContactForm() {
       >
         {isSubmitting ? 'Sending…' : 'Submit'}
       </button>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-mist-600">
         Submissions are sent to support and we&apos;ll reply from support@parkplekk.com. Please do not share
         sensitive financial information when contacting us.
       </p>

@@ -108,27 +108,27 @@ function PaymentForm({
             <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
               ✓
             </div>
-            <span className="ml-2 text-sm font-medium text-gray-500">Date & Time</span>
+            <span className="ml-2 text-sm font-medium text-mist-600">Date & Time</span>
           </div>
           <div className="h-px w-8 bg-accent-500 mx-2" />
           <div className="flex items-center">
             <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
               ✓
             </div>
-            <span className="ml-2 text-sm font-medium text-gray-500">Details</span>
+            <span className="ml-2 text-sm font-medium text-mist-600">Details</span>
           </div>
           <div className="h-px w-8 bg-accent-500 mx-2" />
           <div className="flex items-center">
             <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
               3
             </div>
-            <span className="ml-2 text-sm font-medium text-gray-900">Payment</span>
+            <span className="ml-2 text-sm font-medium text-charcoal-900">Payment</span>
           </div>
         </div>
       </div>
       {/* Mobile: Simple step title */}
       <div className="md:hidden mb-4 px-6 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900">Payment</h2>
+        <h2 className="text-lg font-semibold text-charcoal-900">Payment</h2>
       </div>
 
       {/* Success Banner */}
@@ -175,23 +175,23 @@ function PaymentForm({
       {/* Payment Form */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center">
+          <h3 className="text-base font-semibold text-charcoal-900 mb-4 flex items-center">
             <CreditCard className="h-5 w-5 mr-2 text-accent-500" />
             Payment Information
           </h3>
-          <div className="border border-gray-200 rounded-lg p-5 bg-white">
+          <div className="border border-mist-200 rounded-lg p-5 bg-white">
             <PaymentElement onReady={() => setIsElementReady(true)} />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <div className="flex gap-3 pt-4 border-t border-mist-200">
           <button
             type="button"
             onClick={async () => {
               await onBack()
             }}
-            className="flex-1 px-6 py-3 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            className="flex-1 px-6 py-3 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-50 transition-colors font-medium"
             disabled={isProcessingPayment}
           >
             Back
@@ -470,10 +470,10 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 md:p-4 overflow-y-auto">
       <div className="bg-white rounded-none md:rounded-2xl max-w-2xl w-full h-full md:h-auto md:my-4 shadow-2xl md:max-h-[90vh] overflow-y-auto">
         {/* Header - Compact */}
-        <div className="relative overflow-hidden border-b border-gray-200">
+        <div className="relative overflow-hidden border-b border-mist-200">
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 z-20 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 hover:bg-white text-gray-600 hover:text-gray-900 transition-all shadow-lg"
+            className="absolute top-4 right-4 z-20 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 hover:bg-white text-charcoal-600 hover:text-charcoal-900 transition-all shadow-lg"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -502,35 +502,35 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
                   1
                 </div>
-                <span className="ml-2 text-sm font-medium text-gray-900">Date & Time</span>
+                <span className="ml-2 text-sm font-medium text-charcoal-900">Date & Time</span>
               </div>
-              <div className="h-px w-8 bg-gray-300 mx-2" />
+              <div className="h-px w-8 bg-mist-300 mx-2" />
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold text-sm">
+                <div className="h-8 w-8 rounded-full bg-mist-200 text-mist-600 flex items-center justify-center font-semibold text-sm">
                   2
                 </div>
-                <span className="ml-2 text-sm text-gray-500">Details</span>
+                <span className="ml-2 text-sm text-mist-600">Details</span>
               </div>
-              <div className="h-px w-8 bg-gray-300 mx-2" />
+              <div className="h-px w-8 bg-mist-300 mx-2" />
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold text-sm">
+                <div className="h-8 w-8 rounded-full bg-mist-200 text-mist-600 flex items-center justify-center font-semibold text-sm">
                   3
                 </div>
-                <span className="ml-2 text-sm text-gray-500">Payment</span>
+                <span className="ml-2 text-sm text-mist-600">Payment</span>
               </div>
             </div>
           </div>
           {/* Mobile: Simple step title */}
           <div className="md:hidden">
-            <h2 className="text-lg font-semibold text-gray-900">Date and Time</h2>
+            <h2 className="text-lg font-semibold text-charcoal-900">Date and Time</h2>
           </div>
 
           {/* Property Summary - Compact */}
           <div className="bg-gradient-to-br from-accent-50 to-mist-50 rounded-xl p-4 border border-accent-100">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold text-gray-900 mb-1">{property?.title || 'Parking Space'}</h3>
-                <div className="flex items-center text-sm text-gray-600">
+                <h3 className="text-base font-semibold text-charcoal-900 mb-1">{property?.title || 'Parking Space'}</h3>
+                <div className="flex items-center text-sm text-charcoal-600">
                   <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
                   <span className="truncate">{property?.address || 'Address unavailable'}</span>
                 </div>
@@ -539,14 +539,14 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <span className="text-accent-600 font-bold text-lg">
                   ${property?.hourly_rate || 0}
                 </span>
-                <span className="text-gray-600 text-xs ml-1">/hour</span>
+                <span className="text-charcoal-600 text-xs ml-1">/hour</span>
               </div>
             </div>
           </div>
 
           {/* Date and Time Selection */}
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center">
+            <h3 className="text-base font-semibold text-charcoal-900 mb-4 flex items-center">
               <Clock className="h-5 w-5 mr-2 text-accent-500" />
               When do you need parking?
             </h3>
@@ -602,9 +602,9 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                       setEndDate('')
                     }
                   }}
-                  className="h-4 w-4 text-accent-500 focus:ring-accent-400 border-gray-300 rounded"
+                  className="h-4 w-4 text-accent-500 focus:ring-accent-400 border-mist-300 rounded"
                 />
-                <label htmlFor="multi-day" className="ml-2 text-sm text-gray-700 cursor-pointer">
+                <label htmlFor="multi-day" className="ml-2 text-sm text-charcoal-700 cursor-pointer">
                   Multi-day booking
                 </label>
               </div>
@@ -627,9 +627,9 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
             <div className="bg-accent-50 rounded-xl p-4 border border-accent-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Estimated Total</p>
+                  <p className="text-sm text-charcoal-600">Estimated Total</p>
                   <p className="text-2xl font-bold text-accent-600">${priceBreakdown.total.toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-mist-600 mt-1">
                     {priceBreakdown.hours} hour{priceBreakdown.hours !== 1 ? 's' : ''} × ${priceBreakdown.hourlyRate}/hour
                   </p>
                 </div>
@@ -657,33 +657,33 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                 <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
                   ✓
                 </div>
-                <span className="ml-2 text-sm font-medium text-gray-500">Date & Time</span>
+                <span className="ml-2 text-sm font-medium text-mist-600">Date & Time</span>
               </div>
               <div className="h-px w-8 bg-accent-500 mx-2" />
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-accent-500 text-white flex items-center justify-center font-semibold text-sm">
                   2
                 </div>
-                <span className="ml-2 text-sm font-medium text-gray-900">Details</span>
+                <span className="ml-2 text-sm font-medium text-charcoal-900">Details</span>
               </div>
-              <div className="h-px w-8 bg-gray-300 mx-2" />
+              <div className="h-px w-8 bg-mist-300 mx-2" />
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold text-sm">
+                <div className="h-8 w-8 rounded-full bg-mist-200 text-mist-600 flex items-center justify-center font-semibold text-sm">
                   3
                 </div>
-                <span className="ml-2 text-sm text-gray-500">Payment</span>
+                <span className="ml-2 text-sm text-mist-600">Payment</span>
               </div>
             </div>
           </div>
           {/* Mobile: Simple step title */}
           <div className="md:hidden mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Details</h2>
+            <h2 className="text-lg font-semibold text-charcoal-900">Details</h2>
           </div>
 
           {/* Optional Fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-charcoal-700 mb-2">
                 <Car className="h-4 w-4 inline mr-1" />
                 Vehicle Information (Optional)
               </label>
@@ -696,7 +696,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-charcoal-700 mb-2">
                 Special Requests (Optional)
               </label>
               <textarea
@@ -782,11 +782,11 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
           })()}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t border-mist-200">
             <button
               type="button"
               onClick={() => setStep('date-time')}
-              className="flex-1 px-6 py-3 text-gray-700 border border-mist-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="flex-1 px-6 py-3 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-50 transition-colors font-medium"
             >
               Back
             </button>

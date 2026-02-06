@@ -238,7 +238,7 @@ export function MapboxAutocomplete({
   return (
     <div className="relative">
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mist-500 h-5 w-5" />
         <input
           ref={inputRef}
           type="text"
@@ -260,7 +260,7 @@ export function MapboxAutocomplete({
       className={`w-full pl-10 pr-4 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent ${className}`}
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-mist-500 h-5 w-5 animate-spin" />
         )}
       </div>
 
@@ -268,27 +268,27 @@ export function MapboxAutocomplete({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-white border border-mist-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <button
               key={suggestion.id}
               onClick={() => handleSelect(suggestion)}
-              className={`w-full text-left px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
+              className={`w-full text-left px-4 py-3 hover:bg-mist-50 focus:bg-mist-50 focus:outline-none ${
                 index === selectedIndex ? 'bg-accent-50 border-l-4 border-accent-400' : ''
               }`}
             >
               <div className="flex items-center">
-                <MapPin className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
+                <MapPin className="h-4 w-4 text-mist-500 mr-3 flex-shrink-0" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-charcoal-900">
                     {suggestion.text}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-mist-600">
                     {suggestion.context?.map(ctx => ctx.text).join(', ')}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                <div className="text-xs text-mist-500 bg-mist-100 px-2 py-1 rounded">
                   {getPlaceType(suggestion)}
                 </div>
               </div>

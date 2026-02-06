@@ -24,7 +24,7 @@ export function ImageCarousel({ images, alt, className = '' }: ImageCarouselProp
   if (!count) return null
 
   return (
-    <div className={`relative overflow-hidden rounded-xl bg-gray-100 ${className}`}>
+    <div className={`relative overflow-hidden rounded-xl bg-mist-100 ${className}`}>
       <img
         src={images[index].url}
         alt={images[index].caption || `${alt} – photo ${index + 1}`}
