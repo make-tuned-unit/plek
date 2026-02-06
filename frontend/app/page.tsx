@@ -77,7 +77,7 @@ export default function HomePage() {
             animate="visible"
             variants={{ visible: { transition: stagger } }}
           >
-            <motion.h1 variants={slideUp} transition={slideUpTransition} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-50 mb-6 md:mb-8 leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
+            <motion.h1 variants={slideUp} transition={slideUpTransition} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-charcoal-50 mb-6 md:mb-8 leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
               Finding parking shouldn't{' '}
               <span className="text-accent-400 drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">mean circling the block</span>
             </motion.h1>
@@ -152,10 +152,10 @@ export default function HomePage() {
               <AlertTriangle className="w-4 h-4 mr-2" />
               The Parking Problem
             </motion.span>
-            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 max-w-3xl mx-auto">
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-6 max-w-3xl mx-auto">
               Every day, millions of drivers waste time, fuel, and patience
             </motion.h2>
-            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-charcoal-600 max-w-3xl mx-auto leading-relaxed">
               While drivers circle endlessly, countless driveways sit empty—creating a 
               frustrating cycle that costs everyone time and money.
             </motion.p>
@@ -172,8 +172,8 @@ export default function HomePage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 text-red-600 mb-6 shadow-md">
                 <Clock className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Wasted Time</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-xl font-bold text-charcoal-900 mb-3">Wasted Time</h3>
+              <p className="text-charcoal-600 leading-relaxed">
                 Drivers spend an average of 17 minutes searching for parking in busy areas
               </p>
             </motion.div>
@@ -182,8 +182,8 @@ export default function HomePage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 mb-6 shadow-md">
                 <TrendingUp className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Increased Traffic</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-xl font-bold text-charcoal-900 mb-3">Increased Traffic</h3>
+              <p className="text-charcoal-600 leading-relaxed">
                 Up to 30% of urban traffic is caused by drivers searching for parking spaces
               </p>
             </motion.div>
@@ -192,8 +192,8 @@ export default function HomePage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 mb-6 shadow-md">
                 <Leaf className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Unnecessary Emissions</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-xl font-bold text-charcoal-900 mb-3">Unnecessary Emissions</h3>
+              <p className="text-charcoal-600 leading-relaxed">
                 All that circling creates millions of tons of CO₂ emissions every year
               </p>
             </motion.div>
@@ -216,10 +216,10 @@ export default function HomePage() {
               <Sparkles className="w-4 h-4 mr-2" />
               The plekk Solution
             </motion.span>
-            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 max-w-4xl mx-auto">
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-6 max-w-4xl mx-auto">
               plekk fixes that
             </motion.h2>
-            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed font-light">
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl md:text-2xl text-charcoal-700 max-w-4xl mx-auto leading-relaxed font-light">
               We turn unused driveways into bookable parking spots, so drivers go directly 
               to a guaranteed space—and homeowners earn passive income by helping their 
               community move better.
@@ -239,28 +239,28 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center shadow-lg shadow-accent-500/30">
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">For Drivers</h3>
+                <h3 className="text-2xl font-bold text-charcoal-900">For Drivers</h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Find guaranteed parking</p>
-                    <p className="text-gray-600">Book a space before you arrive—no more circling</p>
+                    <p className="font-semibold text-charcoal-900">Find guaranteed parking</p>
+                    <p className="text-charcoal-600">Book a space before you arrive—no more circling</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Save time and fuel</p>
-                    <p className="text-gray-600">Go directly to your reserved spot</p>
+                    <p className="font-semibold text-charcoal-900">Save time and fuel</p>
+                    <p className="text-charcoal-600">Go directly to your reserved spot</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Secure and convenient</p>
-                    <p className="text-gray-600">Verified spaces with easy booking</p>
+                    <p className="font-semibold text-charcoal-900">Secure and convenient</p>
+                    <p className="text-charcoal-600">Verified spaces with easy booking</p>
                   </div>
                 </li>
               </ul>
@@ -279,28 +279,28 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg shadow-primary-600/30">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">For Homeowners</h3>
+                <h3 className="text-2xl font-bold text-charcoal-900">For Homeowners</h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Earn passive income</p>
-                    <p className="text-gray-600">Turn your empty driveway into revenue</p>
+                    <p className="font-semibold text-charcoal-900">Earn passive income</p>
+                    <p className="text-charcoal-600">Turn your empty driveway into revenue</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Full control</p>
-                    <p className="text-gray-600">Set your own prices, availability, and rules</p>
+                    <p className="font-semibold text-charcoal-900">Full control</p>
+                    <p className="text-charcoal-600">Set your own prices, availability, and rules</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-accent-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900">Help your community</p>
-                    <p className="text-gray-600">Reduce traffic and emissions in your neighbourhood</p>
+                    <p className="font-semibold text-charcoal-900">Help your community</p>
+                    <p className="text-charcoal-600">Reduce traffic and emissions in your neighbourhood</p>
                   </div>
                 </li>
               </ul>
@@ -329,10 +329,10 @@ export default function HomePage() {
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700 text-sm font-medium mb-6 border border-primary-100">
               Simple Process
             </motion.span>
-            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
               How It Works
             </motion.h2>
-            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-charcoal-600 max-w-2xl mx-auto">
               Getting started is quick and easy—whether you're looking for parking or listing your space
             </motion.p>
           </motion.div>
@@ -348,10 +348,10 @@ export default function HomePage() {
               <div className="bg-accent-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white shadow-lg shadow-accent-500/30">
                 <span className="text-2xl font-bold">1</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-charcoal-900 mb-3">
                 Search or List
               </h3>
-              <p className="text-gray-600">
+              <p className="text-charcoal-600">
                 Find parking near your destination, or list your driveway in minutes with photos and pricing
               </p>
             </motion.div>
@@ -360,10 +360,10 @@ export default function HomePage() {
               <div className="bg-primary-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white shadow-lg shadow-primary-600/30">
                 <span className="text-2xl font-bold">2</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-charcoal-900 mb-3">
                 Book Instantly
               </h3>
-              <p className="text-gray-600">
+              <p className="text-charcoal-600">
                 Reserve your spot with secure payment, or receive booking requests from verified drivers
               </p>
             </motion.div>
@@ -372,10 +372,10 @@ export default function HomePage() {
               <div className="bg-sand-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white shadow-lg shadow-sand-500/30">
                 <span className="text-2xl font-bold">3</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-charcoal-900 mb-3">
                 Park or Earn
               </h3>
-              <p className="text-gray-600">
+              <p className="text-charcoal-600">
                 Arrive at your guaranteed space, or start earning passive income from your driveway
               </p>
             </motion.div>
@@ -397,10 +397,10 @@ export default function HomePage() {
               <Shield className="w-4 h-4 mr-2" />
               Trust & Convenience
             </motion.span>
-            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
               Why Choose plekk?
             </motion.h2>
-            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-charcoal-600 max-w-2xl mx-auto">
               Built for trust, designed for convenience
             </motion.p>
           </motion.div>
@@ -451,10 +451,10 @@ export default function HomePage() {
               <HelpCircle className="w-4 h-4 mr-2" />
               FAQ
             </motion.span>
-            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <motion.h2 variants={slideUp} transition={slideUpTransition} className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
               Frequently Asked Questions
             </motion.h2>
-            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-gray-600">
+            <motion.p variants={slideUp} transition={slideUpTransition} className="text-xl text-charcoal-600">
               Common questions about finding parking and listing your driveway
             </motion.p>
           </motion.div>
@@ -471,16 +471,16 @@ export default function HomePage() {
                 key={index}
                 variants={slideUp}
                 transition={slideUpTransition}
-                className="rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden hover:border-accent-200 transition-colors"
+                className="rounded-xl border border-charcoal-200 bg-charcoal-50/50 overflow-hidden hover:border-accent-200 transition-colors"
               >
                 <button
                   type="button"
                   onClick={() => setFaqOpenIndex(faqOpenIndex === index ? null : index)}
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-gray-900 hover:bg-accent-50/50 transition-colors"
+                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-charcoal-900 hover:bg-accent-50/50 transition-colors"
                 >
                   <span>{item.question}</span>
                   <ChevronDown
-                    className={`w-5 h-5 flex-shrink-0 text-gray-500 transition-transform duration-200 ${
+                    className={`w-5 h-5 flex-shrink-0 text-charcoal-500 transition-transform duration-200 ${
                       faqOpenIndex === index ? 'rotate-180' : ''
                     }`}
                   />
@@ -491,7 +491,7 @@ export default function HomePage() {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-5 pb-4 pt-0 text-gray-600 leading-relaxed border-t border-gray-100">
+                    <p className="px-5 pb-4 pt-0 text-charcoal-600 leading-relaxed border-t border-charcoal-100">
                       {item.answer}
                     </p>
                   </div>
@@ -508,7 +508,7 @@ export default function HomePage() {
             variants={slideUp}
             transition={slideUpTransition}
           >
-            <p className="text-gray-600 mb-4">More answers in the Help Center</p>
+            <p className="text-charcoal-600 mb-4">More answers in the Help Center</p>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <Link
                 href="/help"
@@ -519,7 +519,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center text-gray-600 font-medium hover:text-gray-900"
+                className="inline-flex items-center text-charcoal-600 font-medium hover:text-charcoal-900"
               >
                 Contact us
               </Link>

@@ -274,27 +274,27 @@ export default function AdminDashboardPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-mist-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-accent-500 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-charcoal-600">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 min-w-0">
+    <div className="min-h-screen bg-mist-100 min-w-0">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3 truncate">
+              <h1 className="text-2xl sm:text-3xl font-bold text-charcoal-900 flex items-center gap-2 sm:gap-3 truncate">
                 <Shield className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 text-primary-700" />
                 <span className="truncate">Admin Dashboard</span>
               </h1>
-              <p className="mt-1 sm:mt-2 text-gray-600 text-sm sm:text-base">
+              <p className="mt-1 sm:mt-2 text-charcoal-600 text-sm sm:text-base">
                 Review and approve property listings
               </p>
             </div>
@@ -302,7 +302,7 @@ export default function AdminDashboardPage() {
               <span className="px-3 py-1 bg-accent-50 text-accent-700 rounded-full text-sm font-medium">
                 {pendingProperties.length} Pending
               </span>
-              <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
+              <span className="px-3 py-1 bg-mist-100 text-charcoal-800 rounded-full text-sm font-medium">
                 {allProperties.length} Total
               </span>
             </div>
@@ -315,12 +315,12 @@ export default function AdminDashboardPage() {
         {/* KPIs & Filters */}
         <section className="mb-8 min-w-0">
           <div className="flex flex-col gap-4 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-charcoal-900 flex items-center gap-2 flex-shrink-0">
               <BarChart3 className="h-5 w-5 text-accent-600" />
               Metrics
             </h2>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-              <span className="text-sm font-medium text-gray-700 w-full sm:w-auto">Date range</span>
+              <span className="text-sm font-medium text-charcoal-700 w-full sm:w-auto">Date range</span>
               <div className="flex flex-wrap gap-2 min-w-0">
                 {[
                   { key: 'last7', label: 'Last 7 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 7); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
@@ -336,7 +336,7 @@ export default function AdminDashboardPage() {
                       setDateRange(preset.getValue() as any)
                     }}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                      datePreset === preset.key ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      datePreset === preset.key ? 'bg-accent-500 text-white' : 'bg-mist-100 text-charcoal-700 hover:bg-mist-200'
                     }`}
                   >
                     {preset.label}
@@ -349,23 +349,23 @@ export default function AdminDashboardPage() {
                     type="date"
                     value={dateRange.start}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, start: e.target.value })); }}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                    className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
                   />
-                  <span className="text-gray-500 flex-shrink-0">to</span>
+                  <span className="text-charcoal-500 flex-shrink-0">to</span>
                   <input
                     type="date"
                     value={dateRange.end}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, end: e.target.value })); }}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                    className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
                   />
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2 border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-3 min-w-0">
-                <span className="text-sm font-medium text-gray-700">Bookings</span>
+              <div className="flex flex-wrap items-center gap-2 border-t sm:border-t-0 sm:border-l border-mist-200 pt-2 sm:pt-0 sm:pl-3 min-w-0">
+                <span className="text-sm font-medium text-charcoal-700">Bookings</span>
                 <select
                   value={bookingStatusFilter}
                   onChange={(e) => setBookingStatusFilter(e.target.value as 'all' | 'paid')}
-                  className="rounded border border-gray-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                  className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
                 >
                   <option value="all">All (non-cancelled)</option>
                   <option value="paid">Paid only</option>
@@ -375,73 +375,73 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => fetchAdminStats()}
                 disabled={statsLoading}
-                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                className="p-2 rounded-lg bg-mist-100 hover:bg-mist-200 disabled:opacity-50"
                 title="Refresh metrics"
               >
-                <Loader2 className={`h-4 w-4 text-gray-600 ${statsLoading ? 'animate-spin' : ''}`} />
+                <Loader2 className={`h-4 w-4 text-charcoal-600 ${statsLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
           {statsLoading && !stats ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 flex items-center justify-center">
+            <div className="bg-white rounded-xl border border-mist-200 p-8 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
             </div>
           ) : stats && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 min-w-0">
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
                   <Calendar className="h-4 w-4" />
                   Bookings
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.bookings.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-charcoal-900">{stats.bookings.toLocaleString()}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
                   <TrendingUp className="h-4 w-4" />
                   Total Revenue
                 </div>
-                <p className="text-2xl font-bold text-gray-900">${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold text-charcoal-900">${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
                   <Receipt className="h-4 w-4" />
                   Total Fees
                 </div>
-                <p className="text-2xl font-bold text-gray-900">${stats.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold text-charcoal-900">${stats.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
                   <User className="h-4 w-4" />
                   Total Users
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.users.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-charcoal-900">{stats.users.toLocaleString()}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
                   <List className="h-4 w-4" />
                   Total Listings
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{stats.listings.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-charcoal-900">{stats.listings.toLocaleString()}</p>
               </div>
             </div>
           )}
           {stats && dateRange !== 'all' && typeof dateRange === 'object' && (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-charcoal-500 mt-2">
               Showing data from {dateRange.start} to {dateRange.end}
             </p>
           )}
         </section>
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200 min-w-0 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto overflow-y-hidden">
+        <div className="mb-6 border-b border-mist-200 min-w-0 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto overflow-y-hidden">
           <nav className="flex gap-4 sm:space-x-8 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('pending')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'pending'
                   ? 'border-accent-400 text-accent-600'
-                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
               }`}
             >
               <Clock className="h-4 w-4 inline mr-2" />
@@ -452,7 +452,7 @@ export default function AdminDashboardPage() {
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'all'
                   ? 'border-accent-400 text-accent-600'
-                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
               }`}
             >
               <List className="h-4 w-4 inline mr-2" />
@@ -463,7 +463,7 @@ export default function AdminDashboardPage() {
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'users'
                   ? 'border-accent-400 text-accent-600'
-                  : 'border-transparent text-gray-500 hover:text-charcoal-600 hover:border-mist-300'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
               }`}
             >
               <User className="h-4 w-4 inline mr-2" />
@@ -478,10 +478,10 @@ export default function AdminDashboardPage() {
             {pendingProperties.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-charcoal-900 mb-2">
               No Pending Properties
             </h3>
-            <p className="text-gray-600">
+            <p className="text-charcoal-600">
               All properties have been reviewed. Check back later for new submissions.
             </p>
           </div>
@@ -490,13 +490,13 @@ export default function AdminDashboardPage() {
             {pendingProperties.map((property) => (
               <div
                 key={property.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-w-0"
+                className="bg-white rounded-lg shadow-sm border border-mist-200 overflow-hidden min-w-0"
               >
                 <div className="p-4 sm:p-6 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 min-w-0">
-                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
+                        <h3 className="text-lg sm:text-xl font-semibold text-charcoal-900 break-words min-w-0">
                           {property.title}
                         </h3>
                         <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
@@ -504,28 +504,28 @@ export default function AdminDashboardPage() {
                         </span>
                       </div>
 
-                      <p className="text-gray-600 mb-4">{property.description}</p>
+                      <p className="text-charcoal-600 mb-4">{property.description}</p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
-                        <div className="flex items-start gap-2 text-gray-600 min-w-0">
+                        <div className="flex items-start gap-2 text-charcoal-600 min-w-0">
                           <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                           <span className="text-sm break-words min-w-0">
                             {property.address}, {property.city}, {property.state} {property.zip_code}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-charcoal-600">
                           <DollarSign className="h-4 w-4 flex-shrink-0" />
                           <span className="text-sm">
                             ${property.hourly_rate}/hour
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-charcoal-600">
                           <Calendar className="h-4 w-4 flex-shrink-0" />
                           <span className="text-sm">
                             Submitted {new Date(property.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-charcoal-600">
                           <User className="h-4 w-4 flex-shrink-0" />
                           <span className="text-sm break-words min-w-0">
                             {property.host?.first_name} {property.host?.last_name}
@@ -535,9 +535,9 @@ export default function AdminDashboardPage() {
 
                       {/* Host Contact Info */}
                       {property.host && (
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2">Host Information</h4>
-                          <div className="space-y-1 text-sm text-gray-600">
+                        <div className="bg-mist-100 rounded-lg p-4 mb-4 min-w-0">
+                          <h4 className="text-sm font-semibold text-charcoal-900 mb-2">Host Information</h4>
+                          <div className="space-y-1 text-sm text-charcoal-600">
                             <div className="flex items-center gap-2">
                               <Mail className="h-4 w-4" />
                               <span>{property.host.email}</span>
@@ -555,14 +555,14 @@ export default function AdminDashboardPage() {
                       {/* Photos */}
                       {property.photos && property.photos.length > 0 && (
                         <div className="mb-4">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2">Photos</h4>
+                          <h4 className="text-sm font-semibold text-charcoal-900 mb-2">Photos</h4>
                           <div className="flex gap-2 flex-wrap">
                             {property.photos.map((photo: any, index: number) => (
                               <img
                                 key={index}
                                 src={photo.url}
                                 alt={`${property.title} - Photo ${index + 1}`}
-                                className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                                className="w-24 h-24 object-cover rounded-lg border border-mist-200"
                               />
                             ))}
                           </div>
@@ -572,7 +572,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-mist-200">
                     <button
                       onClick={() => handleApprove(property.id)}
                       disabled={processingId === property.id}
@@ -607,11 +607,11 @@ export default function AdminDashboardPage() {
           <>
             {allProperties.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <List className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <List className="h-16 w-16 text-charcoal-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-charcoal-900 mb-2">
                   No Properties Found
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-charcoal-600">
                   There are no active properties in the system.
                 </p>
               </div>
@@ -620,13 +620,13 @@ export default function AdminDashboardPage() {
                 {allProperties.map((property) => (
                   <div
                     key={property.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-w-0"
+                    className="bg-white rounded-lg shadow-sm border border-mist-200 overflow-hidden min-w-0"
                   >
                     <div className="p-4 sm:p-6 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 min-w-0">
-                            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words min-w-0">
+                            <h3 className="text-lg sm:text-xl font-semibold text-charcoal-900 break-words min-w-0">
                               {property.title}
                             </h3>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -634,7 +634,7 @@ export default function AdminDashboardPage() {
                                 ? 'bg-green-100 text-green-800'
                                 : property.status === 'pending_review'
                                 ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
+                                : 'bg-mist-100 text-charcoal-800'
                             }`}>
                               {property.status === 'active' ? 'Active' : 
                                property.status === 'pending_review' ? 'Pending' : 
@@ -642,28 +642,28 @@ export default function AdminDashboardPage() {
                             </span>
                           </div>
 
-                          <p className="text-gray-600 mb-4">{property.description}</p>
+                          <p className="text-charcoal-600 mb-4">{property.description}</p>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
-                            <div className="flex items-start gap-2 text-gray-600 min-w-0">
+                            <div className="flex items-start gap-2 text-charcoal-600 min-w-0">
                               <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                               <span className="text-sm break-words min-w-0">
                                 {property.address}, {property.city}, {property.state} {property.zip_code}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2 text-charcoal-600">
                               <DollarSign className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm">
                                 ${property.hourly_rate}/hour
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2 text-charcoal-600">
                               <Calendar className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm">
                                 Created {new Date(property.created_at).toLocaleDateString()}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2 text-charcoal-600">
                               <User className="h-4 w-4 flex-shrink-0" />
                               <span className="text-sm break-words min-w-0">
                                 {property.host?.first_name} {property.host?.last_name}
@@ -673,9 +673,9 @@ export default function AdminDashboardPage() {
 
                           {/* Host Contact Info */}
                           {property.host && (
-                            <div className="bg-gray-50 rounded-lg p-4 mb-4 min-w-0">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-2">Host Information</h4>
-                              <div className="space-y-1 text-sm text-gray-600">
+                            <div className="bg-mist-100 rounded-lg p-4 mb-4 min-w-0">
+                              <h4 className="text-sm font-semibold text-charcoal-900 mb-2">Host Information</h4>
+                              <div className="space-y-1 text-sm text-charcoal-600">
                                 <div className="flex items-center gap-2">
                                   <Mail className="h-4 w-4" />
                                   <span>{property.host.email}</span>
@@ -693,14 +693,14 @@ export default function AdminDashboardPage() {
                           {/* Photos */}
                           {property.photos && property.photos.length > 0 && (
                             <div className="mb-4">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-2">Photos</h4>
+                              <h4 className="text-sm font-semibold text-charcoal-900 mb-2">Photos</h4>
                               <div className="flex gap-2 flex-wrap">
                                 {property.photos.map((photo: any, index: number) => (
                                   <img
                                     key={index}
                                     src={photo.url}
                                     alt={`${property.title} - Photo ${index + 1}`}
-                                    className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                                    className="w-24 h-24 object-cover rounded-lg border border-mist-200"
                                   />
                                 ))}
                               </div>
@@ -710,7 +710,7 @@ export default function AdminDashboardPage() {
                       </div>
 
                       {/* Delete Button */}
-                      <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-gray-200">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-mist-200">
                         <button
                           onClick={() => setShowDeleteModal(property.id)}
                           disabled={processingId === property.id}
@@ -734,8 +734,8 @@ export default function AdminDashboardPage() {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 min-w-0">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-4 sm:p-6 min-w-0">
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-4 flex items-center gap-2">
               <Search className="h-5 w-5 text-accent-600" />
               Search users
             </h2>
@@ -746,7 +746,7 @@ export default function AdminDashboardPage() {
                 onChange={(e) => setUserSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && runUserSearch()}
                 placeholder="Search by email, first name, or last name..."
-                className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                className="flex-1 min-w-0 rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -759,7 +759,7 @@ export default function AdminDashboardPage() {
               </button>
             </div>
             {userSearchResults.length === 0 && !userSearchLoading && (
-              <p className="text-gray-500 text-sm">
+              <p className="text-charcoal-500 text-sm">
                 {userSearch ? 'No users found. Try a different search.' : 'Enter a search term and click Search.'}
               </p>
             )}
@@ -768,18 +768,18 @@ export default function AdminDashboardPage() {
                 {userSearchResults.map((u: any) => (
                   <li
                     key={u.id}
-                    className="flex items-center justify-between py-3 px-4 rounded-lg border border-gray-200 hover:bg-gray-50"
+                    className="flex items-center justify-between py-3 px-4 rounded-lg border border-mist-200 hover:bg-mist-100"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
+                      <div className="w-10 h-10 rounded-full bg-charcoal-200 flex items-center justify-center text-charcoal-600 font-medium">
                         {(u.first_name?.[0] || u.email?.[0] || '?').toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-charcoal-900">
                           {u.first_name} {u.last_name}
                         </p>
-                        <p className="text-sm text-gray-500">{u.email}</p>
-                        {u.phone && <p className="text-xs text-gray-400">{u.phone}</p>}
+                        <p className="text-sm text-charcoal-500">{u.email}</p>
+                        {u.phone && <p className="text-xs text-charcoal-400">{u.phone}</p>}
                       </div>
                     </div>
                     <button
@@ -802,8 +802,8 @@ export default function AdminDashboardPage() {
       {messageUserId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col min-w-0">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">
+            <div className="flex items-center justify-between p-4 border-b border-mist-200">
+              <h3 className="font-semibold text-charcoal-900">
                 {directOtherUser
                   ? `${directOtherUser.first_name || ''} ${directOtherUser.last_name || ''}`.trim() || directOtherUser.email
                   : 'Loading...'}
@@ -811,7 +811,7 @@ export default function AdminDashboardPage() {
               <button
                 type="button"
                 onClick={() => { setMessageUserId(null); setNewMessageText(''); }}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                className="p-2 rounded-lg hover:bg-mist-100 text-charcoal-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -822,7 +822,7 @@ export default function AdminDashboardPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
                 </div>
               ) : directMessages.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">No messages yet. Send a message below.</p>
+                <p className="text-charcoal-500 text-sm text-center py-4">No messages yet. Send a message below.</p>
               ) : (
                 directMessages.map((msg: any) => {
                   const isAdmin = msg.sender_id === user?.id;
@@ -833,11 +833,11 @@ export default function AdminDashboardPage() {
                     >
                       <div
                         className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                          isAdmin ? 'bg-accent-500 text-white' : 'bg-gray-100 text-gray-900'
+                          isAdmin ? 'bg-accent-500 text-white' : 'bg-mist-100 text-charcoal-900'
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-xs mt-1 ${isAdmin ? 'text-accent-100' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-1 ${isAdmin ? 'text-accent-100' : 'text-charcoal-500'}`}>
                           {new Date(msg.created_at).toLocaleString()}
                         </p>
                       </div>
@@ -846,14 +846,14 @@ export default function AdminDashboardPage() {
                 })
               )}
             </div>
-            <div className="p-4 border-t border-gray-200 flex gap-2">
+            <div className="p-4 border-t border-mist-200 flex gap-2">
               <input
                 type="text"
                 value={newMessageText}
                 onChange={(e) => setNewMessageText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendDirectMessage()}
                 placeholder="Type a message..."
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                className="flex-1 rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -873,15 +873,15 @@ export default function AdminDashboardPage() {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 w-full max-w-md min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Reject Property</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-charcoal-900 mb-4">Reject Property</h3>
+            <p className="text-sm text-charcoal-600 mb-4">
               Please provide a reason for rejecting this property (optional):
             </p>
             <textarea
               value={rejectReason[showRejectModal] || ''}
               onChange={(e) => setRejectReason(prev => ({ ...prev, [showRejectModal]: e.target.value }))}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+              className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
               placeholder="Reason for rejection..."
             />
             <div className="flex gap-3">
@@ -890,7 +890,7 @@ export default function AdminDashboardPage() {
                   setShowRejectModal(null)
                   setRejectReason(prev => ({ ...prev, [showRejectModal]: '' }))
                 }}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-100"
               >
                 Cancel
               </button>
@@ -910,14 +910,14 @@ export default function AdminDashboardPage() {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 w-full max-w-md min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Property</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-charcoal-900 mb-4">Delete Property</h3>
+            <p className="text-sm text-charcoal-600 mb-4">
               Are you sure you want to delete this property? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(null)}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-100"
               >
                 Cancel
               </button>

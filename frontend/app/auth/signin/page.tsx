@@ -51,8 +51,8 @@ export default function SignInPage() {
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-charcoal-900">Welcome back</h1>
+          <p className="mt-2 text-charcoal-600">
             Sign in to your plekk account
           </p>
         </div>
@@ -60,11 +60,11 @@ export default function SignInPage() {
         <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 animate-scale-in">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('email')}
                   type="email"
@@ -79,11 +79,11 @@ export default function SignInPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
@@ -94,7 +94,7 @@ export default function SignInPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -112,7 +112,7 @@ export default function SignInPage() {
                   type="checkbox"
                   className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-charcoal-700">
                   Remember me
                 </label>
               </div>
@@ -136,10 +136,10 @@ export default function SignInPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-charcoal-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-charcoal-500">Or continue with</span>
               </div>
             </div>
 
@@ -148,7 +148,7 @@ export default function SignInPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-charcoal-600">
             Don't have an account?{' '}
             <Link href="/auth/signup" className="text-accent-600 hover:text-accent-500 font-medium">
               Sign up

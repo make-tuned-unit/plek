@@ -102,15 +102,15 @@ function SignUpContent() {
             </div>
             <CheckCircle2 className="h-6 w-6 text-accent-500 mx-auto mb-4" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Check your email</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-3xl font-bold text-charcoal-900 mb-4">Check your email</h1>
+          <p className="text-charcoal-600 mb-6">
             We've sent a confirmation email to your inbox. Please click the link in the email to confirm your account and activate it.
           </p>
           <div className="bg-accent-50 border border-accent-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-charcoal-700">
               <strong>Didn't receive the email?</strong>
             </p>
-            <ul className="text-sm text-gray-600 mt-2 text-left list-disc list-inside space-y-1">
+            <ul className="text-sm text-charcoal-600 mt-2 text-left list-disc list-inside space-y-1">
               <li>Check your spam or junk folder</li>
               <li>Make sure you entered the correct email address</li>
               <li>Wait a few minutes - emails can take up to 5 minutes to arrive</li>
@@ -137,7 +137,7 @@ function SignUpContent() {
                 </button>
               ) : (
                 <div className="space-y-2 text-left">
-                  <p className="text-sm text-gray-700 font-medium">Resend confirmation link</p>
+                  <p className="text-sm text-charcoal-700 font-medium">Resend confirmation link</p>
                   <input
                     type="email"
                     placeholder="Your email"
@@ -177,7 +177,7 @@ function SignUpContent() {
             </button>
             <Link
               href="/auth/signin"
-              className="text-gray-600 hover:text-gray-900 font-semibold text-sm"
+              className="text-charcoal-600 hover:text-charcoal-900 font-semibold text-sm"
             >
               Already confirmed? Sign in →
             </Link>
@@ -191,8 +191,8 @@ function SignUpContent() {
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-charcoal-900">Create your account</h1>
+          <p className="mt-2 text-charcoal-600">
             {hostIntent
               ? 'Create an account to start listing your driveway.'
               : 'Join plekk and start earning from your driveway'}
@@ -204,11 +204,11 @@ function SignUpContent() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="firstName" className="block text-sm font-medium text-charcoal-700 mb-2">
                   First name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                   <input
                     {...register('firstName')}
                     type="text"
@@ -223,11 +223,11 @@ function SignUpContent() {
               </div>
 
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="lastName" className="block text-sm font-medium text-charcoal-700 mb-2">
                   Last name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                   <input
                     {...register('lastName')}
                     type="text"
@@ -243,11 +243,11 @@ function SignUpContent() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('email')}
                   type="email"
@@ -262,11 +262,11 @@ function SignUpContent() {
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Phone number
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('phone')}
                   type="tel"
@@ -290,21 +290,21 @@ function SignUpContent() {
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="isHost" className="text-gray-700">
+                <label htmlFor="isHost" className="text-charcoal-700">
                   I want to list my driveway and become a host
                 </label>
-                <p className="text-gray-500 mt-1">
+                <p className="text-charcoal-500 mt-1">
                   Check this if you want to rent out your driveway to other drivers
                 </p>
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
@@ -315,7 +315,7 @@ function SignUpContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -326,11 +326,11 @@ function SignUpContent() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Confirm password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -341,7 +341,7 @@ function SignUpContent() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600"
                 >
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -361,7 +361,7 @@ function SignUpContent() {
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="acceptTerms" className="text-gray-700">
+                <label htmlFor="acceptTerms" className="text-charcoal-700">
                   I agree to the{' '}
                   <Link href="/terms" className="text-accent-600 hover:text-accent-500">
                     Terms of Service
@@ -389,10 +389,10 @@ function SignUpContent() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-charcoal-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-charcoal-500">Or continue with</span>
               </div>
             </div>
 
@@ -409,7 +409,7 @@ function SignUpContent() {
                   />
                 </div>
                 <div className="ml-3 text-sm">
-                  <label htmlFor="googleAcceptTerms" className="text-gray-700 cursor-pointer">
+                  <label htmlFor="googleAcceptTerms" className="text-charcoal-700 cursor-pointer">
                     I agree to the{' '}
                     <Link href="/terms" className="text-accent-600 hover:text-accent-500">
                       Terms of Service
@@ -425,7 +425,7 @@ function SignUpContent() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-charcoal-600">
             Already have an account?{' '}
             <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
               Sign in
@@ -443,7 +443,7 @@ export default function SignUpPage() {
       <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-mist-200 p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading...</h1>
+          <h1 className="text-2xl font-bold text-charcoal-900 mb-4">Loading...</h1>
         </div>
       </div>
     }>

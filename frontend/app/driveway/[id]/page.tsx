@@ -97,10 +97,10 @@ export default function DrivewayDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-mist-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-accent-500 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading listing...</p>
+          <p className="mt-4 text-charcoal-600">Loading listing...</p>
         </div>
       </div>
     )
@@ -108,9 +108,9 @@ export default function DrivewayDetailPage() {
 
   if (error || !property) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-mist-100 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <p className="text-gray-700 mb-4">{error || 'Listing not found'}</p>
+          <p className="text-charcoal-700 mb-4">{error || 'Listing not found'}</p>
           <Link
             href="/find-parking"
             className="inline-flex items-center gap-2 text-accent-600 hover:text-accent-700 font-medium"
@@ -133,13 +133,13 @@ export default function DrivewayDetailPage() {
           : 'Request booking'
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
+    <div className="min-h-screen bg-mist-100 pb-24 md:pb-8">
       {/* Back link */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div className="bg-white border-b border-mist-200 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3">
           <Link
             href="/find-parking"
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium"
+            className="inline-flex items-center gap-2 text-charcoal-600 hover:text-charcoal-900 text-sm font-medium"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to find parking
@@ -152,31 +152,31 @@ export default function DrivewayDetailPage() {
         {photos.length > 0 ? (
           <ImageCarousel images={photos} alt={property.title} className="mb-6" />
         ) : (
-          <div className="w-full aspect-[16/10] sm:aspect-[2/1] rounded-xl bg-gray-200 flex items-center justify-center mb-6">
-            <Car className="h-16 w-16 text-gray-400" />
+          <div className="w-full aspect-[16/10] sm:aspect-[2/1] rounded-xl bg-mist-200 flex items-center justify-center mb-6">
+            <Car className="h-16 w-16 text-mist-500" />
           </div>
         )}
 
         {/* Title & location */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+        <h1 className="text-2xl sm:text-3xl font-bold text-charcoal-900 mb-2 break-words">
           {property.title}
         </h1>
-        <p className="text-gray-600 flex items-center gap-1.5 mb-6">
+        <p className="text-charcoal-600 flex items-center gap-1.5 mb-6">
           <MapPin className="h-4 w-4 flex-shrink-0" />
           <span className="break-words">{locationText}</span>
         </p>
 
         {/* Pricing & quick info */}
         <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex items-center gap-2 text-gray-700">
+          <div className="flex items-center gap-2 text-charcoal-700">
             <DollarSign className="h-5 w-5 text-accent-600" />
-            <span className="text-xl font-bold text-gray-900">
+            <span className="text-xl font-bold text-charcoal-900">
               ${Number(property.hourly_rate ?? 0).toFixed(0)}
-              <span className="text-base font-normal text-gray-600">/hour</span>
+              <span className="text-base font-normal text-charcoal-600">/hour</span>
             </span>
           </div>
           {property.instant_booking && (
-            <div className="flex items-center gap-1.5 text-sm text-gray-600">
+            <div className="flex items-center gap-1.5 text-sm text-charcoal-600">
               <Clock className="h-4 w-4" />
               Instant booking
             </div>
@@ -186,16 +186,16 @@ export default function DrivewayDetailPage() {
         {/* Description */}
         {property.description && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">About this space</h2>
-            <p className="text-gray-700 whitespace-pre-wrap break-words">{property.description}</p>
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-2">About this space</h2>
+            <p className="text-charcoal-700 whitespace-pre-wrap break-words">{property.description}</p>
           </section>
         )}
 
         {/* Host */}
         {property.host && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Hosted by</h2>
-            <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200">
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-3">Hosted by</h2>
+            <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-mist-200">
               <div
                 className="w-14 h-14 rounded-full bg-accent-100 flex items-center justify-center text-accent-700 font-semibold text-lg flex-shrink-0"
                 aria-hidden
@@ -203,8 +203,8 @@ export default function DrivewayDetailPage() {
                 {hostName.slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-gray-900 truncate">{hostName}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mt-0.5">
+                <p className="font-semibold text-charcoal-900 truncate">{hostName}</p>
+                <div className="flex items-center gap-2 text-sm text-charcoal-600 mt-0.5">
                   {hostRating != null && (
                     <span className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
@@ -223,12 +223,12 @@ export default function DrivewayDetailPage() {
         {/* Recent reviews */}
         {reviews.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Recent reviews</h2>
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-3">Recent reviews</h2>
             <ul className="space-y-4">
               {reviews.map((r: any) => (
-                <li key={r.id} className="p-4 bg-white rounded-xl border border-gray-200">
+                <li key={r.id} className="p-4 bg-white rounded-xl border border-mist-200">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-charcoal-900">
                       {r.reviewer?.first_name} {r.reviewer?.last_name}
                     </span>
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -237,9 +237,9 @@ export default function DrivewayDetailPage() {
                     </div>
                   </div>
                   {r.comment && (
-                    <p className="text-gray-600 text-sm break-words">{r.comment}</p>
+                    <p className="text-charcoal-600 text-sm break-words">{r.comment}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-mist-600 mt-2">
                     {new Date(r.created_at).toLocaleDateString()}
                   </p>
                 </li>
@@ -251,7 +251,7 @@ export default function DrivewayDetailPage() {
         {/* Features – show all tags the host added, with canonical labels */}
         {property.features && property.features.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Features</h2>
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-3">Features</h2>
             <ul className="flex flex-wrap gap-2">
               {property.features.map((f: string, i: number) => {
                 const resolved = listingFeatures.find(
@@ -276,7 +276,7 @@ export default function DrivewayDetailPage() {
       </main>
 
       {/* Sticky CTA – mobile */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-40">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-mist-200 shadow-lg md:hidden z-40">
         <div className="max-w-4xl mx-auto">
           <button
             type="button"
@@ -291,8 +291,8 @@ export default function DrivewayDetailPage() {
 
       {/* Desktop CTA – at end of content */}
       <div className="hidden md:block max-w-4xl mx-auto px-4 sm:px-6 pb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <p className="text-gray-600 text-sm mb-2">
+        <div className="bg-white rounded-xl border border-mist-200 p-6">
+          <p className="text-charcoal-600 text-sm mb-2">
             ${Number(property.hourly_rate ?? 0).toFixed(0)}/hour
           </p>
           <button

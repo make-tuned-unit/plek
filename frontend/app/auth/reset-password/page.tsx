@@ -75,8 +75,8 @@ function ResetPasswordContent() {
       <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10">
-            <h1 className="text-2xl font-bold text-gray-900">Invalid or expired link</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-2xl font-bold text-charcoal-900">Invalid or expired link</h1>
+            <p className="mt-2 text-charcoal-600">
               This password reset link is invalid or has expired. Please request a new one.
             </p>
             <Link
@@ -85,7 +85,7 @@ function ResetPasswordContent() {
             >
               Request new reset link
             </Link>
-            <p className="mt-6 text-center text-sm text-gray-600">
+            <p className="mt-6 text-center text-sm text-charcoal-600">
               <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
                 Back to sign in
               </Link>
@@ -101,8 +101,8 @@ function ResetPasswordContent() {
       <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Password reset</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-2xl font-bold text-charcoal-900">Password reset</h1>
+            <p className="mt-2 text-charcoal-600">
               Your password has been updated. Redirecting you to sign in...
             </p>
             <Link
@@ -121,8 +121,8 @@ function ResetPasswordContent() {
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Set new password</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-charcoal-900">Set new password</h1>
+          <p className="mt-2 text-charcoal-600">
             Enter your new password below
           </p>
         </div>
@@ -130,11 +130,11 @@ function ResetPasswordContent() {
         <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 animate-scale-in">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="newPassword" className="block text-sm font-medium text-charcoal-700 mb-2">
                 New password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('newPassword')}
                   type={showPassword ? 'text' : 'password'}
@@ -145,7 +145,7 @@ function ResetPasswordContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -156,11 +156,11 @@ function ResetPasswordContent() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal-700 mb-2">
                 Confirm password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                 <input
                   {...register('confirmPassword')}
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -171,7 +171,7 @@ function ResetPasswordContent() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600"
                 >
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -190,7 +190,7 @@ function ResetPasswordContent() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-charcoal-600">
             <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
               Back to sign in
             </Link>
@@ -205,7 +205,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-charcoal-600">Loading...</p>
       </div>
     }>
       <ResetPasswordContent />

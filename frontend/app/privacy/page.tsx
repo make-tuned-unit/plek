@@ -73,11 +73,11 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-mist-100 min-h-screen">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <header className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">plekk Privacy Policy</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-charcoal-900 mb-3">plekk Privacy Policy</h1>
+          <p className="text-charcoal-600">
             Effective date: November 10, 2025. plekk is committed to protecting your privacy while
             providing a marketplace that connects hosts and drivers. This policy explains our data
             practices.
@@ -86,14 +86,14 @@ export default function PrivacyPage() {
 
         <div className="space-y-8">
           {sections.map((section) => (
-            <section key={section.title} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">{section.title}</h2>
-              <p className="text-gray-600 leading-relaxed">{section.content}</p>
+            <section key={section.title} className="bg-white rounded-xl shadow-sm border border-charcoal-100 p-6">
+              <h2 className="text-xl font-semibold text-charcoal-900 mb-3">{section.title}</h2>
+              <p className="text-charcoal-600 leading-relaxed">{section.content}</p>
             </section>
           ))}
         </div>
 
-        <p className="text-sm text-gray-500 mt-10">
+        <p className="text-sm text-charcoal-500 mt-10">
           plekk is a marketplace and does not oversee parking spaces or vehicles. Protect your
           personal information and physical property when interacting with other users, and contact us
           immediately if you suspect unauthorized activity on your account.

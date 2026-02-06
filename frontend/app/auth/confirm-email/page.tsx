@@ -75,25 +75,25 @@ function ConfirmEmailContent() {
         {status === 'loading' && (
           <>
             <Loader2 className="h-16 w-16 text-accent-500 mx-auto mb-6 animate-spin" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Confirming your email...</h1>
-            <p className="text-gray-600">Please wait while we verify your email address.</p>
+            <h1 className="text-2xl font-bold text-charcoal-900 mb-4">Confirming your email...</h1>
+            <p className="text-charcoal-600">Please wait while we verify your email address.</p>
           </>
         )}
 
         {status === 'success' && (
           <>
             <CheckCircle2 className="h-16 w-16 text-accent-500 mx-auto mb-6" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Email Confirmed!</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <p className="text-sm text-gray-500">Redirecting you to your profile...</p>
+            <h1 className="text-2xl font-bold text-charcoal-900 mb-4">Email Confirmed!</h1>
+            <p className="text-charcoal-600 mb-6">{message}</p>
+            <p className="text-sm text-charcoal-500">Redirecting you to your profile...</p>
           </>
         )}
 
         {status === 'error' && (
           <>
             <XCircle className="h-16 w-16 text-red-500 mx-auto mb-6" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Confirmation Failed</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
+            <h1 className="text-2xl font-bold text-charcoal-900 mb-4">Confirmation Failed</h1>
+            <p className="text-charcoal-600 mb-6">{message}</p>
             <div className="flex flex-col gap-3">
               <Link
                 href="/auth/signin"
@@ -121,7 +121,7 @@ export default function ConfirmEmailPage() {
       <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
           <Loader2 className="h-16 w-16 text-accent-500 mx-auto mb-6 animate-spin" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading...</h1>
+          <h1 className="text-2xl font-bold text-charcoal-900 mb-4">Loading...</h1>
         </div>
       </div>
     }>

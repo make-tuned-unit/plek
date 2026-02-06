@@ -331,8 +331,8 @@ export default function ListYourDrivewayPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div className="min-h-screen bg-mist-100 flex items-center justify-center">
+        <div className="text-charcoal-600">Loading...</div>
       </div>
     )
   }
@@ -340,25 +340,25 @@ export default function ListYourDrivewayPage() {
   // Confirmation / success view after listing is published — no going back to steps
   if (publishedListingId) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-mist-100">
         <div className="bg-white shadow-sm border-b">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900">List Your Driveway</h1>
-              <p className="mt-2 text-gray-600">Start earning money from your parking space</p>
+              <h1 className="text-3xl font-bold text-charcoal-900">List Your Driveway</h1>
+              <p className="mt-2 text-charcoal-600">Start earning money from your parking space</p>
             </div>
           </div>
         </div>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-10 text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-mist-200 p-8 sm:p-10 text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
               <PartyPopper className="h-8 w-8 text-green-600" aria-hidden />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Listing published successfully</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-2xl font-bold text-charcoal-900 mb-2">Listing published successfully</h2>
+            <p className="text-charcoal-600 mb-6">
               Your listing has been submitted and is now under review. It will appear in the Admin Dashboard as pending and will go live once approved—usually within 24 hours.
             </p>
-            <p className="text-sm text-gray-500 mb-8">
+            <p className="text-sm text-mist-600 mb-8">
               You can view and edit it anytime from your profile.
             </p>
             <button
@@ -375,13 +375,13 @@ export default function ListYourDrivewayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-mist-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">List Your Driveway</h1>
-            <p className="mt-2 text-gray-600">Start earning money from your parking space</p>
+            <h1 className="text-3xl font-bold text-charcoal-900">List Your Driveway</h1>
+            <p className="mt-2 text-charcoal-600">Start earning money from your parking space</p>
           </div>
         </div>
       </div>
@@ -403,7 +403,7 @@ export default function ListYourDrivewayPage() {
                 <div className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 flex-shrink-0 ${
                   currentStep >= step.id
                     ? 'bg-accent-500 border-accent-500 text-white'
-                    : 'border-gray-300 text-gray-500'
+                    : 'border-mist-300 text-mist-600'
                 }`}>
                   {currentStep > step.id ? (
                     <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -413,7 +413,7 @@ export default function ListYourDrivewayPage() {
                 </div>
                 {/* Step title below tab on mobile; hide on small to save space, show from sm */}
                 <span className={`hidden sm:block text-xs font-medium text-center truncate w-full ${
-                  currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+                  currentStep >= step.id ? 'text-charcoal-900' : 'text-mist-600'
                 }`}>
                   {step.title}
                 </span>
@@ -422,10 +422,10 @@ export default function ListYourDrivewayPage() {
           </div>
           {/* Current step title + description below (mobile-friendly) */}
           <div className="mt-3 text-center sm:mt-4">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-charcoal-900">
               {steps.find(s => s.id === currentStep)?.title}
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-mist-600 mt-0.5">
               {steps.find(s => s.id === currentStep)?.description}
             </p>
           </div>
@@ -435,10 +435,10 @@ export default function ListYourDrivewayPage() {
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Basic Information</h2>
+              <h2 className="text-xl font-semibold text-charcoal-900">Basic Information</h2>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Listing Title
                 </label>
                 <input
@@ -453,7 +453,7 @@ export default function ListYourDrivewayPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Description
                 </label>
                 <textarea
@@ -469,7 +469,7 @@ export default function ListYourDrivewayPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Street Address
                   </label>
                   <input
@@ -484,7 +484,7 @@ export default function ListYourDrivewayPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     City
                   </label>
                   <input
@@ -499,7 +499,7 @@ export default function ListYourDrivewayPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     State
                   </label>
                   <input
@@ -514,7 +514,7 @@ export default function ListYourDrivewayPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Postal/Zip Code
                   </label>
                   <input
@@ -531,7 +531,7 @@ export default function ListYourDrivewayPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Property Type
                   </label>
                   <select
@@ -548,7 +548,7 @@ export default function ListYourDrivewayPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Maximum Vehicle Size
                   </label>
                   <select
@@ -569,11 +569,11 @@ export default function ListYourDrivewayPage() {
           {/* Step 2: Pricing */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Pricing & Availability</h2>
+              <h2 className="text-xl font-semibold text-charcoal-900">Pricing & Availability</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Hourly Rate ($)
                   </label>
                   <input
@@ -590,7 +590,7 @@ export default function ListYourDrivewayPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Daily Rate ($)
                   </label>
                   <input
@@ -608,7 +608,7 @@ export default function ListYourDrivewayPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-charcoal-700 mb-3">
                   Available Days
                 </label>
                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -624,16 +624,16 @@ export default function ListYourDrivewayPage() {
                              [day]: e.target.checked
                            })
                          }}
-                         className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                         className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                        />
-                       <span className="ml-2 text-sm text-gray-700 capitalize">{day}</span>
+                       <span className="ml-2 text-sm text-charcoal-700 capitalize">{day}</span>
                      </label>
                    ))}
                  </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Available Times
                 </label>
                 <div className="mb-3">
@@ -650,7 +650,7 @@ export default function ListYourDrivewayPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                    <label className="block text-xs text-charcoal-600 mb-1">Start Time</label>
                     <input
                       {...register('startTime')}
                       type="time"
@@ -658,7 +658,7 @@ export default function ListYourDrivewayPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">End Time</label>
+                    <label className="block text-xs text-charcoal-600 mb-1">End Time</label>
                     <input
                       {...register('endTime')}
                       type="time"
@@ -666,17 +666,17 @@ export default function ListYourDrivewayPage() {
                     />
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-mist-600">
                   💡 Same times apply to all selected days. e.g. overnight for winter parking bans: set 6 PM–8 AM.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Booking Lead Time
                   </label>
-                  <p className="text-xs text-gray-500 mb-3">
+                  <p className="text-xs text-mist-600 mb-3">
                     Set how much advance notice you need before a booking can be auto-approved. Bookings with less notice will require your approval.
                   </p>
                   <div className="flex items-center gap-4">
@@ -693,7 +693,7 @@ export default function ListYourDrivewayPage() {
                       <option value={336}>2 weeks</option>
                     </select>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-mist-600 mt-2">
                     Bookings made with at least this much advance notice will be auto-approved. You'll receive a notification email.
                   </p>
                 </div>
@@ -702,9 +702,9 @@ export default function ListYourDrivewayPage() {
                   <input
                     {...register('requireApproval')}
                     type="checkbox"
-                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-gray-300 rounded"
+                    className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded"
                   />
-                  <label className="ml-2 text-sm text-gray-700">
+                  <label className="ml-2 text-sm text-charcoal-700">
                     Always require approval (ignore lead time)
                   </label>
                 </div>
@@ -715,8 +715,8 @@ export default function ListYourDrivewayPage() {
           {/* Step 3: Photos */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Photos</h2>
-              <p className="text-gray-600">Upload clear photos of your parking space to attract more renters</p>
+              <h2 className="text-xl font-semibold text-charcoal-900">Photos</h2>
+              <p className="text-charcoal-600">Upload clear photos of your parking space to attract more renters</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {uploadedImages.map((image, index) => (
@@ -736,7 +736,7 @@ export default function ListYourDrivewayPage() {
                   </div>
                 ))}
                 
-                <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 cursor-pointer">
+                <label className="border-2 border-dashed border-mist-300 rounded-lg p-6 text-center hover:border-mist-400 cursor-pointer">
                   <input
                     type="file"
                     multiple
@@ -744,8 +744,8 @@ export default function ListYourDrivewayPage() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
-                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Upload Photos</p>
+                  <Upload className="h-8 w-8 text-mist-500 mx-auto mb-2" />
+                  <p className="text-sm text-charcoal-600">Upload Photos</p>
                 </label>
               </div>
             </div>
@@ -754,29 +754,29 @@ export default function ListYourDrivewayPage() {
           {/* Step 4: Review */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Review Your Listing</h2>
+              <h2 className="text-xl font-semibold text-charcoal-900">Review Your Listing</h2>
               
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-medium text-gray-900 mb-4">Listing Summary</h3>
+              <div className="bg-mist-100 rounded-lg p-6">
+                <h3 className="font-medium text-charcoal-900 mb-4">Listing Summary</h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Title:</span>
+                    <span className="text-charcoal-600">Title:</span>
                     <span className="font-medium">{watch('title')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Type:</span>
+                    <span className="text-charcoal-600">Type:</span>
                     <span className="font-medium capitalize">{watch('propertyType')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Hourly Rate:</span>
+                    <span className="text-charcoal-600">Hourly Rate:</span>
                     <span className="font-medium">${watch('hourlyRate')}/hr</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Daily Rate:</span>
+                    <span className="text-charcoal-600">Daily Rate:</span>
                     <span className="font-medium">${watch('dailyRate')}/day</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Photos:</span>
+                    <span className="text-charcoal-600">Photos:</span>
                     <span className="font-medium">{uploadedImages.length} uploaded</span>
                   </div>
                 </div>
@@ -804,7 +804,7 @@ export default function ListYourDrivewayPage() {
               type="button"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center px-4 py-2 text-gray-600 border border-mist-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 text-charcoal-600 border border-mist-300 rounded-lg hover:bg-mist-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous

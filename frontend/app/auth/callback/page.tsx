@@ -63,11 +63,11 @@ export default function AuthCallbackPage() {
         {status === 'loading' && (
           <>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-gray-900">Completing sign-in...</h1>
+            <h1 className="text-xl font-bold text-charcoal-900">Completing sign-in...</h1>
           </>
         )}
         {status === 'error' && (
-          <h1 className="text-xl font-bold text-gray-900">Redirecting...</h1>
+          <h1 className="text-xl font-bold text-charcoal-900">Redirecting...</h1>
         )}
       </div>
     </div>

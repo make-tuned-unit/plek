@@ -507,7 +507,7 @@ function FindParkingContent() {
     })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-mist-100">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-mist-200 sticky top-16 md:top-20 z-40">
         <div className="max-w-7xl mx-auto container-padding py-6">
@@ -548,7 +548,7 @@ function FindParkingContent() {
                 
                 {/* Search */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Where do you need parking?
                   </label>
                   <div className="flex space-x-2 mb-2">
@@ -609,7 +609,7 @@ function FindParkingContent() {
 
               {/* Property Type */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Property Type
                 </label>
                 <select
@@ -635,7 +635,7 @@ function FindParkingContent() {
                   className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-charcoal-600 hover:bg-mist-100 transition"
                 >
                   <span>Listing Features</span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-mist-600">
                     {isFeatureFilterOpen ? 'Hide' : 'Show'}
                   </span>
                 </button>
@@ -685,11 +685,11 @@ function FindParkingContent() {
 
               {/* Price Range */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Price Range (per hour)
                 </label>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-charcoal-600">
                     <span>${priceRange[0]}</span>
                     <span>${priceRange[1]}</span>
                   </div>
@@ -717,7 +717,7 @@ function FindParkingContent() {
                   setLocationAccuracyWarning(null)
                   setPropertyType('all')
                 }}
-                className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="w-full px-4 py-2 text-sm text-charcoal-600 border border-mist-300 rounded-lg hover:bg-mist-100"
               >
                 Clear All Filters
               </button>
@@ -742,7 +742,7 @@ function FindParkingContent() {
               <>
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <p className="text-gray-600">
+                    <p className="text-charcoal-600">
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
@@ -772,7 +772,7 @@ function FindParkingContent() {
                 {isLoading && (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading parking spots...</p>
+                    <p className="text-charcoal-600">Loading parking spots...</p>
                   </div>
                 )}
 
@@ -834,14 +834,14 @@ function FindParkingContent() {
                       </div>
                       
                       <div className="space-y-2 mb-4">
-                        <p className="text-gray-600 flex items-center text-sm">
-                          <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                        <p className="text-charcoal-600 flex items-center text-sm">
+                          <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
                           <span className="line-clamp-1">{locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}</span>
                         </p>
                         
                         {property.start_time && property.end_time && (
-                          <p className="text-gray-600 flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
+                          <p className="text-charcoal-600 flex items-center text-sm">
+                            <Clock className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
                             <span>
                               {(() => {
                                 const formatTime = (time: string) => {
@@ -860,7 +860,7 @@ function FindParkingContent() {
                       </div>
                       
                       {property.description && (
-                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">{property.description}</p>
+                        <p className="text-sm text-mist-600 mb-4 line-clamp-2">{property.description}</p>
                       )}
                       
                       {property.features && property.features.length > 0 && (
@@ -871,7 +871,7 @@ function FindParkingContent() {
                             </span>
                           ))}
                           {property.features.length > 3 && (
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                            <span className="px-2 py-0.5 bg-mist-100 text-charcoal-600 text-xs rounded">
                               +{property.features.length - 3}
                             </span>
                           )}
@@ -900,9 +900,9 @@ function FindParkingContent() {
 
                 {!isLoading && !error && filteredProperties.length === 0 && (
                   <div className="text-center py-12">
-                    <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No parking spots found</h3>
-                    <p className="text-gray-600">Try adjusting your search criteria or location</p>
+                    <Car className="h-12 w-12 text-mist-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-charcoal-900 mb-2">No parking spots found</h3>
+                    <p className="text-charcoal-600">Try adjusting your search criteria or location</p>
                   </div>
                 )}
               </>
@@ -933,7 +933,7 @@ function FindParkingContent() {
 export default function FindParkingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-mist-100">
         <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-mist-200 sticky top-16 md:top-20 z-40">
           <div className="max-w-7xl mx-auto container-padding py-6">
             <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900">Find Parking</h1>
@@ -943,7 +943,7 @@ export default function FindParkingPage() {
         <div className="max-w-7xl mx-auto container-padding py-8">
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-charcoal-600">Loading...</p>
           </div>
         </div>
       </div>

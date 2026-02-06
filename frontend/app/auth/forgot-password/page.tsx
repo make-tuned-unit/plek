@@ -49,8 +49,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Forgot password?</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-charcoal-900">Forgot password?</h1>
+          <p className="mt-2 text-charcoal-600">
             Enter your email and we&apos;ll send you a link to reset your password
           </p>
         </div>
@@ -58,10 +58,10 @@ export default function ForgotPasswordPage() {
         <div className="bg-white rounded-2xl shadow-xl border border-mist-200 p-8 md:p-10 animate-scale-in">
           {submitted ? (
             <div className="space-y-6">
-              <p className="text-gray-700">
+              <p className="text-charcoal-700">
                 If an account exists for that email, we&apos;ve sent a password reset link. Check your inbox (and spam folder).
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-charcoal-600">
                 The link expires in 1 hour.
               </p>
               <Link
@@ -74,11 +74,11 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-charcoal-700 mb-2">
                   Email address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5" />
                   <input
                     {...register('email')}
                     type="email"
@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-charcoal-600">
             Remember your password?{' '}
             <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
               Sign in

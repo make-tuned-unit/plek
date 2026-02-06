@@ -19,28 +19,28 @@ export default function BlogPage() {
   const posts = getAllBlogPosts()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-mist-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <header className="mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900 mb-4">
             plekk Blog
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-charcoal-600">
             Parking tips, driveway rental advice, and how to find or list a parking space near you.
           </p>
         </header>
 
         <ul className="space-y-8">
           {posts.map((post) => (
-            <li key={post.slug} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <li key={post.slug} className="bg-white rounded-xl border border-charcoal-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <Link href={`/blog/${post.slug}`} className="block p-6 sm:p-8">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 hover:text-accent-600 transition-colors">
+                <h2 className="text-xl sm:text-2xl font-semibold text-charcoal-900 mb-2 hover:text-accent-600 transition-colors">
                   {post.title}
                 </h2>
-                <p className="text-gray-600 mb-4 line-clamp-2">
+                <p className="text-charcoal-600 mb-4 line-clamp-2">
                   {post.description}
                 </p>
-                <span className="inline-flex items-center gap-2 text-sm text-gray-500">
+                <span className="inline-flex items-center gap-2 text-sm text-charcoal-500">
                   <Calendar className="h-4 w-4" />
                   {new Date(post.date).toLocaleDateString('en-CA', {
                     year: 'numeric',
