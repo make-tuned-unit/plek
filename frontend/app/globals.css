@@ -74,9 +74,9 @@
     @apply input border-red-300 focus:border-red-500 focus:ring-red-500/20;
   }
   
-  /* Enhanced Card Styles */
+  /* Enhanced Card Styles – elevation and rhythm */
   .card {
-    @apply bg-white overflow-hidden shadow-md rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+    @apply bg-white overflow-hidden shadow-lg rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 border border-mist-100;
   }
 
   .card-glass {
@@ -91,13 +91,13 @@
     @apply px-6 py-5 sm:p-8;
   }
 
-  /* Property Card (Special) */
+  /* Property Card – list/grid items, stronger elevation */
   .property-card {
     @apply card cursor-pointer;
   }
 
   .property-card:hover {
-    @apply shadow-2xl -translate-y-2;
+    @apply shadow-xl -translate-y-1 border-mist-200;
   }
   
   /* Badge Styles */

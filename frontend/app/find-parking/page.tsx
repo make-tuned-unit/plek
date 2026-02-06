@@ -510,18 +510,18 @@ function FindParkingContent() {
     <div className="min-h-screen bg-mist-100">
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-mist-200 sticky top-16 md:top-20 z-40">
-        <div className="max-w-7xl mx-auto container-padding py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900">Find Parking</h1>
-              <p className="mt-2 text-charcoal-600">Discover available parking spots near you</p>
+        <div className="max-w-7xl mx-auto container-padding py-5 sm:py-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-charcoal-900 tracking-tight">Find Parking</h1>
+              <p className="mt-1.5 text-base text-charcoal-600">Discover available parking spots near you</p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center shrink-0">
               <button
                 onClick={() => setShowMap(!showMap)}
-                className={`flex items-center px-5 py-2.5 border-2 rounded-lg transition-all duration-200 font-semibold ${
+                className={`flex items-center min-h-[44px] px-4 sm:px-5 py-2.5 border-2 rounded-xl transition-all duration-200 font-semibold text-sm sm:text-base ${
                   showMap 
-                    ? 'bg-gradient-accent text-white border-accent-500 hover:shadow-accent-lg hover:-translate-y-0.5' 
+                    ? 'bg-gradient-accent text-white border-accent-500 shadow-md shadow-accent-500/25 hover:shadow-accent-lg hover:-translate-y-0.5' 
                     : 'border-mist-300 hover:bg-mist-50 hover:border-accent-300 text-charcoal-700'
                 }`}
               >
@@ -539,22 +539,22 @@ function FindParkingContent() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Filters Sidebar - Always Visible */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24 border border-mist-200">
-              <h3 className="text-lg font-bold text-charcoal-900 mb-6">Search & Filters</h3>
+            <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 sticky top-24 border border-mist-200">
+              <h3 className="text-base font-bold text-charcoal-900 mb-5 tracking-tight">Search & Filters</h3>
                 
                 {/* Search */}
-                <div className="mb-6">
+                <div className="mb-5">
                   <label className="block text-sm font-medium text-charcoal-700 mb-2">
                     Where do you need parking?
                   </label>
                   <div className="flex space-x-2 mb-2">
                     <button
                       onClick={getUserLocation}
-                      className="flex items-center px-4 py-2.5 text-sm bg-gradient-accent text-white rounded-lg hover:shadow-accent-lg hover:-translate-y-0.5 transition-all duration-200 font-semibold"
+                      className="flex items-center min-h-[44px] px-4 py-2.5 text-sm bg-gradient-accent text-white rounded-xl font-semibold shadow-md shadow-accent-500/25 hover:shadow-accent-lg hover:-translate-y-0.5 transition-all duration-200"
                     >
                       <Navigation className="h-4 w-4 mr-2" />
                       Use My Location
@@ -591,7 +591,7 @@ function FindParkingContent() {
                 </div>
 
               {/* Date & Time */}
-              <div className="mb-6 space-y-4">
+              <div className="mb-5 space-y-4">
                 <DatePicker
                   value={selectedDate}
                   onChange={setSelectedDate}
@@ -608,7 +608,7 @@ function FindParkingContent() {
               </div>
 
               {/* Property Type */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Property Type
                 </label>
@@ -628,7 +628,7 @@ function FindParkingContent() {
               </div>
 
               {/* Feature Filters */}
-              <div className="mb-6 border border-mist-200 rounded-lg">
+              <div className="mb-5 border border-mist-200 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setIsFeatureFilterOpen((prev) => !prev)}
@@ -684,7 +684,7 @@ function FindParkingContent() {
               </div>
 
               {/* Price Range */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="block text-sm font-medium text-charcoal-700 mb-2">
                   Price Range (per hour)
                 </label>
@@ -717,7 +717,7 @@ function FindParkingContent() {
                   setLocationAccuracyWarning(null)
                   setPropertyType('all')
                 }}
-                className="w-full px-4 py-2 text-sm text-charcoal-600 border border-mist-300 rounded-lg hover:bg-mist-100"
+                className="w-full min-h-[44px] px-4 py-2.5 text-sm font-medium text-charcoal-600 border border-mist-300 rounded-xl hover:bg-mist-100 transition-colors"
               >
                 Clear All Filters
               </button>
@@ -740,13 +740,13 @@ function FindParkingContent() {
             ) : (
               /* List View */
               <>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <p className="text-charcoal-600">
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-medium text-charcoal-700">
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
-                  <select className="px-3 py-2 pr-10 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
+                  <select className="shrink-0 px-3 py-2.5 pr-10 border border-mist-300 rounded-xl text-sm font-medium text-charcoal-700 focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
                     <option>Sort by: Recommended</option>
                     <option>Price: Low to High</option>
                     <option>Price: High to Low</option>
@@ -778,7 +778,7 @@ function FindParkingContent() {
 
                 {/* Properties Grid */}
                 {!isLoading && !error && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                     {filteredProperties.map((property) => {
                       const locationParts = [
                         property.address?.split(',')[0]?.trim() || property.address,
@@ -788,52 +788,52 @@ function FindParkingContent() {
 
                       return (
                   <div key={property.id} className="property-card group">
-                    <Link href={`/driveway/${property.id}`} className="block relative overflow-hidden">
+                    <Link href={`/driveway/${property.id}`} className="block relative overflow-hidden rounded-t-2xl">
                       {property.photos && property.photos.length > 0 && property.photos[0]?.url ? (
                         <img
                           src={property.photos[0].url}
                           alt={property.title || 'Parking Space'}
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-44 sm:h-48 object-cover group-hover:scale-[1.03] transition-transform duration-300"
                           onError={(e) => {
                             // Fallback to a default image if photo fails to load
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%23e5e7eb" width="300" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E'
                           }}
                         />
                       ) : (
-                        <div className="w-full h-48 bg-gradient-to-br from-mist-200 to-mist-300 flex items-center justify-center">
+                        <div className="w-full h-44 sm:h-48 bg-gradient-to-br from-mist-200 to-mist-300 flex items-center justify-center">
                           <div className="text-center text-mist-600">
-                            <Car className="h-12 w-12 mx-auto mb-2" />
+                            <Car className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2" />
                             <p className="text-sm font-medium">No photos available</p>
                           </div>
                         </div>
                       )}
                       {property.status !== 'active' && (
-                        <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+                        <div className="absolute top-3 right-3 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-md">
                           {property.status === 'pending_review' ? 'Pending Review' : 'Unavailable'}
                         </div>
                       )}
-                      <div className="absolute top-3 left-3 bg-gradient-accent text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg shadow-accent-500/40">
+                      <div className="absolute top-3 left-3 bg-gradient-accent text-white px-2.5 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-accent-500/30">
                         ${property.hourly_rate || 0}/hr
                       </div>
                     </Link>
                     
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <Link href={`/driveway/${property.id}`}>
-                          <h3 className="text-lg font-bold text-charcoal-900 pr-2 group-hover:text-accent-700 transition-colors">{property.title || 'Parking Space'}</h3>
+                    <div className="p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <Link href={`/driveway/${property.id}`} className="min-w-0">
+                          <h3 className="text-base sm:text-lg font-bold text-charcoal-900 pr-2 group-hover:text-accent-700 transition-colors tracking-tight line-clamp-2">{property.title || 'Parking Space'}</h3>
                         </Link>
                         {(property.rating || property.review_count) > 0 && (
-                          <div className="flex items-center flex-shrink-0 bg-white px-2 py-1 rounded-full shadow-sm border border-mist-200">
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span className="ml-1 text-sm font-semibold text-charcoal-700">{property.rating || 0}</span>
+                          <div className="flex items-center flex-shrink-0 bg-mist-50 px-2 py-1 rounded-lg border border-mist-200">
+                            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            <span className="ml-1 text-sm font-semibold text-charcoal-800">{property.rating || 0}</span>
                             {property.review_count > 0 && (
-                              <span className="ml-1 text-xs text-mist-600">({property.review_count})</span>
+                              <span className="ml-0.5 text-xs text-mist-600">({property.review_count})</span>
                             )}
                           </div>
                         )}
                       </div>
                       
-                      <div className="space-y-2 mb-4">
+                      <div className="space-y-1.5 mb-3">
                         <p className="text-charcoal-600 flex items-center text-sm">
                           <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
                           <span className="line-clamp-1">{locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}</span>
@@ -860,11 +860,11 @@ function FindParkingContent() {
                       </div>
                       
                       {property.description && (
-                        <p className="text-sm text-mist-600 mb-4 line-clamp-2">{property.description}</p>
+                        <p className="text-sm text-mist-600 mb-3 line-clamp-2">{property.description}</p>
                       )}
                       
                       {property.features && property.features.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-4">
+                        <div className="flex flex-wrap gap-1.5 mb-3">
                           {property.features.slice(0, 3).map((feature: string, index: number) => (
                             <span key={index} className="px-2 py-0.5 bg-accent-50 text-accent-700 text-xs rounded">
                               {feature}
@@ -879,14 +879,14 @@ function FindParkingContent() {
                       )}
                       
                       {property.host_id === user?.id ? (
-                        <div className="w-full bg-mist-100 text-charcoal-600 py-3 px-4 rounded-lg text-center text-sm font-semibold border border-mist-200">
+                        <div className="w-full bg-mist-100 text-charcoal-600 py-3 px-4 rounded-xl text-center text-sm font-semibold border border-mist-200">
                           Your Listing
                         </div>
                       ) : (
                         <button
                           onClick={() => handleOpenBooking(property)}
                           disabled={property.status !== 'active'}
-                          className="w-full bg-gradient-accent text-white py-3 px-4 rounded-lg hover:shadow-accent-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none transition-all duration-200 font-bold"
+                          className="w-full min-h-[48px] bg-gradient-accent text-white py-3.5 px-4 rounded-xl font-bold text-sm sm:text-base shadow-md shadow-accent-500/25 hover:shadow-accent-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none transition-all duration-200"
                         >
                           {property.status === 'active' ? 'Book Now' : 'Currently Unavailable'}
                         </button>
@@ -899,10 +899,10 @@ function FindParkingContent() {
                 )}
 
                 {!isLoading && !error && filteredProperties.length === 0 && (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 sm:py-16">
                     <Car className="h-12 w-12 text-mist-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-charcoal-900 mb-2">No parking spots found</h3>
-                    <p className="text-charcoal-600">Try adjusting your search criteria or location</p>
+                    <h3 className="text-lg font-semibold text-charcoal-900 mb-2 tracking-tight">No parking spots found</h3>
+                    <p className="text-sm text-charcoal-600">Try adjusting your search criteria or location</p>
                   </div>
                 )}
               </>
