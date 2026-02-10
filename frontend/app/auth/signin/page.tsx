@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, Shield, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 import toast from 'react-hot-toast'
@@ -154,6 +154,18 @@ export default function SignInPage() {
               Sign up
             </Link>
           </p>
+        </div>
+
+        {/* Trust signals */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-6 text-xs text-charcoal-500">
+          <span className="flex items-center gap-1.5">
+            <Shield className="h-4 w-4 text-accent-500" />
+            Payments secured by Stripe
+          </span>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 text-accent-500" />
+            Verified spaces &amp; hosts
+          </span>
         </div>
       </div>
     </div>
