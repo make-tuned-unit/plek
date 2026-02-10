@@ -52,12 +52,12 @@ const FAQ_ITEMS = [
 ]
 
 const slideUp = {
-  hidden: { y: 32, opacity: 0 },
+  hidden: { y: 20, opacity: 0 },
   visible: { y: 0, opacity: 1 },
 }
-const slideUpTransition = { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
-const viewport = { once: true, amount: 0.12 }
-const stagger = { staggerChildren: 0.08, delayChildren: 0.06 }
+const slideUpTransition = { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
+const viewport = { once: true, amount: 0.2 }
+const stagger = { staggerChildren: 0.12, delayChildren: 0.1 }
 
 export default function HomePage() {
   const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null)
@@ -140,14 +140,14 @@ export default function HomePage() {
 
       {/* Problem Statement Section */}
       <section className="relative py-16 lg:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-12 lg:mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+        <motion.div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          variants={{ visible: { transition: stagger } }}
+        >
+          <div className="text-center mb-12 lg:mb-16">
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-red-50 text-red-700 text-sm font-medium mb-6 border border-red-100">
               <AlertTriangle className="w-4 h-4 mr-2" />
               The Parking Problem
@@ -156,19 +156,13 @@ export default function HomePage() {
               Every day, millions of drivers waste time, fuel, and patience
             </motion.h2>
             <motion.p variants={slideUp} transition={slideUpTransition} className="text-lg sm:text-xl text-charcoal-600 max-w-3xl mx-auto leading-relaxed">
-              While drivers circle endlessly, countless driveways sit empty—creating a 
+              While drivers circle endlessly, countless driveways sit empty—creating a
               frustrating cycle that costs everyone time and money.
             </motion.p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
-            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-red-50/60 border border-red-100 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-red-50/60 border border-red-100 shadow-md hover:shadow-lg transition-shadow duration-300">
               <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-red-100 text-red-600 mb-5 shadow-sm">
                 <Clock className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
@@ -178,7 +172,7 @@ export default function HomePage() {
               </p>
             </motion.div>
 
-            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-orange-50/60 border border-orange-100 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-orange-50/60 border border-orange-100 shadow-md hover:shadow-lg transition-shadow duration-300">
               <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-orange-100 text-orange-600 mb-5 shadow-sm">
                 <TrendingUp className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
@@ -188,7 +182,7 @@ export default function HomePage() {
               </p>
             </motion.div>
 
-            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-amber-50/60 border border-amber-100 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+            <motion.div variants={slideUp} transition={slideUpTransition} className="text-center p-6 sm:p-8 rounded-2xl bg-amber-50/60 border border-amber-100 shadow-md hover:shadow-lg transition-shadow duration-300">
               <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-100 text-amber-600 mb-5 shadow-sm">
                 <Leaf className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
@@ -197,21 +191,21 @@ export default function HomePage() {
                 All that circling creates millions of tons of CO₂ emissions every year
               </p>
             </motion.div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Solution Section */}
       <section className="relative py-16 lg:py-24 bg-gradient-to-br from-accent-50 via-white to-mist-50 overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_rgba(61,187,133,0.15),_transparent_70%)] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div
-            className="text-center mb-12 lg:mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+        <motion.div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          variants={{ visible: { transition: stagger } }}
+        >
+          <div className="text-center mb-12 lg:mb-16">
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-accent-100 text-accent-700 text-sm font-medium mb-6 border border-accent-200">
               <Sparkles className="w-4 h-4 mr-2" />
               The plekk Solution
@@ -220,21 +214,15 @@ export default function HomePage() {
               plekk fixes that
             </motion.h2>
             <motion.p variants={slideUp} transition={slideUpTransition} className="text-lg sm:text-xl md:text-2xl text-charcoal-700 max-w-4xl mx-auto leading-relaxed font-light">
-              We turn unused driveways into bookable parking spots, so drivers go directly 
-              to a guaranteed space—and homeowners earn passive income by helping their 
+              We turn unused driveways into bookable parking spots, so drivers go directly
+              to a guaranteed space—and homeowners earn passive income by helping their
               community move better.
             </motion.p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center">
             {/* For Drivers */}
-            <motion.div variants={slideUp} transition={slideUpTransition} className="bg-white rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg border border-mist-200 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
+            <motion.div variants={slideUp} transition={slideUpTransition} className="bg-white rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg border border-mist-200 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center shadow-md shadow-accent-500/30">
                   <MapPin className="w-6 h-6 text-white" />
@@ -274,7 +262,7 @@ export default function HomePage() {
             </motion.div>
 
             {/* For Homeowners */}
-            <motion.div variants={slideUp} transition={slideUpTransition} className="bg-white rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg border border-mist-200 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
+            <motion.div variants={slideUp} transition={slideUpTransition} className="bg-white rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg border border-mist-200 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md shadow-primary-600/30">
                   <DollarSign className="w-6 h-6 text-white" />
@@ -312,20 +300,20 @@ export default function HomePage() {
                 <ArrowRight className="ml-1.5 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* How It Works Section */}
       <section className="relative py-16 lg:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-12 lg:mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+        <motion.div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          variants={{ visible: { transition: stagger } }}
+        >
+          <div className="text-center mb-12 lg:mb-16">
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700 text-sm font-medium mb-6 border border-primary-100">
               Simple Process
             </motion.span>
@@ -335,15 +323,9 @@ export default function HomePage() {
             <motion.p variants={slideUp} transition={slideUpTransition} className="text-lg sm:text-xl text-charcoal-600 max-w-2xl mx-auto">
               Getting started is quick and easy—whether you're looking for parking or listing your space
             </motion.p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             <motion.div variants={slideUp} transition={slideUpTransition} className="text-center px-5 sm:px-6 py-6 sm:py-8 rounded-2xl bg-gradient-to-br from-accent-50 to-white border border-accent-100 shadow-md hover:shadow-lg transition-shadow">
               <div className="bg-accent-500 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-md shadow-accent-500/30">
                 <span className="text-xl sm:text-2xl font-bold">1</span>
@@ -379,20 +361,20 @@ export default function HomePage() {
                 Arrive at your guaranteed space, or start earning passive income from your driveway
               </p>
             </motion.div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Benefits Section */}
       <section className="relative py-16 lg:py-24 bg-gradient-to-b from-mist-50 via-white to-sand-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-12 lg:mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+        <motion.div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          variants={{ visible: { transition: stagger } }}
+        >
+          <div className="text-center mb-12 lg:mb-16">
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-accent-50 text-accent-700 text-sm font-medium mb-6 border border-accent-100">
               <Shield className="w-4 h-4 mr-2" />
               Trust & Convenience
@@ -403,15 +385,9 @@ export default function HomePage() {
             <motion.p variants={slideUp} transition={slideUpTransition} className="text-lg sm:text-xl text-charcoal-600 max-w-2xl mx-auto">
               Built for trust, designed for convenience
             </motion.p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             <motion.div variants={slideUp} transition={slideUpTransition}>
               <FeatureCard
                 icon={<Shield className="w-8 h-8" strokeWidth={1.6} />}
@@ -433,20 +409,20 @@ export default function HomePage() {
                 description="Find parking near your destination or list your space in high-demand areas where drivers need it most."
               />
             </motion.div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* FAQ Section */}
       <section className="relative py-16 lg:py-24 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-10 lg:mb-12"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+        <motion.div
+          className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          variants={{ visible: { transition: stagger } }}
+        >
+          <div className="text-center mb-10 lg:mb-12">
             <motion.span variants={slideUp} transition={slideUpTransition} className="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700 text-sm font-medium mb-6 border border-primary-100">
               <HelpCircle className="w-4 h-4 mr-2" />
               FAQ
@@ -457,15 +433,9 @@ export default function HomePage() {
             <motion.p variants={slideUp} transition={slideUpTransition} className="text-lg sm:text-xl text-charcoal-600">
               Common questions about finding parking and listing your driveway
             </motion.p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="space-y-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={{ visible: { transition: stagger } }}
-          >
+          <div className="space-y-3">
             {FAQ_ITEMS.map((item, index) => (
               <motion.div
                 key={index}
@@ -498,16 +468,9 @@ export default function HomePage() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="mt-10 text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            variants={slideUp}
-            transition={slideUpTransition}
-          >
+          <motion.div variants={slideUp} transition={slideUpTransition} className="mt-10 text-center">
             <p className="text-charcoal-600 mb-4">More answers in the Help Center</p>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <Link
@@ -525,7 +488,7 @@ export default function HomePage() {
               </Link>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Final CTA Section */}
