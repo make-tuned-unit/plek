@@ -63,61 +63,14 @@ const normalizePropertiesList = (properties: any[] = []) =>
 
 const geocodeCache = new Map<string, { lat: number; lng: number }>()
 
-// Mock data for demonstration
-const mockProperties = [
-  {
-    id: 1,
-    title: 'Downtown Parking Spot',
-    address: '123 Main St, Downtown',
-    price: 15,
-    rating: 4.8,
-    reviews: 127,
-    distance: '0.2 miles',
-    image: '/api/placeholder/300/200',
-    available: true,
-    type: 'driveway',
-    features: ['Covered', '24/7 Access', 'Security Camera'],
-  },
-  {
-    id: 2,
-    title: 'Residential Driveway',
-    address: '456 Oak Ave, Residential Area',
-    price: 8,
-    rating: 4.6,
-    reviews: 89,
-    distance: '0.5 miles',
-    image: '/api/placeholder/300/200',
-    available: true,
-    type: 'driveway',
-    features: ['Easy Access', 'Well Lit'],
-  },
-  {
-    id: 3,
-    title: 'Secure Parking Garage',
-    address: '789 Business Blvd, Commercial District',
-    price: 25,
-    rating: 4.9,
-    reviews: 203,
-    distance: '0.8 miles',
-    image: '/api/placeholder/300/200',
-    available: true,
-    type: 'garage',
-    features: ['Covered', 'Security Guard', '24/7 Access', 'EV Charging'],
-  },
-  {
-    id: 4,
-    title: 'Secure Storage Unit',
-    address: '321 Elm St, Quiet Neighbourhood',
-    price: 45,
-    rating: 4.3,
-    reviews: 45,
-    distance: '1.2 miles',
-    image: '/api/placeholder/300/200',
-    available: true,
-    type: 'storage',
-    features: ['Covered', '24/7 Access', 'Easy Access'],
-  },
-]
+const propertyTypeLabels: Record<string, string> = {
+  driveway: 'Driveway',
+  garage: 'Garage',
+  warehouse: 'Warehouse',
+  barn: 'Barn',
+  storage: 'Storage',
+  other: 'Other',
+}
 
 interface Place {
   id: string
@@ -157,6 +110,7 @@ function FindParkingContent() {
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<any>(null)
+  const [sortBy, setSortBy] = useState('recommended')
 
   const geocodeProperty = useCallback(async (property: any) => {
     if (!mapboxToken || !property?.id) return null
@@ -498,12 +452,20 @@ function FindParkingContent() {
       return matchesSearch && matchesType && matchesPrice && matchesFeatures
     })
     .sort((a, b) => {
-      const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
-      const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
-      if (distanceA === distanceB) {
-        return 0
+      switch (sortBy) {
+        case 'price_asc':
+          return (a.hourly_rate || 0) - (b.hourly_rate || 0)
+        case 'price_desc':
+          return (b.hourly_rate || 0) - (a.hourly_rate || 0)
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0)
+        case 'recommended':
+        default: {
+          const distanceA = typeof a.distance === 'number' ? a.distance : Number.POSITIVE_INFINITY
+          const distanceB = typeof b.distance === 'number' ? b.distance : Number.POSITIVE_INFINITY
+          return distanceA - distanceB
+        }
       }
-      return distanceA - distanceB
     })
 
   return (
@@ -567,26 +529,19 @@ function FindParkingContent() {
                     placeholder="e.g. Halifax, Nova Scotia"
                   />
                   {selectedLocation && (
-                    <div className="mt-2 p-2 bg-mist-200 rounded-lg">
-                      <p className="text-xs text-primary-700">
-                        <strong>Selected:</strong> {selectedLocation.place_name}
-                      </p>
-                      <p className="text-xs text-primary-600">
-                        Coordinates: {selectedLocation.center[1].toFixed(4)}, {selectedLocation.center[0].toFixed(4)}
-                      </p>
-                    </div>
+                    <p className="mt-2 text-xs text-charcoal-600">
+                      Showing results near <span className="font-medium">{selectedLocation.text || selectedLocation.place_name}</span>
+                    </p>
                   )}
-                  {userLocation && (
-                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
-                      <p className="text-xs text-green-800">
-                        <strong>Your GPS Location:</strong> {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                      </p>
-                      {locationAccuracyWarning && (
-                        <p className="text-xs text-amber-700 mt-1">
-                          ⚠️ {locationAccuracyWarning}
-                        </p>
-                      )}
-                    </div>
+                  {!selectedLocation && userLocation && (
+                    <p className="mt-2 text-xs text-charcoal-600">
+                      Showing results near your location
+                    </p>
+                  )}
+                  {locationAccuracyWarning && (
+                    <p className="mt-1.5 text-xs text-amber-700">
+                      Location accuracy is limited. For better results, search for a specific address above.
+                    </p>
                   )}
                 </div>
 
@@ -746,12 +701,15 @@ function FindParkingContent() {
                       {isLoading ? 'Loading...' : `${filteredProperties.length} parking spots found`}
                     </p>
                   </div>
-                  <select className="shrink-0 px-3 py-2.5 pr-10 border border-mist-300 rounded-xl text-sm font-medium text-charcoal-700 focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat">
-                    <option>Sort by: Recommended</option>
-                    <option>Price: Low to High</option>
-                    <option>Price: High to Low</option>
-                    <option>Distance</option>
-                    <option>Rating</option>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="shrink-0 px-3 py-2.5 pr-10 border border-mist-300 rounded-xl text-sm font-medium text-charcoal-700 focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none bg-white bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%23666%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27/%3E%3C/svg%3E')] bg-[length:1.5em_1.5em] bg-[right_0.5rem_center] bg-no-repeat"
+                  >
+                    <option value="recommended">Sort by: Recommended</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="rating">Rating</option>
                   </select>
                 </div>
 
@@ -768,11 +726,23 @@ function FindParkingContent() {
                   </div>
                 )}
 
-                {/* Loading State */}
+                {/* Loading State — skeleton cards */}
                 {isLoading && (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
-                    <p className="text-charcoal-600">Loading parking spots...</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-white rounded-2xl border border-mist-200 overflow-hidden">
+                        <div className="skeleton w-full h-44 sm:h-48" />
+                        <div className="p-4 sm:p-5 space-y-3">
+                          <div className="skeleton h-5 w-3/4 rounded" />
+                          <div className="skeleton h-4 w-1/2 rounded" />
+                          <div className="flex gap-2">
+                            <div className="skeleton h-6 w-16 rounded" />
+                            <div className="skeleton h-6 w-20 rounded" />
+                          </div>
+                          <div className="skeleton h-10 w-full rounded-xl" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -812,8 +782,15 @@ function FindParkingContent() {
                           {property.status === 'pending_review' ? 'Pending Review' : 'Unavailable'}
                         </div>
                       )}
-                      <div className="absolute top-3 left-3 bg-gradient-accent text-white px-2.5 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-accent-500/30">
-                        ${property.hourly_rate || 0}/hr
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <span className="bg-gradient-accent text-white px-2.5 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-accent-500/30">
+                          ${property.hourly_rate || 0}/hr
+                        </span>
+                        {property.property_type && propertyTypeLabels[property.property_type] && (
+                          <span className="bg-white/90 backdrop-blur-sm text-charcoal-700 px-2 py-1.5 rounded-lg text-xs font-semibold shadow-md">
+                            {propertyTypeLabels[property.property_type]}
+                          </span>
+                        )}
                       </div>
                     </Link>
                     
@@ -837,6 +814,13 @@ function FindParkingContent() {
                         <p className="text-charcoal-600 flex items-center text-sm">
                           <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
                           <span className="line-clamp-1">{locationParts.length > 0 ? locationParts.join(', ') : 'Address not available'}</span>
+                          {typeof property.distance === 'number' && (
+                            <span className="ml-auto pl-2 text-xs text-mist-600 whitespace-nowrap flex-shrink-0">
+                              {property.distance < 1
+                                ? `${(property.distance * 1000).toFixed(0)} m`
+                                : `${property.distance.toFixed(1)} km`}
+                            </span>
+                          )}
                         </p>
                         
                         {property.start_time && property.end_time && (
