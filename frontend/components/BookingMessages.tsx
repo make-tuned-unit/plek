@@ -80,7 +80,6 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
     } catch (error: any) {
       // Only show error toast on initial load, not on polling
       if (showLoading) {
-        console.error('Error fetching messages:', error)
         toast.error('Failed to load messages')
       }
     } finally {
@@ -116,7 +115,6 @@ export function BookingMessages({ bookingId, onClose, otherUser }: BookingMessag
         setMessageContent(content) // Restore message on error
       }
     } catch (error: any) {
-      console.error('Error sending message:', error)
       toast.error(error.message || 'Failed to send message')
       setMessageContent(content) // Restore message on error
     } finally {

@@ -92,7 +92,6 @@ export default function AdminDashboardPage() {
         })
       }
     } catch (e) {
-      console.error('Failed to fetch admin stats', e)
       toast.error('Failed to load metrics')
     } finally {
       setStatsLoading(false)
@@ -132,7 +131,6 @@ export default function AdminDashboardPage() {
         setPendingProperties(response.data.properties || [])
       }
     } catch (error: any) {
-      console.error('Error fetching pending properties:', error)
       toast.error('Failed to load pending properties')
     }
   }
@@ -149,7 +147,6 @@ export default function AdminDashboardPage() {
         setAllProperties(activeProperties)
       }
     } catch (error: any) {
-      console.error('Error fetching all properties:', error)
       toast.error('Failed to load properties')
     } finally {
       setIsLoading(false)
@@ -166,7 +163,6 @@ export default function AdminDashboardPage() {
         setUserSearchResults([])
       }
     } catch (e) {
-      console.error('User search failed', e)
       toast.error('Failed to search users')
       setUserSearchResults([])
     } finally {
@@ -221,7 +217,6 @@ export default function AdminDashboardPage() {
         throw new Error(response.error || 'Failed to approve property')
       }
     } catch (error: any) {
-      console.error('Error approving property:', error)
       toast.error(error.message || 'Failed to approve property')
     } finally {
       setProcessingId(null)
@@ -244,7 +239,6 @@ export default function AdminDashboardPage() {
         throw new Error(response.error || 'Failed to reject property')
       }
     } catch (error: any) {
-      console.error('Error rejecting property:', error)
       toast.error(error.message || 'Failed to reject property')
     } finally {
       setProcessingId(null)
@@ -265,7 +259,6 @@ export default function AdminDashboardPage() {
         throw new Error(response.error || 'Failed to delete property')
       }
     } catch (error: any) {
-      console.error('Error deleting property:', error)
       toast.error(error.message || 'Failed to delete property')
     } finally {
       setProcessingId(null)

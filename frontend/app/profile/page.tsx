@@ -375,7 +375,6 @@ function ProfileContent() {
       setIsLoadingBookings(true)
       const token = localStorage.getItem('auth_token')
       if (!token) {
-        console.log('No auth token found, skipping bookings fetch')
         return
       }
 
@@ -396,7 +395,6 @@ function ProfileContent() {
       setBookings(renterBookings)
       setHostBookings(hostBookings)
     } catch (error) {
-      console.error('Error fetching bookings:', error)
       setBookings([])
       setHostBookings([])
     } finally {
@@ -412,7 +410,6 @@ function ProfileContent() {
       setIsLoadingNotifications(true)
       const token = localStorage.getItem('auth_token')
       if (!token) {
-        console.log('No auth token found, skipping notifications fetch')
         return
       }
 
@@ -425,11 +422,9 @@ function ProfileContent() {
         setNotifications([])
       }
     } catch (error: any) {
-      console.error('Error fetching notifications:', error)
       // Don't clear notifications on error, keep existing ones
       if (error.message?.includes('429')) {
         // Rate limited - don't retry immediately
-        console.warn('Rate limited, skipping notification fetch')
       } else {
         setNotifications([])
       }
@@ -452,7 +447,7 @@ function ProfileContent() {
         n.id === notificationId ? { ...n, is_read: true } : n
       ))
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      // silently handled
     }
   }
 
@@ -546,7 +541,6 @@ function ProfileContent() {
       // TODO: Add getUserReviews to apiService when backend endpoint is ready
       setReviews([])
     } catch (error) {
-      console.error('Error fetching reviews:', error)
       setReviews([])
     } finally {
       setIsLoadingReviews(false)
@@ -625,7 +619,6 @@ function ProfileContent() {
       setWebcamStream(stream)
       setShowWebcam(true)
     } catch (error: any) {
-      console.error('Error accessing webcam:', error)
       toast.error('Could not access webcam. Please check permissions.')
     }
   }
@@ -636,7 +629,7 @@ function ProfileContent() {
       videoRef.current.srcObject = webcamStream
       // Ensure video plays
       videoRef.current.play().catch((error) => {
-        console.error('Error playing video:', error)
+        // silently handled
       })
     }
   }, [showWebcam, webcamStream])
@@ -729,7 +722,6 @@ function ProfileContent() {
       // Store file for upload
       setSelectedAvatarFile(file)
     } catch (error: any) {
-      console.error('Error processing avatar:', error)
       toast.error(error.message || 'Failed to process image')
       setAvatarPreview(null)
       setSelectedAvatarFile(null)
@@ -779,7 +771,6 @@ function ProfileContent() {
           }
         } catch (updateError: any) {
           // If updateProfile fails, still refresh to get the avatar from the database
-          console.error('Profile update error (non-fatal):', updateError)
           await refreshUser()
           toast.success('Profile picture uploaded successfully!')
           setShowAvatarModal(false)
@@ -792,7 +783,6 @@ function ProfileContent() {
       }
       reader.readAsDataURL(resizedFile)
     } catch (error: any) {
-      console.error('Error uploading avatar:', error)
       toast.error(error.message || 'Failed to upload profile picture')
     } finally {
       setIsUploadingAvatar(false)
@@ -805,7 +795,6 @@ function ProfileContent() {
       // Check if token exists before making API call
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        console.log('No auth token found, skipping API call');
         return;
       }
       
@@ -818,8 +807,6 @@ function ProfileContent() {
         setListings([]);
       }
     } catch (error: any) {
-      console.error('Error fetching properties:', error);
-      
       // Show different messages based on error type
       if (error.message?.includes('Invalid token')) {
         toast.error('Authentication expired. Please sign in again.');
@@ -868,7 +855,7 @@ function ProfileContent() {
             setStripeVerificationUrl(response.data.verificationUrl || null);
           }
         } catch (error) {
-          console.error('Error checking Stripe status:', error);
+          // silently handled
         }
       }
     };
@@ -1141,7 +1128,6 @@ function ProfileContent() {
       // Refresh status after a short delay to ensure Stripe has processed
       setTimeout(() => {
         apiService.getConnectAccountStatus().then(response => {
-          console.log('[Profile] Status refresh after return:', response);
           if (response.success && response.data) {
             setStripeConnected(response.data.connected);
             setStripeStatus(response.data.status || 'pending');
@@ -1151,7 +1137,7 @@ function ProfileContent() {
             setPendingEarnings(0);
           }
         }).catch(error => {
-          console.error('[Profile] Error refreshing status:', error);
+          // silently handled
         });
       }, 1000);
       // Clean URL
@@ -1184,7 +1170,6 @@ function ProfileContent() {
         toast.error('Failed to update profile')
       }
     } catch (error) {
-      console.error('Error updating profile:', error)
       toast.error('Failed to update profile')
     } finally {
       setIsLoading(false)
@@ -1259,7 +1244,6 @@ function ProfileContent() {
         throw new Error(response.error || 'Failed to delete listing');
       }
     } catch (error: any) {
-      console.error('Error deleting listing:', error);
       toast.error(error.message || 'Failed to delete listing');
     }
   };
@@ -1672,7 +1656,7 @@ function ProfileContent() {
                             setNotifications(notifications.map((n: any) => ({ ...n, is_read: true })))
                             toast.success('All notifications marked as read')
                           } catch (error) {
-                            console.error('Error marking all as read:', error)
+                            // silently handled
                           }
                         }}
                         className="text-sm text-accent-600 hover:text-accent-700 font-medium"

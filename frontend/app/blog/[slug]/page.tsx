@@ -74,7 +74,7 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-charcoal-200">
+        <div className="mt-12 pt-8 border-t border-mist-200">
           <Link
             href="/find-parking"
             className="inline-block px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors"

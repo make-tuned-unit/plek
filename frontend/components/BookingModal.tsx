@@ -92,7 +92,6 @@ function PaymentForm({
         }
       }
     } catch (error: any) {
-      console.error('Error processing payment:', error)
       toast.error(error.message || 'Payment processing failed')
     } finally {
       setIsProcessingPayment(false)
@@ -433,12 +432,11 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
       setPaymentIntentId(paymentId)
       setPaymentCurrency(currency)
       setStep('payment') // Move to payment step
-      toast('Please complete payment to confirm your booking.', { 
+      toast('Please complete payment to confirm your booking.', {
         icon: '💳',
-        duration: 4000 
+        duration: 4000
       })
     } catch (error: any) {
-      console.error('Error creating booking:', error)
       toast.error(error.message || 'Failed to create booking. Please try again.')
     } finally {
       setIsSubmitting(false)

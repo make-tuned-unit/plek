@@ -82,11 +82,6 @@ class ApiService {
       // Don't log connection refused errors in production - they're expected if backend is down
       if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_CONNECTION_REFUSED')) {
         // Silently handle connection errors - backend might not be running
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Backend server appears to be offline. Make sure it\'s running on port 8000.');
-        }
-      } else {
-        console.error('API request failed:', error);
       }
       throw error;
     }

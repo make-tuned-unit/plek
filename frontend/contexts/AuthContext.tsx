@@ -66,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null)
           }
         } catch (error) {
-          console.error('Auth check failed:', error)
           localStorage.removeItem('auth_token')
           setUser(null)
         }
@@ -93,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
       return { success: false, error: response.message || 'Login failed' }
     } catch (error: any) {
-      console.error('Login failed:', error)
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       const errorMessage =
@@ -105,27 +103,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithToken = async (token: string): Promise<boolean> => {
     setIsLoading(true)
     try {
-      console.log('Storing token and fetching user...')
       localStorage.setItem('auth_token', token)
       const response = await apiService.getMe()
-      console.log('getMe response:', { success: response.success, hasUser: !!response.data?.user })
       if (response.success && response.data?.user) {
         setUser(response.data.user)
         setIsLoading(false)
-        console.log('Login successful, user set:', response.data.user.email)
         return true
       }
-      console.warn('getMe failed or no user data:', response)
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
     } catch (error: any) {
-      console.error('Login with token failed:', error)
-      console.error('Error details:', {
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status
-      })
       localStorage.removeItem('auth_token')
       setIsLoading(false)
       return false
@@ -178,7 +166,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
       return false
     } catch (error: any) {
-      console.error('Signup failed:', error)
       // Check if it's actually a success response (email confirmation required)
       // Sometimes the API returns success but axios/fetch treats it as an error
       if (error?.response?.data?.success && (error?.response?.data?.data?.user || error?.response?.data?.user)) {
@@ -195,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiService.logout()
     } catch (error) {
-      console.error('Logout failed:', error)
+      // silently handled
     } finally {
       localStorage.removeItem('auth_token')
       setUser(null)
@@ -211,7 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return false
     } catch (error) {
-      console.error('Profile update failed:', error)
       return false
     }
   }
@@ -225,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(response.data.user)
         }
       } catch (error) {
-        console.error('Failed to refresh user:', error)
+        // silently handled
       }
     }
   }

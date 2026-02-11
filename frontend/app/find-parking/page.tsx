@@ -150,7 +150,7 @@ function FindParkingContent() {
         return coords
       }
     } catch (error) {
-      console.warn('Failed to geocode property', property.id, error)
+      // silently handled
     }
 
     return null
@@ -229,7 +229,6 @@ function FindParkingContent() {
         // Check if location accuracy is poor (more than 1000 meters = city-level)
         if (accuracy && accuracy > 1000) {
           const accuracyKm = (accuracy / 1000).toFixed(1)
-          console.warn(`Location accuracy is poor: ${accuracy.toFixed(0)} meters. This may only be city-level precision.`)
           // Show a warning but don't block functionality
           setLocationAccuracyWarning(`Location accuracy is limited (${accuracyKm} km radius). For precise location, ensure your browser has permission to use precise location.`)
         } else {
@@ -242,10 +241,6 @@ function FindParkingContent() {
         fetchPropertiesNearLocation(latitude, longitude, DEFAULT_RADIUS_KM)
       },
       (error) => {
-        // Only log error if it's not a user denial (which is expected)
-        if (error.code !== 1) {
-          console.error('Error getting location:', error)
-        }
         setLocationPermission('denied')
         // Don't show error for user denial - just fetch all properties silently
         if (error.code !== 1) {
@@ -284,7 +279,6 @@ function FindParkingContent() {
         setError('Failed to load properties')
       }
     } catch (err: any) {
-      console.error('Error fetching properties:', err)
       setError(err.message || 'Failed to load properties')
     } finally {
       setIsLoading(false)
@@ -341,7 +335,6 @@ function FindParkingContent() {
         await fetchProperties()
       }
     } catch (err: any) {
-      console.error('Error fetching properties near location:', err)
       setError(err.message || 'Failed to load properties near your location')
       // Fall back to fetching all properties
       await fetchProperties()
@@ -362,7 +355,6 @@ function FindParkingContent() {
     if (locationParam && locationParam !== lastLocationQueryRef.current) {
       lastLocationQueryRef.current = locationParam
       if (!mapboxToken) {
-        console.warn('[FindParking] Missing Mapbox token, falling back to all properties')
         void fetchProperties()
         return
       }
@@ -395,7 +387,6 @@ function FindParkingContent() {
             await fetchProperties()
           }
         } catch (error) {
-          console.error('Error geocoding location:', error)
           setError('Could not determine that location. Showing all listings.')
           await fetchProperties()
         } finally {

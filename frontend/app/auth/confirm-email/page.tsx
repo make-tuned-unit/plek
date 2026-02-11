@@ -25,7 +25,6 @@ function ConfirmEmailContent() {
     // If we have token_hash and token from Supabase (direct link), redirect to backend for verification
     // This handles cases where Supabase redirects directly to frontend
     if (token_hash && supabaseToken && type && !success) {
-      console.log('Redirecting to backend for token verification...')
       const backendUrl = '/api/auth/confirm-email'
       const params = new URLSearchParams({
         token_hash: token_hash,
@@ -49,7 +48,6 @@ function ConfirmEmailContent() {
           }, 2000)
         })
         .catch((err) => {
-          console.error('Login error:', err)
           setStatus('error')
           setMessage('Email confirmed, but login failed. Please try logging in manually.')
         })

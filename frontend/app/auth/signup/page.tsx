@@ -78,7 +78,6 @@ function SignUpContent() {
         toast.error('Failed to create account. Please try again.')
       }
     } catch (error: any) {
-      console.error('Sign up error:', error)
       // Check if it's a success response but without token (email confirmation required)
       if (error?.response?.data?.success && error?.response?.data?.message?.includes('check your email')) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
@@ -213,6 +212,7 @@ function SignUpContent() {
                     {...register('firstName')}
                     type="text"
                     id="firstName"
+                    autoComplete="given-name"
                     className="input pl-10"
                     placeholder="John"
                   />
@@ -232,6 +232,7 @@ function SignUpContent() {
                     {...register('lastName')}
                     type="text"
                     id="lastName"
+                    autoComplete="family-name"
                     className="input pl-10"
                     placeholder="Doe"
                   />
@@ -252,6 +253,7 @@ function SignUpContent() {
                   {...register('email')}
                   type="email"
                   id="email"
+                  autoComplete="email"
                   className="input pl-10"
                   placeholder="john@example.com"
                 />
@@ -271,6 +273,7 @@ function SignUpContent() {
                   {...register('phone')}
                   type="tel"
                   id="phone"
+                  autoComplete="tel"
                   className="input pl-10"
                   placeholder="+1 (555) 123-4567"
                 />
@@ -309,6 +312,7 @@ function SignUpContent() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="new-password"
                   className="input pl-10 pr-12"
                   placeholder="Create a strong password"
                 />
@@ -389,7 +393,7 @@ function SignUpContent() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-charcoal-300" />
+                <div className="w-full border-t border-mist-200" />
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-charcoal-500">Or continue with</span>

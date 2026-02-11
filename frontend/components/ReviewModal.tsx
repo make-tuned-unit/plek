@@ -68,7 +68,6 @@ export function ReviewModal({
       onReviewSubmitted?.()
       onClose()
     } catch (error: any) {
-      console.error('Error submitting review:', error)
       toast.error(error.message || 'Failed to submit review')
     } finally {
       setIsSubmitting(false)

@@ -28,8 +28,6 @@ export function SearchBar() {
             onChange={setLocation}
             onSelect={(place) => {
               setLocation(place.place_name);
-              // Store coordinates for future use
-              console.log('Selected location:', place);
             }}
             placeholder="Where do you need parking? (e.g. Halifax, Nova Scotia)"
             className="w-full"

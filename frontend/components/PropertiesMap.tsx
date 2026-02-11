@@ -78,7 +78,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
 
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
     if (!token || token === 'your_mapbox_token_here') {
-      console.warn('Mapbox token not configured')
       return
     }
 
@@ -134,8 +133,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
     markersRef.current.forEach(({ marker }) => marker.remove())
     markersRef.current = []
 
-    console.log(`Creating markers for ${properties.length} properties`)
-    
     // Add markers for each property with valid coordinates
     properties.forEach(property => {
       // Validate coordinates are numbers and in valid range
@@ -149,7 +146,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
         property.longitude < -180 || 
         property.longitude > 180
       ) {
-        console.warn(`Invalid coordinates for property ${property.id}:`, property.latitude, property.longitude)
         return
       }
 
@@ -186,7 +182,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       
       // Handle image load errors - fallback to a simple colored div if PNG fails
       pinImage.onerror = () => {
-        console.warn('Failed to load icon.png, using fallback marker')
         pinImage.style.display = 'none'
         const fallbackDiv = document.createElement('div')
         fallbackDiv.style.width = '32px'
@@ -310,13 +305,11 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       // If coordinates appear swapped (lat is outside -90 to 90 but in -180 to 180, and lng is in -90 to 90)
       // OR if both are in lat range but the "lng" value looks more like a latitude (positive for northern hemisphere)
       if (latInLngRange && lngInLatRange) {
-        console.warn(`Coordinate swap detected for property ${property.id}, correcting...`)
         const temp = lng
         lng = lat
         lat = temp
       } else if (bothInLatRange && lng > 0 && lat < 0) {
         // Both in lat range, but lng is positive (northern hemisphere) and lat is negative - likely swapped
-        console.warn(`Coordinate swap detected for property ${property.id} (both in lat range), correcting...`)
         const temp = lng
         lng = lat
         lat = temp
@@ -338,9 +331,8 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
         .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map.current!)
-      
+
       markersRef.current.push({ marker, element: markerEl })
-      console.log(`Created marker for property ${property.id} at [${lng}, ${lat}]`)
 
       // Add click handler
       markerEl.addEventListener('click', () => {
@@ -379,8 +371,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
         })
           .setLngLat([userLng, userLat])
           .addTo(map.current!)
-      } else {
-        console.warn('Invalid user location coordinates:', userLocation)
       }
     }
 
@@ -458,8 +448,6 @@ export function PropertiesMap({ properties, userLocation, selectedLocation, onPr
       map.current!.setCenter(HALIFAX_CENTER)
       map.current!.setZoom(12)
     }
-    
-    console.log(`Map centered. Properties with coords: ${propertiesWithCoords.length}, Markers created: ${markersRef.current.length}`)
   }, [properties, mapLoaded, userLocation, selectedLocation, onPropertyClick])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN

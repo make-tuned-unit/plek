@@ -73,23 +73,10 @@ export function MapboxAutocomplete({
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { longitude, latitude, accuracy } = position.coords
-          
-          // Log accuracy for debugging
-          if (accuracy) {
-            if (accuracy > 1000) {
-              console.warn(`Geolocation accuracy is poor: ${accuracy.toFixed(0)} meters (city-level)`)
-            } else {
-              console.log(`Geolocation accuracy: ${accuracy.toFixed(0)} meters`)
-            }
-          }
-          
           setUserLocation([longitude, latitude])
         },
         (error) => {
-          // Only log if it's not a user denial (code 1)
-          if (error.code !== 1) {
-            console.log('Geolocation not available:', error.message)
-          }
+          // silently handled
         },
         {
           enableHighAccuracy: true, // Request GPS-level accuracy
@@ -153,7 +140,6 @@ export function MapboxAutocomplete({
           setSelectedIndex(-1)
         }
       } catch (error) {
-        console.error('Error fetching suggestions:', error)
         setSuggestions([])
       } finally {
         setIsLoading(false)

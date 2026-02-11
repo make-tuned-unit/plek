@@ -32,7 +32,7 @@ export default function BlogPage() {
 
         <ul className="space-y-8">
           {posts.map((post) => (
-            <li key={post.slug} className="bg-white rounded-xl border border-charcoal-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <li key={post.slug} className="bg-white rounded-xl border border-mist-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <Link href={`/blog/${post.slug}`} className="block p-6 sm:p-8">
                 <h2 className="text-xl sm:text-2xl font-semibold text-charcoal-900 mb-2 hover:text-accent-600 transition-colors">
                   {post.title}

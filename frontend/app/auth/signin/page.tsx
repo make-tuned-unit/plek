@@ -42,7 +42,6 @@ export default function SignInPage() {
         toast.error(result.error || 'Invalid email or password')
       }
     } catch (error: any) {
-      console.error('Sign in error:', error)
       toast.error(error?.message || 'An error occurred during sign in')
     }
   }
@@ -69,6 +68,7 @@ export default function SignInPage() {
                   {...register('email')}
                   type="email"
                   id="email"
+                  autoComplete="email"
                   className="input pl-10"
                   placeholder="Enter your email"
                 />
@@ -88,6 +88,7 @@ export default function SignInPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="current-password"
                   className="input pl-10 pr-12"
                   placeholder="Enter your password"
                 />
@@ -136,7 +137,7 @@ export default function SignInPage() {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-charcoal-300" />
+                <div className="w-full border-t border-mist-200" />
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-charcoal-500">Or continue with</span>
