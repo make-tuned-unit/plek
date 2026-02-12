@@ -33,6 +33,7 @@ interface CreateBookingData {
     color?: string;
     licensePlate?: string;
   };
+  timezone?: string; // IANA timezone from browser (e.g. "America/Halifax")
 }
 
 interface BookingConflict {
@@ -234,7 +235,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
     
-    const { propertyId, startTime, endTime, specialRequests, vehicleInfo }: CreateBookingData = req.body;
+    const { propertyId, startTime, endTime, specialRequests, vehicleInfo, timezone }: CreateBookingData = req.body;
     
     // Validate required fields
     if (!propertyId || !startTime || !endTime) {
@@ -291,6 +292,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         payment_status: requiresApproval ? 'pending' : 'pending',
         special_requests: specialRequests || null,
         vehicle_info: vehicleInfo || null,
+        timezone: timezone || null,
       } as any)
       .select(`
         *,
@@ -344,8 +346,9 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       securityDeposit: booking.security_deposit || 0,
       ...(vehicleInfoString && { vehicleInfo: vehicleInfoString }),
       ...(specialRequests && { specialRequests }),
+      ...(timezone && { timezone }),
     };
-    
+
     // Send confirmation email to renter
     if (booking.renter && booking.renter.email) {
       sendBookingConfirmationEmail({
@@ -664,6 +667,7 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
           startTime: existingBooking.start_time,
           endTime: existingBooking.end_time,
           totalHours: existingBooking.total_hours,
+          timezone: existingBooking.timezone || undefined,
         }).catch((err: Error) => console.error('[Booking] Failed to send booking approved email to renter', err));
       }
     } else if (status === 'cancelled') {

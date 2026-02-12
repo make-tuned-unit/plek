@@ -37,6 +37,11 @@ function SignUpContent() {
   const searchParams = useSearchParams()
   const redirectParam = searchParams.get('redirect')
   const redirectTarget = redirectParam ? decodeURIComponent(redirectParam) : null
+
+  // Store redirect target in localStorage so email confirmation flow can use it
+  if (redirectTarget && typeof window !== 'undefined') {
+    localStorage.setItem('plekk_auth_redirect', redirectTarget)
+  }
   const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
   const checkEmail = searchParams.get('check-email') === 'true'
   const pendingEmail = searchParams.get('email') || ''
@@ -73,7 +78,8 @@ function SignUpContent() {
       const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
       if (success) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
-        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}`)
+        const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
+        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
       } else {
         toast.error('Failed to create account. Please try again.')
       }
@@ -81,7 +87,8 @@ function SignUpContent() {
       // Check if it's a success response but without token (email confirmation required)
       if (error?.response?.data?.success && error?.response?.data?.message?.includes('check your email')) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
-        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}`)
+        const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
+        router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
       } else {
         toast.error(error?.response?.data?.message || 'An error occurred during sign up')
       }
@@ -175,7 +182,7 @@ function SignUpContent() {
               Try signing up again
             </button>
             <Link
-              href="/auth/signin"
+              href={redirectParam ? `/auth/signin?redirect=${encodeURIComponent(redirectParam)}` : '/auth/signin'}
               className="text-charcoal-600 hover:text-charcoal-900 font-semibold text-sm"
             >
               Already confirmed? Sign in →
@@ -431,7 +438,7 @@ function SignUpContent() {
 
           <p className="mt-6 text-center text-sm text-charcoal-600">
             Already have an account?{' '}
-            <Link href="/auth/signin" className="text-accent-600 hover:text-accent-500 font-medium">
+            <Link href={redirectParam ? `/auth/signin?redirect=${encodeURIComponent(redirectParam)}` : '/auth/signin'} className="text-accent-600 hover:text-accent-500 font-medium">
               Sign in
             </Link>
           </p>

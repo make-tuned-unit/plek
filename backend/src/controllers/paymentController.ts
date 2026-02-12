@@ -596,12 +596,14 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       endTime,
       vehicleInfo,
       specialRequests,
+      timezone,
     }: {
       propertyId?: string;
       startTime?: string;
       endTime?: string;
       vehicleInfo?: any;
       specialRequests?: string;
+      timezone?: string;
     } = req.body;
     const renterId = (req as any).user.id;
     const supabase = getSupabaseClient();
@@ -788,6 +790,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       vehicle_info: serializeMetadataValue(vehicleInfo),
       special_requests: serializeMetadataValue(specialRequests),
       instant_booking: serializeMetadataValue(property.instant_booking),
+      timezone: serializeMetadataValue(timezone),
       platform: 'plekk',
       host_connect_pending: 'false',
       host_payout_amount: serializeMetadataValue(hostPayoutAmount),
@@ -958,6 +961,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
     const vehicleInfoMetadata = paymentIntent.metadata['vehicle_info'];
     const specialRequestsMetadata = paymentIntent.metadata['special_requests'];
     const instantBooking = paymentIntent.metadata['instant_booking'] === 'true';
+    const timezoneFromMeta = paymentIntent.metadata['timezone'] || undefined;
 
     const totalHours = calculateTotalHours(startDate, endDate);
 
@@ -976,6 +980,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         payment_status: 'completed',
         special_requests: specialRequestsMetadata || null,
         vehicle_info: vehicleInfoMetadata ? { note: vehicleInfoMetadata } : null,
+        timezone: timezoneFromMeta || null,
       } as any)
       .select(`
         *,
@@ -1082,6 +1087,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         securityDeposit: 0,
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
+        timezone: timezoneFromMeta,
       }).catch((error) => {
         logger.error('Failed to send booking confirmation email', error);
       });
@@ -1107,6 +1113,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         securityDeposit: 0,
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
+        timezone: timezoneFromMeta,
       };
       if (instantBooking) {
         sendBookingNotificationEmail(hostBookingEmailPayload).catch((error) => {
@@ -1128,6 +1135,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         amount: paymentIntent.amount / 100,
         paymentDate: new Date().toISOString(),
         transactionId: paymentIntent.id,
+        timezone: timezoneFromMeta,
       }).catch((error) => {
         logger.error('Failed to send payment receipt email', error);
       });

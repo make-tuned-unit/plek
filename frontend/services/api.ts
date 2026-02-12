@@ -421,6 +421,7 @@ class ApiService {
     endTime: string;
     vehicleInfo?: any;
     specialRequests?: string;
+    timezone?: string;
   }): Promise<ApiResponse<{
     clientSecret: string;
     paymentIntentId: string;

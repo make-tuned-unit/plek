@@ -286,16 +286,38 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     }
   }, [startDate, startTime, endDate, endTime, isMultiDay, property?.hourly_rate])
 
-  // Reset form when modal opens
+  // Reset form when modal opens, restore saved booking context if available
   useEffect(() => {
     if (isOpen) {
       setStep('date-time')
+
+      // Check for saved booking context (from pre-login redirect)
+      try {
+        const saved = localStorage.getItem('plekk_pending_booking')
+        if (saved) {
+          const ctx = JSON.parse(saved)
+          if (ctx.propertyId === property.id) {
+            // Restore saved form state
+            if (ctx.startDate) setStartDate(ctx.startDate)
+            if (ctx.startTime) setStartTime(ctx.startTime)
+            if (ctx.endDate) setEndDate(ctx.endDate)
+            if (ctx.endTime) setEndTime(ctx.endTime)
+            if (ctx.isMultiDay) setIsMultiDay(ctx.isMultiDay)
+            if (ctx.vehicleInfo) setVehicleInfo(ctx.vehicleInfo)
+            if (ctx.specialRequests) setSpecialRequests(ctx.specialRequests)
+            localStorage.removeItem('plekk_pending_booking')
+            return // skip default time setup
+          }
+        }
+      } catch {}
+      localStorage.removeItem('plekk_pending_booking')
+
       setIsMultiDay(false)
       setEndDate('')
       setEndTime('')
       setVehicleInfo('')
       setSpecialRequests('')
-      
+
       // Set default start time to now (rounded to next 15 minutes)
       const now = new Date()
       const roundedMinutes = Math.ceil(now.getMinutes() / 15) * 15
@@ -304,7 +326,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
       const hours = String(startHours % 24).padStart(2, '0')
       const minutes = String(finalStartMinutes).padStart(2, '0')
       setStartTime(`${hours}:${minutes}`)
-      
+
       // Default end time to 2 hours later
       const endTimeDate = new Date(now.getTime() + 2 * 60 * 60 * 1000)
       const endRoundedMinutes = Math.ceil(endTimeDate.getMinutes() / 15) * 15
@@ -314,7 +336,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
       const endMinutes = String(finalEndMinutes).padStart(2, '0')
       setEndTime(`${endHours}:${endMinutes}`)
     }
-  }, [isOpen])
+  }, [isOpen, property.id])
 
   // Set today as minimum date
   const today = new Date().toISOString().split('T')[0]
@@ -358,8 +380,22 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     e.preventDefault()
 
     if (!user) {
+      // Store booking context so we can resume after login
+      try {
+        localStorage.setItem('plekk_pending_booking', JSON.stringify({
+          propertyId: property.id,
+          startDate,
+          startTime,
+          endDate,
+          endTime,
+          isMultiDay,
+          vehicleInfo,
+          specialRequests,
+        }))
+        localStorage.setItem('plekk_auth_redirect', window.location.pathname + window.location.search)
+      } catch {}
       toast.error('Please sign in to book a parking spot')
-      router.push('/auth/signin')
+      router.push(`/auth/signin?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`)
       return
     }
 
@@ -413,6 +449,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
         endTime: endDateTime.toISOString(),
         vehicleInfo: vehicleInfo || undefined,
         specialRequests: specialRequests || undefined,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
 
       if (!paymentResponse.success) {

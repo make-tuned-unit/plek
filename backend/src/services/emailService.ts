@@ -36,6 +36,38 @@ function getFrontendUrl(): string {
   return process.env['FRONTEND_URL'] || 'http://localhost:3000';
 }
 
+/**
+ * Format a date/time for display in emails using the booking's timezone.
+ * Falls back to UTC if no timezone is provided.
+ */
+function formatDateForEmail(isoString: string, timezone?: string): string {
+  const tz = timezone || 'UTC';
+  try {
+    return new Date(isoString).toLocaleString('en-CA', {
+      timeZone: tz,
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    // Invalid timezone string — fall back to UTC
+    return new Date(isoString).toLocaleString('en-CA', {
+      timeZone: 'UTC',
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+}
+
 // Brand colors
 const BRAND_COLORS = {
   accent: '#3dbb85', // accent-500
@@ -96,6 +128,7 @@ export interface BookingEmailData {
   securityDeposit: number;
   vehicleInfo?: string | undefined;
   specialRequests?: string | undefined;
+  timezone?: string | undefined;
 }
 
 export interface PaymentEmailData {
@@ -106,6 +139,7 @@ export interface PaymentEmailData {
   amount: number;
   paymentDate: string;
   transactionId: string;
+  timezone?: string | undefined;
 }
 
 export interface BookingMessageEmailData {
@@ -147,6 +181,7 @@ export interface BookingApprovedEmailData {
   startTime: string;
   endTime: string;
   totalHours?: number;
+  timezone?: string | undefined;
 }
 
 /**
@@ -299,8 +334,8 @@ export async function sendBookingConfirmationEmail(
   try {
     const client = getResendClient();
     
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     
     await client.emails.send({
       from: getFromEmail(),
@@ -385,8 +420,8 @@ export async function sendBookingNotificationEmail(
   try {
     const client = getResendClient();
     
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     
     await client.emails.send({
       from: getFromEmail(),
@@ -452,8 +487,8 @@ export async function sendBookingNotificationEmail(
 export async function sendHostBookingRequestEmail(data: BookingEmailData): Promise<void> {
   try {
     const client = getResendClient();
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     const bookingsUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
     await client.emails.send({
       from: getFromEmail(),
@@ -501,8 +536,8 @@ export async function sendHostBookingRequestEmail(data: BookingEmailData): Promi
 export async function sendRenterBookingApprovedEmail(data: BookingApprovedEmailData): Promise<void> {
   try {
     const client = getResendClient();
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     const viewUrl = `${getFrontendUrl()}/profile?tab=bookings&bookingId=${data.bookingId}`;
     await client.emails.send({
       from: getFromEmail(),
@@ -591,8 +626,8 @@ export async function sendBookingCancelledEmail(data: BookingCancelledEmailData)
 export async function sendRenterUpcomingBookingReminder(data: BookingEmailData): Promise<void> {
   try {
     const client = getResendClient();
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     await client.emails.send({
       from: getFromEmail(),
       to: data.renterEmail,
@@ -637,8 +672,8 @@ export async function sendRenterUpcomingBookingReminder(data: BookingEmailData):
 export async function sendHostUpcomingBookingReminder(data: BookingEmailData): Promise<void> {
   try {
     const client = getResendClient();
-    const startDate = new Date(data.startTime).toLocaleString();
-    const endDate = new Date(data.endTime).toLocaleString();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
     await client.emails.send({
       from: getFromEmail(),
       to: data.hostEmail,
@@ -851,7 +886,7 @@ export async function sendPaymentReceiptEmail(
   try {
     const client = getResendClient();
     
-    const paymentDate = new Date(data.paymentDate).toLocaleString();
+    const paymentDate = formatDateForEmail(data.paymentDate, data.timezone);
     
     await client.emails.send({
       from: getFromEmail(),

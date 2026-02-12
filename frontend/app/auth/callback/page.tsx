@@ -40,7 +40,9 @@ export default function AuthCallbackPage() {
           if (ok && !didComplete.current) {
             didComplete.current = true
             toast.success('Signed in with Google!')
-            router.replace('/profile')
+            const redirectTo = localStorage.getItem('plekk_auth_redirect') || '/profile'
+            localStorage.removeItem('plekk_auth_redirect')
+            router.replace(redirectTo)
             return
           }
         }

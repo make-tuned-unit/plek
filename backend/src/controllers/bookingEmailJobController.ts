@@ -55,6 +55,7 @@ function buildEmailData(booking: any): BookingEmailData {
     securityDeposit: Number(booking.security_deposit) || 0,
     ...(vehicleInfoString && { vehicleInfo: vehicleInfoString }),
     ...(booking.special_requests && { specialRequests: booking.special_requests }),
+    ...(booking.timezone && { timezone: booking.timezone }),
   };
 }
 
@@ -94,6 +95,7 @@ export async function runBookingEmailJob(_req: Request, res: Response): Promise<
         security_deposit,
         special_requests,
         vehicle_info,
+        timezone,
         reminder_renter_sent_at,
         reminder_host_sent_at,
         property:properties(id, title, address),
@@ -146,6 +148,7 @@ export async function runBookingEmailJob(_req: Request, res: Response): Promise<
         security_deposit,
         special_requests,
         vehicle_info,
+        timezone,
         review_request_renter_sent_at,
         review_request_host_sent_at,
         property:properties(id, title, address),

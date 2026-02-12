@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, Shield, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
@@ -18,10 +18,12 @@ const signInSchema = z.object({
 
 type SignInForm = z.infer<typeof signInSchema>
 
-export default function SignInPage() {
+function SignInContent() {
   const [showPassword, setShowPassword] = useState(false)
   const { login, isLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect')
 
   const {
     register,
@@ -36,7 +38,10 @@ export default function SignInPage() {
       const result = await login(data.email, data.password)
       if (result.success) {
         toast.success('Successfully signed in!')
-        router.push('/profile')
+        // Redirect to the page the user came from, or default to /profile
+        const destination = redirectTo || localStorage.getItem('plekk_auth_redirect') || '/profile'
+        localStorage.removeItem('plekk_auth_redirect')
+        router.push(destination)
       } else {
         // Show the actual error message from the backend
         toast.error(result.error || 'Invalid email or password')
@@ -151,7 +156,7 @@ export default function SignInPage() {
 
           <p className="mt-6 text-center text-sm text-charcoal-600">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-accent-600 hover:text-accent-500 font-medium">
+            <Link href={redirectTo ? `/auth/signup?redirect=${encodeURIComponent(redirectTo)}` : '/auth/signup'} className="text-accent-600 hover:text-accent-500 font-medium">
               Sign up
             </Link>
           </p>
@@ -171,4 +176,18 @@ export default function SignInPage() {
       </div>
     </div>
   )
-} 
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto" />
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
+  )
+}

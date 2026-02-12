@@ -42,9 +42,11 @@ function ConfirmEmailContent() {
         .then(() => {
           setStatus('success')
           setMessage('Email confirmed! You are now logged in.')
-          // Redirect to profile after 2 seconds
+          // Redirect to where user was going, or profile
+          const redirectTo = localStorage.getItem('plekk_auth_redirect') || '/profile'
+          localStorage.removeItem('plekk_auth_redirect')
           setTimeout(() => {
-            router.push('/profile')
+            router.push(redirectTo)
           }, 2000)
         })
         .catch((err) => {
