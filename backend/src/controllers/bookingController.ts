@@ -708,6 +708,9 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
           cancelledByName,
           recipientIsCanceller: isHost,
           refundMessage: refundMessage.trim() || undefined,
+          startTime: existingBooking.start_time,
+          endTime: existingBooking.end_time,
+          timezone: existingBooking.timezone || undefined,
         }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to host', err));
       }
       if (renterEmail) {
@@ -719,6 +722,9 @@ export const updateBooking = async (req: Request, res: Response): Promise<void> 
           cancelledByName,
           recipientIsCanceller: !isHost,
           refundMessage: refundMessage.trim() || undefined,
+          startTime: existingBooking.start_time,
+          endTime: existingBooking.end_time,
+          timezone: existingBooking.timezone || undefined,
         }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to renter', err));
       }
     } else if (status === 'completed') {
@@ -972,6 +978,9 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
         cancelledByName,
         recipientIsCanceller: isHost,
         refundMessage: refundMessage.trim() || undefined,
+        startTime: existingBooking.start_time,
+        endTime: existingBooking.end_time,
+        timezone: existingBooking.timezone || undefined,
       }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to host', err));
     }
     if (renterEmail) {
@@ -983,6 +992,9 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
         cancelledByName,
         recipientIsCanceller: !isHost,
         refundMessage: refundMessage.trim() || undefined,
+        startTime: existingBooking.start_time,
+        endTime: existingBooking.end_time,
+        timezone: existingBooking.timezone || undefined,
       }).catch((err: Error) => console.error('[Booking] Failed to send cancellation email to renter', err));
     }
 

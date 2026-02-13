@@ -59,7 +59,16 @@ function BookingSuccessContent() {
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-accent-600 flex-shrink-0" />
                   <span className="text-charcoal-700">
-                    {new Date(booking.start_time).toLocaleString()}
+                    {new Date(booking.start_time).toLocaleString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: booking.timezone || undefined
+                    })}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">

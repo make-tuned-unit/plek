@@ -170,6 +170,22 @@ export interface BookingCancelledEmailData {
   /** True if this recipient is the one who cancelled */
   recipientIsCanceller: boolean;
   refundMessage?: string;
+  startTime?: string;
+  endTime?: string;
+  timezone?: string;
+}
+
+export interface BookingAutoCancelledEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  recipientIsHost: boolean;
+  propertyTitle: string;
+  propertyAddress: string;
+  bookingId: string;
+  startTime: string;
+  endTime: string;
+  timezone?: string;
+  refundMessage?: string;
 }
 
 export interface BookingApprovedEmailData {
@@ -588,6 +604,12 @@ export async function sendBookingCancelledEmail(data: BookingCancelledEmailData)
       ? `You have cancelled the booking at <strong>${data.propertyTitle}</strong>.`
       : `The booking at <strong>${data.propertyTitle}</strong> has been cancelled by ${data.cancelledByName}.`;
     const refundLine = data.refundMessage ? `<p style="font-size: 16px; margin: 20px 0 0 0;">${data.refundMessage}</p>` : '';
+    const timesBlock = data.startTime && data.endTime
+      ? `<div style="background: ${BRAND_COLORS.background}; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+           <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${formatDateForEmail(data.startTime, data.timezone)}</p>
+           <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${formatDateForEmail(data.endTime, data.timezone)}</p>
+         </div>`
+      : '';
     await client.emails.send({
       from: getFromEmail(),
       to: data.recipientEmail,
@@ -602,6 +624,7 @@ export async function sendBookingCancelledEmail(data: BookingCancelledEmailData)
               <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
                 <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.recipientName},</p>
                 <p style="font-size: 16px; margin: 0 0 20px 0;">${intro}</p>
+                ${timesBlock}
                 ${refundLine}
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="${viewUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">View bookings</a>
@@ -874,6 +897,60 @@ export async function sendHostPayoutOnTheWayEmail(data: HostPayoutEmailData): Pr
     logger.info('[Email] Host payout-on-the-way email sent');
   } catch (error: any) {
     logger.error('[Email] Error sending host payout email', error);
+  }
+}
+
+/**
+ * Send auto-cancellation email to one party (host or renter).
+ * Called when a pending booking is auto-cancelled because the host didn't confirm in time.
+ */
+export async function sendBookingAutoCancelledEmail(data: BookingAutoCancelledEmailData): Promise<void> {
+  try {
+    const client = getResendClient();
+    const startDate = formatDateForEmail(data.startTime, data.timezone);
+    const endDate = formatDateForEmail(data.endTime, data.timezone);
+    const ctaUrl = data.recipientIsHost
+      ? `${getFrontendUrl()}/profile?tab=listings`
+      : `${getFrontendUrl()}/find-parking`;
+    const ctaLabel = data.recipientIsHost ? 'Manage Listings' : 'Find More Parking';
+    const refundLine = data.refundMessage
+      ? `<p style="font-size: 16px; margin: 20px 0 0 0;">${data.refundMessage}</p>`
+      : '';
+    await client.emails.send({
+      from: getFromEmail(),
+      to: data.recipientEmail,
+      subject: `Booking request auto-cancelled — ${data.propertyTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Booking request auto-cancelled')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.recipientName},</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;">This booking was automatically cancelled because the host did not confirm the request at least 4 hours before the start time.</p>
+                <div style="background: ${BRAND_COLORS.background}; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${BRAND_COLORS.accent};">
+                  <h2 style="margin-top: 0; color: ${BRAND_COLORS.accent}; font-size: 20px; font-weight: 600;">${data.propertyTitle}</h2>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Address:</strong> ${data.propertyAddress}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>Start:</strong> ${startDate}</p>
+                  <p style="margin: 8px 0; font-size: 15px;"><strong>End:</strong> ${endDate}</p>
+                </div>
+                ${refundLine}
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${ctaUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">${ctaLabel}</a>
+                </div>
+                <p style="margin-top: 30px; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Best regards,<br><strong>The plekk Team</strong></p>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+    logger.info('[Email] Booking auto-cancelled email sent');
+  } catch (error: any) {
+    logger.error('[Email] Error sending booking auto-cancelled email', error);
   }
 }
 

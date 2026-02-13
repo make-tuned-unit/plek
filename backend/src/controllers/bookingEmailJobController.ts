@@ -11,6 +11,7 @@ import {
   sendHostUpcomingBookingReminder,
   sendRenterReviewRequestEmail,
   sendHostReviewRequestEmail,
+  sendBookingAutoCancelledEmail,
 } from '../services/emailService';
 import type { BookingEmailData } from '../services/emailService';
 import { logger } from '../utils/logger';
@@ -78,7 +79,8 @@ export async function runBookingEmailJob(_req: Request, res: Response): Promise<
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const results = { remindersSent: 0, reviewRequestsSent: 0, errors: [] as string[] };
+  const in4h = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+  const results = { remindersSent: 0, reviewRequestsSent: 0, autoCancelled: 0, errors: [] as string[] };
 
   try {
     // ---- Upcoming reminders: start_time between now and now+24h, status confirmed ----
@@ -188,6 +190,123 @@ export async function runBookingEmailJob(_req: Request, res: Response): Promise<
           } catch (e: any) {
             results.errors.push(`Host review ${b.id}: ${e?.message || e}`);
           }
+        }
+      }
+    }
+
+    // ---- Auto-cancel unconfirmed pending bookings within 4h of start ----
+    const { data: pendingBookings, error: pendingError } = await supabase
+      .from('bookings')
+      .select(
+        `
+        id,
+        start_time,
+        end_time,
+        total_hours,
+        total_amount,
+        service_fee,
+        security_deposit,
+        special_requests,
+        vehicle_info,
+        timezone,
+        payment_status,
+        renter_id,
+        host_id,
+        property:properties(id, title, address),
+        renter:users!bookings_renter_id_fkey(id, first_name, last_name, email),
+        host:users!bookings_host_id_fkey(id, first_name, last_name, email)
+      `
+      )
+      .eq('status', 'pending')
+      .lte('start_time', in4h.toISOString());
+
+    if (pendingError) {
+      logger.error('[Cron] Failed to fetch pending bookings for auto-cancel', pendingError);
+      results.errors.push(pendingError.message);
+    } else {
+      for (const b of pendingBookings || []) {
+        try {
+          // Cancel the booking
+          await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', b.id);
+
+          // Refund if payment was completed
+          let refundMessage: string | undefined;
+          if (b.payment_status === 'completed') {
+            try {
+              const { data: paymentRecord } = await supabase
+                .from('payments')
+                .select('*')
+                .eq('booking_id', b.id)
+                .eq('status', 'completed')
+                .single();
+              if (paymentRecord?.stripe_payment_id) {
+                const Stripe = await import('stripe').then(m => m.default);
+                const stripeSecretKey = process.env['STRIPE_SECRET_KEY'];
+                if (stripeSecretKey) {
+                  const stripeInstance = new Stripe(stripeSecretKey.replace(/^["']|["']$/g, ''), { apiVersion: '2023-10-16' });
+                  const refund = await stripeInstance.refunds.create({
+                    payment_intent: paymentRecord.stripe_payment_id,
+                    reason: 'requested_by_customer',
+                  });
+                  await supabase.from('payments').update({ status: 'refunded', stripe_refund_id: refund.id }).eq('id', paymentRecord.id);
+                  await supabase.from('bookings').update({ payment_status: 'refunded' }).eq('id', b.id);
+                  refundMessage = 'A full refund has been issued to your original payment method.';
+                  logger.info(`[Cron] Auto-cancel refund for booking ${b.id}: ${refund.id}`);
+                }
+              }
+            } catch (refundErr: any) {
+              logger.error(`[Cron] Failed to refund auto-cancelled booking ${b.id}`, refundErr);
+              results.errors.push(`Refund ${b.id}: ${refundErr?.message || refundErr}`);
+            }
+          }
+
+          const renter = b.renter || {} as any;
+          const host = b.host || {} as any;
+          const property = b.property || {} as any;
+          const renterName = `${renter.first_name || ''} ${renter.last_name || ''}`.trim() || 'Renter';
+          const hostName = `${host.first_name || ''} ${host.last_name || ''}`.trim() || 'Host';
+          const propertyTitle = property.title || 'Parking space';
+          const propertyAddress = property.address || '';
+
+          // Send emails to both parties
+          const emailBase = {
+            propertyTitle,
+            propertyAddress,
+            bookingId: b.id,
+            startTime: b.start_time,
+            endTime: b.end_time,
+            timezone: b.timezone || undefined,
+          };
+          if (renter.email) {
+            await sendBookingAutoCancelledEmail({ ...emailBase, recipientName: renterName, recipientEmail: renter.email, recipientIsHost: false, refundMessage });
+          }
+          if (host.email) {
+            await sendBookingAutoCancelledEmail({ ...emailBase, recipientName: hostName, recipientEmail: host.email, recipientIsHost: true });
+          }
+
+          // Create notifications
+          await supabase.from('notifications').insert([
+            {
+              user_id: b.renter_id,
+              type: 'booking_cancelled',
+              title: 'Booking auto-cancelled',
+              message: `Your booking request for ${propertyTitle} was auto-cancelled because the host didn't confirm in time.${refundMessage ? ' ' + refundMessage : ''}`,
+              data: { booking_id: b.id, property_id: property.id },
+              is_read: false,
+            },
+            {
+              user_id: b.host_id,
+              type: 'booking_cancelled',
+              title: 'Booking auto-cancelled',
+              message: `A booking request for ${propertyTitle} was auto-cancelled because it was not confirmed at least 4 hours before the start time.`,
+              data: { booking_id: b.id, property_id: property.id },
+              is_read: false,
+            },
+          ] as any);
+
+          results.autoCancelled += 1;
+        } catch (e: any) {
+          results.errors.push(`Auto-cancel ${b.id}: ${e?.message || e}`);
         }
       }
     }

@@ -2057,24 +2057,27 @@ function ProfileContent() {
                                     {startDate && (
                                       <span className="flex items-center">
                                         <Calendar className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
-                                        <span className="whitespace-nowrap font-medium">{startDate.toLocaleDateString('en-US', { 
-                                          month: 'short', 
+                                        <span className="whitespace-nowrap font-medium">{startDate.toLocaleDateString('en-US', {
+                                          month: 'short',
                                           day: 'numeric',
-                                          year: 'numeric'
+                                          year: 'numeric',
+                                          timeZone: booking.timezone || undefined
                                         })}</span>
                                       </span>
                                     )}
                                     {startDate && endDate && (
                                       <span className="flex items-center">
                                         <Clock className="h-4 w-4 mr-1.5 flex-shrink-0 text-mist-500" />
-                                        <span className="whitespace-nowrap">{startDate.toLocaleTimeString('en-US', { 
-                                          hour: 'numeric', 
+                                        <span className="whitespace-nowrap">{startDate.toLocaleTimeString('en-US', {
+                                          hour: 'numeric',
                                           minute: '2-digit',
-                                          hour12: true 
-                                        })} - {endDate.toLocaleTimeString('en-US', { 
-                                          hour: 'numeric', 
+                                          hour12: true,
+                                          timeZone: booking.timezone || undefined
+                                        })} - {endDate.toLocaleTimeString('en-US', {
+                                          hour: 'numeric',
                                           minute: '2-digit',
-                                          hour12: true 
+                                          hour12: true,
+                                          timeZone: booking.timezone || undefined
                                         })}</span>
                                       </span>
                                     )}
@@ -2207,7 +2210,8 @@ function ProfileContent() {
                                                 day: 'numeric',
                                                 hour: 'numeric',
                                                 minute: '2-digit',
-                                                hour12: true
+                                                hour12: true,
+                                                timeZone: booking.timezone || undefined
                                               })}
                                             </span>
                                           </div>
@@ -2223,7 +2227,8 @@ function ProfileContent() {
                                                 day: 'numeric',
                                                 hour: 'numeric',
                                                 minute: '2-digit',
-                                                hour12: true
+                                                hour12: true,
+                                                timeZone: booking.timezone || undefined
                                               })}
                                             </span>
                                           </div>
