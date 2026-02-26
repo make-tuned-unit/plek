@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SupabaseAuthService, getSupabaseClient } from '../services/supabaseService';
 import { sendEmailConfirmationEmail, sendPasswordResetEmail } from '../services/emailService';
 import { logger } from '../utils/logger';
+import { isBetaRegionEnabled, isAllowedProvince } from '../config/beta';
 
 // @desc    Sign in / sign up with Google (OAuth token from Supabase)
 // @route   POST /api/auth/google
@@ -46,12 +47,12 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// @desc    Register user
+// @desc    Register user (or add to waitlist if outside allowed beta region)
 // @route   POST /api/auth/register
 // @access  Public
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, phone, isHost } = req.body;
+    const { email, password, firstName, lastName, phone, isHost, province } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
@@ -60,6 +61,38 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         message: 'Email, password, first name, and last name are required',
       });
       return;
+    }
+
+    const provinceNormalized = typeof province === 'string' ? province.trim().toUpperCase() : undefined;
+
+    // Beta region: if enabled and user is not in allowed province, add to waitlist instead of registering
+    if (isBetaRegionEnabled()) {
+      if (!provinceNormalized) {
+        res.status(400).json({
+          success: false,
+          message: 'Please select your province.',
+        });
+        return;
+      }
+      if (!isAllowedProvince(provinceNormalized)) {
+        const supabase = getSupabaseClient();
+        const { error: insertError } = await supabase.from('signup_waitlist').insert({
+          email: email.trim().toLowerCase(),
+          province: provinceNormalized,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone: phone?.trim() || null,
+        });
+        if (insertError && insertError.code !== '23505') {
+          logger.warn('[Register] Waitlist insert error', { email, province: provinceNormalized, error: insertError.message });
+        }
+        res.status(201).json({
+          success: true,
+          waitlist: true,
+          message: "We'll contact you when plekk is available in your area.",
+        });
+        return;
+      }
     }
 
     // Register user with Supabase

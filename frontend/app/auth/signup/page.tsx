@@ -6,17 +6,34 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle2, MapPin } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 import { apiService } from '@/services/api'
 import toast from 'react-hot-toast'
+
+const PROVINCES = [
+  { value: 'NS', label: 'Nova Scotia' },
+  { value: 'AB', label: 'Alberta' },
+  { value: 'BC', label: 'British Columbia' },
+  { value: 'MB', label: 'Manitoba' },
+  { value: 'NB', label: 'New Brunswick' },
+  { value: 'NL', label: 'Newfoundland and Labrador' },
+  { value: 'NT', label: 'Northwest Territories' },
+  { value: 'NU', label: 'Nunavut' },
+  { value: 'ON', label: 'Ontario' },
+  { value: 'PE', label: 'Prince Edward Island' },
+  { value: 'QC', label: 'Quebec' },
+  { value: 'SK', label: 'Saskatchewan' },
+  { value: 'YT', label: 'Yukon' },
+] as const
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
+  province: z.string().min(1, 'Please select your province'),
   isHost: z.boolean().default(false),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
@@ -44,6 +61,7 @@ function SignUpContent() {
   }
   const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
   const checkEmail = searchParams.get('check-email') === 'true'
+  const waitlistSuccess = searchParams.get('waitlist') === 'true'
   const pendingEmail = searchParams.get('email') || ''
   const [isResending, setIsResending] = useState(false)
   const [resendEmailInput, setResendEmailInput] = useState('')
@@ -54,6 +72,7 @@ function SignUpContent() {
     lastName: '',
     email: '',
     phone: '',
+    province: 'NS',
     isHost: hostIntent,
     password: '',
     confirmPassword: '',
@@ -70,13 +89,23 @@ function SignUpContent() {
   })
 
   const onSubmit = async (data: SignUpForm) => {
-    if (isSubmitting) return // Prevent double submission
-    
+    if (isSubmitting) return
+
     setIsSubmitting(true)
-    
     try {
-      const success = await signup(data.email, data.password, data.firstName, data.lastName, data.phone, data.isHost)
-      if (success) {
+      const result = await signup(
+        data.email,
+        data.password,
+        data.firstName,
+        data.lastName,
+        data.phone,
+        data.isHost,
+        data.province
+      )
+      if (result.success && result.waitlist) {
+        toast.success("You're on the list! We'll be in touch when plekk is available in your area.", { duration: 5000 })
+        router.push('/auth/signup?waitlist=true')
+      } else if (result.success) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
         const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
         router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
@@ -84,17 +113,45 @@ function SignUpContent() {
         toast.error('Failed to create account. Please try again.')
       }
     } catch (error: any) {
-      // Check if it's a success response but without token (email confirmation required)
-      if (error?.response?.data?.success && error?.response?.data?.message?.includes('check your email')) {
+      const res = error?.response?.data
+      if (res?.success && res?.waitlist) {
+        toast.success("You're on the list! We'll be in touch when plekk is available in your area.", { duration: 5000 })
+        router.push('/auth/signup?waitlist=true')
+      } else if (res?.success && (res?.data?.user || res?.user || res?.message?.includes('check your email'))) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
         const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
         router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
       } else {
-        toast.error(error?.response?.data?.message || 'An error occurred during sign up')
+        toast.error(res?.message || 'An error occurred during sign up')
       }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Show waitlist success when user signed up from outside allowed region
+  if (waitlistSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="mb-6">
+            <div className="mx-auto w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-accent-600" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-charcoal-900 mb-4">You&apos;re on the list</h1>
+          <p className="text-charcoal-600 mb-6">
+            We&apos;ll contact you as soon as plekk becomes available in your area.
+          </p>
+          <Link
+            href="/"
+            className="inline-block text-accent-600 hover:text-accent-700 font-semibold text-sm"
+          >
+            Back to home
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   // Show check email message if redirected here after successful signup
@@ -287,6 +344,30 @@ function SignUpContent() {
               </div>
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="province" className="block text-sm font-medium text-charcoal-700 mb-2">
+                Province
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5 pointer-events-none" />
+                <select
+                  {...register('province')}
+                  id="province"
+                  autoComplete="address-level1"
+                  className="input pl-10 appearance-none cursor-pointer"
+                >
+                  {PROVINCES.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {errors.province && (
+                <p className="mt-1 text-sm text-red-600">{errors.province.message}</p>
               )}
             </div>
 

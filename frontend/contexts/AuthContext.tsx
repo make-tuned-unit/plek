@@ -40,8 +40,9 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     phone: string,
-    isHost?: boolean
-  ) => Promise<boolean>
+    isHost?: boolean,
+    province?: string
+  ) => Promise<{ success: boolean; waitlist?: boolean }>
   logout: () => Promise<void>
   updateProfile: (profileData: Partial<User>) => Promise<boolean>
   refreshUser: () => Promise<void>
@@ -126,8 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firstName: string,
     lastName: string,
     phone: string,
-    isHost: boolean = false
-  ): Promise<boolean> => {
+    isHost: boolean = false,
+    province?: string
+  ): Promise<{ success: boolean; waitlist?: boolean }> => {
     setIsLoading(true)
     try {
       const response = await apiService.register({
@@ -137,44 +139,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastName,
         phone,
         isHost,
+        province,
       })
 
-      // Handle both cases: with token (old flow) or without token (email confirmation required)
-      // Response structure: { success: true, data: { user: {...}, token?: "..." }, message?: "..." }
-      const userData = response.data?.user;
-      const token = response.data?.token;
-      
+      const data = response.data as { user?: any; token?: string; waitlist?: boolean } | undefined
+      const userData = data?.user ?? response.data?.user
+      const token = data?.token ?? response.data?.token
+
+      if (response.success && data?.waitlist) {
+        setIsLoading(false)
+        return { success: true, waitlist: true }
+      }
+
       if (response.success && userData) {
         if (token) {
           localStorage.setItem('auth_token', token)
           setUser(userData)
         }
-        // If no token, user needs to confirm email - still return true to show success message
         setIsLoading(false)
-        return true
+        return { success: true }
       }
-      
-      // Fallback: check if response has user data directly
+
       if (userData) {
         if (token) {
           localStorage.setItem('auth_token', token)
           setUser(userData)
         }
         setIsLoading(false)
-        return true
+        return { success: true }
       }
       setIsLoading(false)
-      return false
+      return { success: false }
     } catch (error: any) {
-      // Check if it's actually a success response (email confirmation required)
-      // Sometimes the API returns success but axios/fetch treats it as an error
-      if (error?.response?.data?.success && (error?.response?.data?.data?.user || error?.response?.data?.user)) {
+      const res = error?.response?.data
+      if (res?.success && res?.waitlist) {
         setIsLoading(false)
-        return true // Return true so UI can show "check your email" message
+        return { success: true, waitlist: true }
+      }
+      if (res?.success && (res?.data?.user || res?.user)) {
+        setIsLoading(false)
+        return { success: true }
       }
       localStorage.removeItem('auth_token')
       setIsLoading(false)
-      return false
+      return { success: false }
     }
   }
 

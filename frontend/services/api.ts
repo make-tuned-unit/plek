@@ -95,7 +95,8 @@ class ApiService {
     lastName: string;
     phone: string;
     isHost: boolean;
-  }): Promise<ApiResponse<{ user: any; token: string }>> {
+    province?: string;
+  }): Promise<ApiResponse<{ user?: any; token?: string; waitlist?: boolean }>> {
     return this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
@@ -105,6 +106,7 @@ class ApiService {
         lastName: userData.lastName,
         phone: userData.phone,
         isHost: userData.isHost,
+        ...(userData.province != null && { province: userData.province }),
       }),
     });
   }
