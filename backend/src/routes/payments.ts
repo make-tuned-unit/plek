@@ -11,6 +11,7 @@ import {
   createPaymentIntent,
   confirmPayment,
   getPaymentHistory,
+  getTaxStatus,
   handleWebhook,
 } from '../controllers/paymentController';
 
@@ -30,6 +31,7 @@ router.post('/refund/:bookingId', protect, processRefund);
 router.post('/refund/:bookingId/decline', protect, declineRefund);
 
 // Payment routes
+router.get('/tax-status', getTaxStatus);
 router.route('/').get(protect, getPaymentHistory).post(protect, createPaymentIntent);
 router.post('/confirm', protect, confirmPayment);
 

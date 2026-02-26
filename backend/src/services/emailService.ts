@@ -125,6 +125,7 @@ export interface BookingEmailData {
   serviceFee: number; // Booker-facing fee
   bookerServiceFee: number;
   hostServiceFee: number;
+  taxAmount?: number; // Tax (15% NS) when present
   securityDeposit: number;
   vehicleInfo?: string | undefined;
   specialRequests?: string | undefined;
@@ -391,13 +392,19 @@ export async function sendBookingConfirmationEmail(
                       <td style="padding: 10px 0; font-size: 15px;">plekk Service Fee (5%):</td>
                       <td style="text-align: right; padding: 10px 0; font-size: 15px;">$${data.serviceFee.toFixed(2)}</td>
                     </tr>
+                    ${(data.taxAmount ?? 0) > 0 ? `
+                    <tr>
+                      <td style="padding: 10px 0; font-size: 15px;">HST (NS):</td>
+                      <td style="text-align: right; padding: 10px 0; font-size: 15px;">$${data.taxAmount!.toFixed(2)}</td>
+                    </tr>
+                    ` : ''}
                     <tr>
                       <td style="padding: 10px 0; font-size: 15px;">Security Deposit:</td>
                       <td style="text-align: right; padding: 10px 0; font-size: 15px;">$${data.securityDeposit.toFixed(2)}</td>
                     </tr>
                     <tr style="border-top: 2px solid ${BRAND_COLORS.text}; font-weight: bold;">
                       <td style="padding: 12px 0; font-size: 16px;">Total Charged:</td>
-                      <td style="text-align: right; padding: 12px 0; font-size: 16px; color: ${BRAND_COLORS.accent};">$${(data.baseAmount + data.serviceFee + data.securityDeposit).toFixed(2)}</td>
+                      <td style="text-align: right; padding: 12px 0; font-size: 16px; color: ${BRAND_COLORS.accent};">$${(data.baseAmount + data.serviceFee + (data.taxAmount ?? 0) + data.securityDeposit).toFixed(2)}</td>
                     </tr>
                   </table>
                 </div>

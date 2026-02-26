@@ -14,12 +14,15 @@ import { TimePicker } from '@/components/TimePicker'
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise: Promise<Stripe | null> | null = publishableKey ? loadStripe(publishableKey) : null
 
+const NS_TAX_RATE = 0.15
+
 interface PriceBreakdown {
   hours: number
   hourlyRate: number
   subtotal: number
   bookerServiceFee: number
   hostServiceFee: number
+  taxAmount: number
   total: number
 }
 
@@ -167,6 +170,12 @@ function PaymentForm({
               <span className="text-accent-100">Fee</span>
               <span className="font-medium">{formatMoney(priceBreakdown.bookerServiceFee, currency)}</span>
             </div>
+            {priceBreakdown.taxAmount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-accent-100">HST (NS)</span>
+                <span className="font-medium">{formatMoney(priceBreakdown.taxAmount, currency)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -245,11 +254,19 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
   const [paymentCurrency, setPaymentCurrency] = useState<string>('usd')
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null)
+  const [taxEnabled, setTaxEnabled] = useState(false)
 
-  // Calculate price breakdown when dates/times change
+  // Fetch tax status when modal opens (HST only shown when small-supplier threshold crossed)
+  useEffect(() => {
+    if (!isOpen) return
+    apiService.getTaxStatus().then((r) => {
+      if (r.success && r.data) setTaxEnabled(Boolean((r.data as { taxEnabled?: boolean }).taxEnabled))
+    }).catch(() => setTaxEnabled(false))
+  }, [isOpen])
+
+  // Calculate price breakdown when dates/times change; tax only when taxEnabled and NS
   useEffect(() => {
     if (startDate && startTime && property?.hourly_rate) {
-      // For single-day bookings, use startDate for endDate
       const effectiveEndDate = isMultiDay && endDate ? endDate : startDate
       const effectiveEndTime = endTime || startTime
 
@@ -263,12 +280,14 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
       
       if (end > start) {
         const diffMs = end.getTime() - start.getTime()
-        const hours = Math.ceil(diffMs / (1000 * 60 * 60)) // Round up to nearest hour
+        const hours = Math.ceil(diffMs / (1000 * 60 * 60))
         const hourlyRate = property.hourly_rate
         const subtotal = Math.round(hours * hourlyRate * 100) / 100
-        const bookerServiceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% service fee for booker
-        const hostServiceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% service fee for host (deducted from payout)
-        const total = Math.round((subtotal + bookerServiceFee) * 100) / 100
+        const bookerServiceFee = Math.round(subtotal * 0.05 * 100) / 100
+        const hostServiceFee = Math.round(subtotal * 0.05 * 100) / 100
+        const isNS = String(property.state || '').toUpperCase() === 'NS'
+        const taxAmount = taxEnabled && isNS ? Math.round(subtotal * NS_TAX_RATE * 100) / 100 : 0
+        const total = Math.round((subtotal + bookerServiceFee + taxAmount) * 100) / 100
 
         setPriceBreakdown({
           hours,
@@ -276,6 +295,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
           subtotal,
           bookerServiceFee,
           hostServiceFee,
+          taxAmount,
           total,
         })
       } else {
@@ -284,7 +304,7 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
     } else {
       setPriceBreakdown(null)
     }
-  }, [startDate, startTime, endDate, endTime, isMultiDay, property?.hourly_rate])
+  }, [startDate, startTime, endDate, endTime, isMultiDay, property?.hourly_rate, property?.state, taxEnabled])
 
   // Reset form when modal opens, restore saved booking context if available
   useEffect(() => {
@@ -768,6 +788,12 @@ export function BookingModal({ property, isOpen, onClose, onSuccess }: BookingMo
                   <span className="text-accent-100">Fee</span>
                   <span className="font-medium">${priceBreakdown.bookerServiceFee.toFixed(2)}</span>
                 </div>
+                {priceBreakdown.taxAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-accent-100">HST (NS)</span>
+                    <span className="font-medium">${priceBreakdown.taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

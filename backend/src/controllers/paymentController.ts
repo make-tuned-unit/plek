@@ -3,6 +3,9 @@ import Stripe from 'stripe';
 import geoip from 'geoip-lite';
 import { getSupabaseClient } from '../services/supabaseService';
 import { logger } from '../utils/logger';
+import { calculateTotalHours, calculateBookingPricing } from '../lib/pricing';
+import * as taxService from '../services/taxService';
+import { getTaxConfig, isTaxEnabled } from '../services/taxService';
 
 /** Get country code from request IP (fallback when user profile has no country). */
 function getCountryFromRequest(req: Request): string | null {
@@ -30,11 +33,6 @@ function getStripe(): Stripe {
     });
   }
   return stripeInstance;
-}
-
-function calculateTotalHours(startTime: Date, endTime: Date): number {
-  const diffMs = endTime.getTime() - startTime.getTime();
-  return diffMs / (1000 * 60 * 60);
 }
 
 // Map user country (ISO 3166-1 alpha-2) to Stripe currency (ISO 4217 lowercase)
@@ -116,53 +114,6 @@ async function ensureConnectStatusFromStripe(
     }
   }
   return { active };
-}
-
-function calculateBookingPriceForProperty(
-  property: any,
-  startTime: Date,
-  endTime: Date
-): {
-  baseAmount: number;
-  totalAmount: number;
-  bookerServiceFee: number;
-  hostServiceFee: number;
-} {
-  const totalHours = calculateTotalHours(startTime, endTime);
-  const totalDays = Math.ceil(totalHours / 24);
-
-  let baseAmount = 0;
-
-  if (property.hourly_rate && totalHours < 24) {
-    baseAmount = property.hourly_rate * totalHours;
-  } else if (property.daily_rate && totalDays >= 1) {
-    baseAmount = property.daily_rate * totalDays;
-  } else if (property.weekly_rate && totalDays >= 7) {
-    const weeks = Math.ceil(totalDays / 7);
-    baseAmount = property.weekly_rate * weeks;
-  } else if (property.monthly_rate && totalDays >= 30) {
-    const months = Math.ceil(totalDays / 30);
-    baseAmount = property.monthly_rate * months;
-  } else if (property.hourly_rate) {
-    baseAmount = property.hourly_rate * totalHours;
-  } else {
-    throw new Error('Property has no pricing configured');
-  }
-
-  const totalFeePercentage = property.service_fee_percentage || 10;
-  const hostFeePercentage = totalFeePercentage / 2;
-  const bookerFeePercentage = totalFeePercentage / 2;
-
-  const hostServiceFee = (baseAmount * hostFeePercentage) / 100;
-  const bookerServiceFee = (baseAmount * bookerFeePercentage) / 100;
-  const totalAmount = baseAmount + bookerServiceFee;
-
-  return {
-    baseAmount: Math.round(baseAmount * 100) / 100,
-    totalAmount: Math.round(totalAmount * 100) / 100,
-    bookerServiceFee: Math.round(bookerServiceFee * 100) / 100,
-    hostServiceFee: Math.round(hostServiceFee * 100) / 100,
-  };
 }
 
 async function checkBookingConflictsForRange(
@@ -734,10 +685,17 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } =
-      calculateBookingPriceForProperty(property, startDate, endDate);
+    const pricing = calculateBookingPricing(property, startDate, endDate);
+    const taxConfig = await getTaxConfig();
+    const applyTax = isTaxEnabled(taxConfig);
+    const taxAmount = applyTax ? pricing.taxAmount : 0;
+    const baseAmount = pricing.baseAmount;
+    const bookerServiceFee = pricing.bookerServiceFee;
+    const hostServiceFee = pricing.hostServiceFee;
+    const totalAmount = baseAmount + bookerServiceFee + taxAmount;
 
-    const applicationFee = bookerServiceFee + hostServiceFee;
+    // Tax (HST NS) when enabled is part of Plekk's application fee
+    const applicationFee = bookerServiceFee + hostServiceFee + taxAmount;
     let hostHasConnect =
       host?.stripe_account_id && host?.stripe_account_status === 'active';
 
@@ -786,6 +744,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
       base_amount: serializeMetadataValue(baseAmount),
       booker_service_fee: serializeMetadataValue(bookerServiceFee),
       host_service_fee: serializeMetadataValue(hostServiceFee),
+      tax_reserve: serializeMetadataValue(taxAmount),
       total_amount: serializeMetadataValue(totalAmount),
       vehicle_info: serializeMetadataValue(vehicleInfo),
       special_requests: serializeMetadataValue(specialRequests),
@@ -822,6 +781,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
           baseAmount,
           bookerServiceFee,
           hostServiceFee,
+          taxAmount,
           currency,
         },
       },
@@ -958,6 +918,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
     };
 
     const hostServiceFee = parseFloat(paymentIntent.metadata['host_service_fee'] || '0');
+    const taxReserve = parseFloat(paymentIntent.metadata['tax_reserve'] || '0');
     const vehicleInfoMetadata = paymentIntent.metadata['vehicle_info'];
     const specialRequestsMetadata = paymentIntent.metadata['special_requests'];
     const instantBooking = paymentIntent.metadata['instant_booking'] === 'true';
@@ -976,6 +937,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         total_hours: totalHours,
         total_amount: totalAmount,
         service_fee: bookerServiceFee,
+        tax_reserve: taxReserve,
         status: instantBooking ? 'confirmed' : 'pending',
         payment_status: 'completed',
         special_requests: specialRequestsMetadata || null,
@@ -1084,6 +1046,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         serviceFee: bookerServiceFee,
         bookerServiceFee,
         hostServiceFee,
+        taxAmount: taxReserve,
         securityDeposit: 0,
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
@@ -1110,6 +1073,7 @@ export const confirmPayment = async (req: Request, res: Response): Promise<void>
         serviceFee: bookerServiceFee,
         bookerServiceFee,
         hostServiceFee,
+        taxAmount: taxReserve,
         securityDeposit: 0,
         vehicleInfo: vehicleInfoText,
         specialRequests: specialRequestsMetadata || undefined,
@@ -1376,6 +1340,18 @@ export const declineRefund = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// @desc    Get tax status for checkout (HST on/off). Public so booking modal can show correct breakdown.
+// @route   GET /api/payments/tax-status
+// @access  Public
+export const getTaxStatus = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const config = await taxService.getTaxConfig();
+    res.json({ success: true, taxEnabled: taxService.isTaxEnabled(config) });
+  } catch {
+    res.json({ success: true, taxEnabled: false });
+  }
+};
+
 // @desc    Handle Stripe webhook
 // @route   POST /api/payments/webhook
 // @access  Public (Stripe calls this)
@@ -1403,6 +1379,40 @@ export const handleWebhook = async (req: Request, res: Response): Promise<void> 
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         await handlePaymentSuccess(paymentIntent, supabase);
         break;
+
+      case 'charge.succeeded': {
+        const charge = event.data.object as Stripe.Charge;
+        if (charge.currency?.toLowerCase() === 'cad') {
+          try {
+            await taxService.processChargeSucceeded(
+              event.id,
+              charge.id,
+              charge.amount,
+              charge.currency
+            );
+          } catch (e) {
+            logger.warn('[Tax] processChargeSucceeded failed', { error: (e as Error).message });
+          }
+        }
+        break;
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge;
+        if (charge.currency?.toLowerCase() === 'cad' && charge.amount_refunded) {
+          try {
+            await taxService.processChargeRefunded(
+              event.id,
+              charge.id,
+              charge.amount_refunded,
+              charge.currency
+            );
+          } catch (e) {
+            logger.warn('[Tax] processChargeRefunded failed', { error: (e as Error).message });
+          }
+        }
+        break;
+      }
         
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object as Stripe.PaymentIntent;

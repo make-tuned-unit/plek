@@ -79,11 +79,14 @@ Analysis of how to integrate the prompt’s four areas into the Plek codebase wi
 
 ---
 
-## 3. Nova Scotia “tax reserve” fee (15%, like a service fee)
+## 3. Nova Scotia tax (15%) — show as “Tax” to the user
 
 **Context**
+- We capture this as part of our service fee until we have an HST number; customer sees **“Tax”** and 15% (no “tax reserve” wording).
+- **Stripe:** The tax amount must be **added to Plekk’s fees** (the application fee), not to the host transfer. So in Stripe: `application_fee_amount = bookerServiceFee + hostServiceFee + taxAmount` (when NS). The host still receives only their share (base minus host service fee). Plekk receives booker fee + host fee + tax, and holds the tax for future remittance.
+- **Goal:** Collect the tax now so we have the funds when we get an HST number and can remit to the tax authority without remittance debt.
 - Property has `state` (e.g. `'NS'`). Booking is for a property, so “Nova Scotia transaction” = property in NS.
-- Tax reserve: 15% of the **same base as the service fee** (subtotal / base amount), applied only when property is in NS. Shown as “Tax reserve (NS)”, not as HST.
+- Tax: 15% of the **same base as the service fee** (subtotal / base amount), applied only when property is in NS.
 
 **Current pricing flow**
 - **Booking creation:** `backend/src/controllers/bookingController.ts` — `calculateBookingPrice(property, start, end)` returns baseAmount, totalAmount, bookerServiceFee, hostServiceFee. Booking row: `total_amount`, `service_fee` (booker portion). No tax reserve.
@@ -102,11 +105,11 @@ Analysis of how to integrate the prompt’s four areas into the Plek codebase wi
 
 **Where to apply**
 - **bookingController:** When creating a booking, after computing base + service fees, call `computeTaxReserve(baseAmount, property.state)`. Add `taxReserve` to `totalAmount`; persist `tax_reserve` and updated `total_amount` on the booking row. Include taxReserve in any email breakdown if you show fees there.
-- **paymentController:** In `createPaymentIntent`, after `calculateBookingPriceForProperty`, get `taxReserve = computeTaxReserve(baseAmount, property.state)`. Add to `totalAmount` and to Stripe `amount`. Put `tax_reserve` in metadata so webhook/confirm can persist it. When creating/updating the booking in the payment flow, set `tax_reserve` and use the same total (including tax reserve).
-- **BookingModal (frontend):** In the price breakdown effect, if `property.state === 'NS'` (or from a small constant), add a line: “Tax reserve (NS): $X” and add X to total. Use the same rate (0.15) and same base (subtotal) as backend so UI matches. Prefer a shared constant (e.g. `NS_TAX_RESERVE_RATE`) in frontend config or from API if you ever need to change it without a deploy.
+- **paymentController:** In `createPaymentIntent`, after `calculateBookingPriceForProperty`, get `taxAmount = computeTaxReserve(baseAmount, property.state)`. Add to `totalAmount` and to Stripe `amount` (so the customer is charged). **Include the tax in Plekk’s application fee:** `application_fee_amount = bookerServiceFee + hostServiceFee + taxAmount` (so the tax is collected by Plekk in Stripe, not transferred to the host). Put `tax_reserve` in metadata and persist on booking so we can track and remit later.
+- **BookingModal (frontend):** In the price breakdown effect, if `property.state === 'NS'` (or from a small constant), add a line: **“Tax (15%)”** or “Tax” with the amount (e.g. “Tax: $X”) and add X to total. Do not use “tax reserve” in the customer-facing label. Use the same rate (0.15) and same base (subtotal) as backend so UI matches. Prefer a shared constant (e.g. `NS_TAX_RATE`) in frontend config or from API if you ever need to change it without a deploy.
 
 **Emails / receipts**
-- Wherever you show a price breakdown (confirmation email, receipt, etc.), if `tax_reserve > 0`, add a line “Tax reserve (NS): $X”. Use the stored `booking.tax_reserve` when available so it matches what was charged.
+- Wherever you show a price breakdown (confirmation email, receipt, etc.), if `tax_reserve > 0`, add a line **“Tax (15%)”** or “Tax: $X”. Use the stored `booking.tax_reserve` when available so it matches what was charged. No “tax reserve” wording to the customer.
 
 **Files to add/change**
 - Add: `backend/src/lib/pricing.ts` — `NS_TAX_RESERVE_RATE`, `computeTaxReserve(base, province)`, and optionally a single `calculateBookingPricing(property, start, end)` that returns all amounts including tax reserve.

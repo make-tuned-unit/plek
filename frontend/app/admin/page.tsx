@@ -70,6 +70,13 @@ export default function AdminDashboardPage() {
   })
   const [datePreset, setDatePreset] = useState<string>('last30')
   const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | 'paid'>('all')
+  const [taxConfig, setTaxConfig] = useState<{
+    tax_mode: string;
+    tax_effective_at: string | null;
+    revenue_cad: number;
+    threshold_cad: number;
+    revenue_last_synced_at: string | null;
+  } | null>(null)
 
   const fetchAdminStats = async () => {
     try {
@@ -115,6 +122,9 @@ export default function AdminDashboardPage() {
       fetchPendingProperties()
       fetchAllProperties()
       fetchAdminStats()
+      apiService.getAdminTaxConfig().then((r) => {
+        if (r.success && r.data) setTaxConfig(r.data as any)
+      }).catch(() => {})
     }
   }, [user, authLoading, router])
 
@@ -313,8 +323,8 @@ export default function AdminDashboardPage() {
               Metrics
             </h2>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-              <span className="text-sm font-medium text-charcoal-700 w-full sm:w-auto">Date range</span>
-              <div className="flex flex-wrap gap-2 min-w-0">
+              <span className="text-sm font-medium text-charcoal-700 flex-shrink-0">Date range</span>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
                 {[
                   { key: 'last7', label: 'Last 7 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 7); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
                   { key: 'last30', label: 'Last 30 days', getValue: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate() - 30); return { start: s.toISOString().split('T')[0], end: e.toISOString().split('T')[0] }; } },
@@ -337,28 +347,28 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
               {dateRange !== 'all' && typeof dateRange === 'object' && (
-                <div className="flex flex-wrap items-center gap-2 min-w-0 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                   <input
                     type="date"
                     value={dateRange.start}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, start: e.target.value })); }}
-                    className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                    className="rounded border border-mist-300 px-2 py-1.5 text-sm min-w-[8.5rem]"
                   />
                   <span className="text-charcoal-500 flex-shrink-0">to</span>
                   <input
                     type="date"
                     value={dateRange.end}
                     onChange={(e) => { setDatePreset('custom'); setDateRange((prev) => (prev === 'all' ? prev : { ...prev, end: e.target.value })); }}
-                    className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                    className="rounded border border-mist-300 px-2 py-1.5 text-sm min-w-[8.5rem]"
                   />
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2 border-t sm:border-t-0 sm:border-l border-mist-200 pt-2 sm:pt-0 sm:pl-3 min-w-0">
-                <span className="text-sm font-medium text-charcoal-700">Bookings</span>
+              <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-mist-200 pt-2 sm:pt-0 sm:pl-3 flex-shrink-0">
+                <span className="text-sm font-medium text-charcoal-700 whitespace-nowrap">Bookings</span>
                 <select
                   value={bookingStatusFilter}
                   onChange={(e) => setBookingStatusFilter(e.target.value as 'all' | 'paid')}
-                  className="rounded border border-mist-300 px-2 py-1 text-sm min-w-0 max-w-full"
+                  className="rounded border border-mist-300 px-2.5 py-1.5 text-sm min-w-[11rem] w-auto"
                 >
                   <option value="all">All (non-cancelled)</option>
                   <option value="paid">Paid only</option>
@@ -368,8 +378,9 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => fetchAdminStats()}
                 disabled={statsLoading}
-                className="p-2 rounded-lg bg-mist-100 hover:bg-mist-200 disabled:opacity-50"
+                className="p-2 rounded-lg bg-mist-100 hover:bg-mist-200 disabled:opacity-50 flex-shrink-0"
                 title="Refresh metrics"
+                aria-label="Refresh metrics"
               >
                 <Loader2 className={`h-4 w-4 text-charcoal-600 ${statsLoading ? 'animate-spin' : ''}`} />
               </button>
@@ -423,6 +434,36 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-charcoal-500 mt-2">
               Showing data from {dateRange.start} to {dateRange.end}
             </p>
+          )}
+
+          {taxConfig && (
+            <div className="mt-6 p-4 bg-mist-50 rounded-xl border border-mist-200">
+              <h3 className="text-sm font-semibold text-charcoal-800 mb-3 flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent-600" />
+                GST/HST (small-supplier threshold)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <span className="text-charcoal-500">Tracked revenue (CAD)</span>
+                  <p className="font-semibold text-charcoal-900">${taxConfig.revenue_cad.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <span className="text-charcoal-500">Threshold</span>
+                  <p className="font-semibold text-charcoal-900">${taxConfig.threshold_cad.toLocaleString('en-CA')}</p>
+                </div>
+                <div>
+                  <span className="text-charcoal-500">Tax mode</span>
+                  <p className="font-semibold text-charcoal-900">{taxConfig.tax_mode === 'on' ? 'On (HST charged)' : 'Off (no tax)'}</p>
+                </div>
+                <div>
+                  <span className="text-charcoal-500">Effective date</span>
+                  <p className="font-semibold text-charcoal-900">{taxConfig.tax_effective_at ? new Date(taxConfig.tax_effective_at).toLocaleString() : '—'}</p>
+                </div>
+              </div>
+              {taxConfig.revenue_last_synced_at && (
+                <p className="text-xs text-charcoal-500 mt-2">Revenue last synced: {new Date(taxConfig.revenue_last_synced_at).toLocaleString()}</p>
+              )}
+            </div>
           )}
         </section>
 

@@ -20,6 +20,8 @@
 
 import { Request, Response } from 'express';
 import { getSupabaseClient } from '../services/supabaseService';
+import { calculateTotalHours, calculateBookingPricing } from '../lib/pricing';
+import { getTaxConfig, isTaxEnabled } from '../services/taxService';
 
 // Types for booking data
 interface CreateBookingData {
@@ -39,72 +41,6 @@ interface CreateBookingData {
 interface BookingConflict {
   hasConflict: boolean;
   conflictingBookings: any[];
-}
-
-/**
- * Calculate total hours between two dates
- */
-function calculateTotalHours(startTime: Date, endTime: Date): number {
-  const diffMs = endTime.getTime() - startTime.getTime();
-  return diffMs / (1000 * 60 * 60); // Convert to hours
-}
-
-/**
- * Calculate booking price based on property rates
- */
-function calculateBookingPrice(
-  property: any,
-  startTime: Date,
-  endTime: Date
-): {
-  baseAmount: number
-  totalAmount: number
-  bookerServiceFee: number
-  hostServiceFee: number
-} {
-  const totalHours = calculateTotalHours(startTime, endTime);
-  const totalDays = Math.ceil(totalHours / 24);
-  
-  let baseAmount = 0;
-  
-  // Calculate base amount based on rates
-  if (property.hourly_rate && totalHours < 24) {
-    // Use hourly rate for bookings less than 24 hours
-    baseAmount = property.hourly_rate * totalHours;
-  } else if (property.daily_rate && totalDays >= 1) {
-    // Use daily rate for bookings 24+ hours
-    baseAmount = property.daily_rate * totalDays;
-  } else if (property.weekly_rate && totalDays >= 7) {
-    // Use weekly rate for bookings 7+ days
-    const weeks = Math.ceil(totalDays / 7);
-    baseAmount = property.weekly_rate * weeks;
-  } else if (property.monthly_rate && totalDays >= 30) {
-    // Use monthly rate for bookings 30+ days
-    const months = Math.ceil(totalDays / 30);
-    baseAmount = property.monthly_rate * months;
-  } else if (property.hourly_rate) {
-    // Fallback to hourly rate
-    baseAmount = property.hourly_rate * totalHours;
-  } else {
-    throw new Error('Property has no pricing configured');
-  }
-  
-  // Calculate total service fee (default 10% split evenly between booker and host, or from property settings)
-  const totalFeePercentage = property.service_fee_percentage || 10;
-  const hostFeePercentage = totalFeePercentage / 2;
-  const bookerFeePercentage = totalFeePercentage / 2;
-
-  const hostServiceFee = (baseAmount * hostFeePercentage) / 100;
-  const bookerServiceFee = (baseAmount * bookerFeePercentage) / 100;
-  
-  const totalAmount = baseAmount + bookerServiceFee;
-  
-  return {
-    baseAmount: Math.round(baseAmount * 100) / 100,
-    totalAmount: Math.round(totalAmount * 100) / 100, // Amount charged to booker
-    bookerServiceFee: Math.round(bookerServiceFee * 100) / 100,
-    hostServiceFee: Math.round(hostServiceFee * 100) / 100,
-  };
 }
 
 /**
@@ -262,20 +198,21 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     
     const property = validation.property!;
     
-    // Calculate pricing
-    const { baseAmount, totalAmount, bookerServiceFee, hostServiceFee } = calculateBookingPrice(
-      property,
-      startDate,
-      endDate
-    );
-    
-    // Calculate total hours
+    // Calculate pricing; tax only when tax_mode is on (small-supplier threshold crossed)
     const totalHours = calculateTotalHours(startDate, endDate);
-    
+    const pricing = calculateBookingPricing(property, startDate, endDate);
+    const taxConfig = await getTaxConfig();
+    const applyTax = isTaxEnabled(taxConfig);
+    const taxAmount = applyTax ? pricing.taxAmount : 0;
+    const baseAmount = pricing.baseAmount;
+    const bookerServiceFee = pricing.bookerServiceFee;
+    const hostServiceFee = pricing.hostServiceFee;
+    const totalAmount = baseAmount + bookerServiceFee + taxAmount;
+
     // Always create booking as 'pending' - will be confirmed only after successful payment
     const requiresApproval = property.require_approval === true;
     const initialStatus = requiresApproval ? 'pending' : 'confirmed';
-    
+
     // Create booking
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -288,6 +225,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         total_hours: totalHours,
         total_amount: totalAmount,
         service_fee: bookerServiceFee,
+        tax_reserve: taxAmount,
         status: initialStatus,
         payment_status: requiresApproval ? 'pending' : 'pending',
         special_requests: specialRequests || null,
@@ -343,6 +281,7 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       serviceFee: bookerServiceFee,
       bookerServiceFee,
       hostServiceFee,
+      taxAmount,
       securityDeposit: booking.security_deposit || 0,
       ...(vehicleInfoString && { vehicleInfo: vehicleInfoString }),
       ...(specialRequests && { specialRequests }),

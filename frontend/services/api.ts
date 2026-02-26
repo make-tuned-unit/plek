@@ -339,6 +339,17 @@ class ApiService {
     });
   }
 
+  async getAdminTaxConfig(): Promise<ApiResponse<{
+    tax_mode: string;
+    tax_effective_at: string | null;
+    revenue_cad_cents: number;
+    revenue_cad: number;
+    threshold_cad: number;
+    revenue_last_synced_at: string | null;
+  }>> {
+    return this.request('/admin/tax-config');
+  }
+
   async getAdminStats(params?: { startDate?: string; endDate?: string; bookingStatus?: 'all' | 'paid' }): Promise<ApiResponse<{
     bookings: number;
     users: number;
@@ -450,6 +461,10 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ paymentIntentId }),
     });
+  }
+
+  async getTaxStatus(): Promise<ApiResponse<{ taxEnabled: boolean }>> {
+    return this.request('/payments/tax-status');
   }
 
   async getPaymentHistory(): Promise<ApiResponse<{ payments: any[] }>> {

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Providers } from '@/components/Providers'
+import { BetaBanner } from '@/components/BetaBanner'
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import { Toaster } from 'react-hot-toast'
@@ -102,6 +103,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <Providers>
+          <BetaBanner />
           <Navigation />
           {children}
           <Footer />
