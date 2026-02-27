@@ -594,6 +594,7 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     const supabaseUrl = process.env['SUPABASE_URL'];
     const anonKey = process.env['SUPABASE_ANON_KEY'];
     if (!supabaseUrl || !anonKey) {
+      logger.error('[Confirm from token] Missing SUPABASE_URL or SUPABASE_ANON_KEY');
       res.status(500).json({ success: false, message: 'Server configuration error' });
       return;
     }
@@ -604,13 +605,15 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
       },
     });
     if (!userRes.ok) {
-      logger.warn('[Confirm from token] Supabase user fetch failed', userRes.status);
+      const errText = await userRes.text();
+      logger.warn('[Confirm from token] Supabase /user failed', { status: userRes.status, body: errText.slice(0, 200) });
       res.status(401).json({ success: false, message: 'Invalid or expired link' });
       return;
     }
-    const userJson = (await userRes.json()) as { id?: string };
-    const userId = userJson?.id;
+    const userJson = (await userRes.json()) as { id?: string; user?: { id?: string } };
+    const userId = userJson?.id ?? userJson?.user?.id;
     if (!userId) {
+      logger.warn('[Confirm from token] No user id in response. Keys:', Object.keys(userJson));
       res.status(401).json({ success: false, message: 'Invalid or expired link' });
       return;
     }
@@ -622,11 +625,13 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     if (profileError) {
       logger.error('[Confirm from token] Profile update error', profileError);
     }
+    let tokenToReturn = access_token;
     const { data: session, error: sessionError } = await client.auth.admin.createSession({ userId });
     if (sessionError || !session?.session?.access_token) {
-      logger.error('[Confirm from token] Session creation error', sessionError);
-      res.status(500).json({ success: false, message: 'Could not create session' });
-      return;
+      logger.warn('[Confirm from token] createSession failed, returning incoming access_token', { message: sessionError?.message, code: (sessionError as any)?.code });
+      tokenToReturn = session?.session?.access_token ?? access_token;
+    } else {
+      tokenToReturn = session.session.access_token;
     }
     try {
       const { sendWelcomeEmail } = await import('../services/emailService');
@@ -637,9 +642,9 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     } catch (_) {
       /* ignore */
     }
-    res.status(200).json({ success: true, data: { token: session.session.access_token } });
+    res.status(200).json({ success: true, data: { token: tokenToReturn } });
   } catch (err: any) {
-    logger.error('[Confirm from token] Error', err);
+    logger.error('[Confirm from token] Error', err?.message ?? err, err?.stack);
     res.status(500).json({ success: false, message: err?.message || 'Server error' });
   }
 };
