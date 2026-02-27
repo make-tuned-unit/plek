@@ -575,13 +575,83 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// Normalize FRONTEND_URL (no trailing slash) so redirects are consistent
+function getFrontendUrl(): string {
+  const url = (process.env['FRONTEND_URL'] || 'http://localhost:3000').trim();
+  return url.replace(/\/+$/, '');
+}
+
+// @desc    Exchange Supabase access_token (from hash redirect) for our session token
+// @route   POST /api/auth/confirm-email
+// @access  Public
+export const confirmEmailFromAccessToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { access_token } = req.body || {};
+    if (!access_token || typeof access_token !== 'string') {
+      res.status(400).json({ success: false, message: 'access_token is required' });
+      return;
+    }
+    const supabaseUrl = process.env['SUPABASE_URL'];
+    const anonKey = process.env['SUPABASE_ANON_KEY'];
+    if (!supabaseUrl || !anonKey) {
+      res.status(500).json({ success: false, message: 'Server configuration error' });
+      return;
+    }
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        apikey: anonKey,
+      },
+    });
+    if (!userRes.ok) {
+      logger.warn('[Confirm from token] Supabase user fetch failed', userRes.status);
+      res.status(401).json({ success: false, message: 'Invalid or expired link' });
+      return;
+    }
+    const userJson = await userRes.json();
+    const userId = userJson?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Invalid or expired link' });
+      return;
+    }
+    const client = getSupabaseClient();
+    const { error: profileError } = await client
+      .from('users')
+      .update({ is_verified: true, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (profileError) {
+      logger.error('[Confirm from token] Profile update error', profileError);
+    }
+    const { data: session, error: sessionError } = await client.auth.admin.createSession({ userId });
+    if (sessionError || !session?.session?.access_token) {
+      logger.error('[Confirm from token] Session creation error', sessionError);
+      res.status(500).json({ success: false, message: 'Could not create session' });
+      return;
+    }
+    try {
+      const { sendWelcomeEmail } = await import('../services/emailService');
+      const { data: userData } = await client.from('users').select('email, first_name').eq('id', userId).single();
+      if (userData?.email && userData?.first_name) {
+        sendWelcomeEmail(userData.email, userData.first_name).catch((e) => logger.error('[Confirm from token] Welcome email failed', e));
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    res.status(200).json({ success: true, data: { token: session.session.access_token } });
+  } catch (err: any) {
+    logger.error('[Confirm from token] Error', err);
+    res.status(500).json({ success: false, message: err?.message || 'Server error' });
+  }
+};
+
 // @desc    Confirm email and log user in
 // @route   GET /api/auth/confirm-email
 // @access  Public
 export const confirmEmail = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token_hash, token, type, email } = req.query;
-    const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
+    const frontendUrl = getFrontendUrl();
+    const wantsJson = /application\/json/i.test((req.headers['accept'] as string) || '');
 
     logger.info('Confirmation request params', { hasTokenHash: !!token_hash, hasToken: !!token, type });
 
@@ -612,11 +682,13 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
             if (users?.[0]?.is_verified) {
               const { data: session } = await client.auth.admin.createSession({ userId: users[0].id });
               if (session?.session?.access_token) {
+                if (wantsJson) return res.status(200).json({ success: true, data: { token: session.session.access_token } });
                 res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
                 return;
               }
             }
           }
+          if (wantsJson) return res.status(400).json({ success: false, error: 'invalid' });
           res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=invalid`);
           return;
         }
@@ -629,6 +701,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
         if (profileError) {
           console.error('Profile update error:', profileError);
+          if (wantsJson) return res.status(400).json({ success: false, error: 'profile' });
           res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=profile`);
           return;
         }
@@ -660,15 +733,17 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
         if (sessionCreateError || !session?.session?.access_token) {
           logger.error('Session creation error', sessionCreateError);
+          if (wantsJson) return res.status(200).json({ success: true, error: 'session' });
           res.redirect(`${frontendUrl}/auth/confirm-email?success=true&error=session`);
           return;
         }
 
-        // Redirect to frontend with token
+        if (wantsJson) return res.status(200).json({ success: true, data: { token: session.session.access_token } });
         res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
         return;
       } catch (error: any) {
         console.error('Confirmation processing error:', error);
+        if (wantsJson) return res.status(500).json({ success: false, error: 'server' });
         res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
         return;
       }
@@ -726,8 +801,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
     res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=missing_params`);
   } catch (error: any) {
     logger.error('Email confirmation error', error);
-    const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
+    res.redirect(`${getFrontendUrl()}/auth/confirm-email?success=false&error=server`);
   }
 };
 

@@ -217,8 +217,14 @@ Docs: [Resend – Receiving emails](https://resend.com/docs/dashboard/receiving/
 ⚠️ **Important for Staging/Production:**
 - Currently using `onboarding@resend.dev` (test mode) - can only send to verified email
 - For staging/production, need to:
-  1. Verify a domain at https://resend.com/domains
-  2. Set `FROM_EMAIL` to use verified domain (e.g., `noreply@yourdomain.com`)
+  1. Verify a domain at https://resend.com/domains (SPF/DKIM/DMARC are set up by Resend)
+  2. Set `FROM_EMAIL` to use verified domain (e.g., `support@parkplekk.com`) so messages land in inbox instead of junk
+
+### Deliverability (inbox placement, avoid spam/junk)
+- **Domain:** Use a verified sending domain; Resend sets SPF/DKIM/DMARC when you verify.
+- **From address:** Use a real address on your domain (e.g. `support@parkplekk.com`), not a generic no-reply.
+- **Content:** Confirmation and other transactional emails include both `text/plain` and HTML; avoid link shorteners; keep links on your domain.
+- **Backend:** Ensure `SUPABASE_ANON_KEY` is set if using hash-based email confirmation (POST `/api/auth/confirm-email` with `access_token`).
 
 ### Email Branding
 All emails include:

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { register, login, getMe, updateProfile, logout, confirmEmail, forgotPassword, resetPassword, uploadAvatar, googleAuth, resendConfirmation } from '../controllers/authController';
+import { register, login, getMe, updateProfile, logout, confirmEmail, confirmEmailFromAccessToken, forgotPassword, resetPassword, uploadAvatar, googleAuth, resendConfirmation } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -74,6 +74,7 @@ router.post('/register', authStrictLimiter, registerValidation, validate, regist
 router.post('/login', authStrictLimiter, loginValidation, validate, login);
 router.post('/google', authStrictLimiter, googleAuth);
 router.get('/confirm-email', confirmEmail);
+router.post('/confirm-email', confirmEmailFromAccessToken);
 router.post('/resend-confirmation', resendConfirmationLimiter, body('email').isEmail().withMessage('Valid email required'), validate, resendConfirmation);
 router.post('/forgot-password', authStrictLimiter, forgotPasswordValidation, validate, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validate, resetPassword);

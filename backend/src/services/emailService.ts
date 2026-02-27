@@ -220,10 +220,29 @@ export async function sendEmailConfirmationEmail(
       logger.warn('[Email] Using Resend test mode. Verify domain for production.');
     }
     
+    // Plain-text version improves deliverability (inbox placement, spam filters)
+    const textBody = `Hi ${firstName},
+
+Thank you for signing up for plekk! Please confirm your email address to activate your account.
+
+Confirm your email: ${confirmationLink}
+
+This link expires in 24 hours.
+
+If you didn't create an account with plekk, you can safely ignore this email.
+
+Best regards,
+The plekk Team
+
+—
+plekk — parking marketplace powered by local driveways
+Halifax, Nova Scotia, Canada`;
+
     const result = await client.emails.send({
       from: fromEmail,
       to: email,
       subject: 'Confirm your plekk account',
+      text: textBody,
       html: `
         <!DOCTYPE html>
         <html>
