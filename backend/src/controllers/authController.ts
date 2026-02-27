@@ -625,14 +625,7 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     if (profileError) {
       logger.error('[Confirm from token] Profile update error', profileError);
     }
-    let tokenToReturn = access_token;
-    const { data: session, error: sessionError } = await client.auth.admin.createSession({ userId });
-    if (sessionError || !session?.session?.access_token) {
-      logger.warn('[Confirm from token] createSession failed, returning incoming access_token', { message: sessionError?.message, code: (sessionError as any)?.code });
-      tokenToReturn = session?.session?.access_token ?? access_token;
-    } else {
-      tokenToReturn = session.session.access_token;
-    }
+    // Return the same access_token Supabase gave in the hash (auth.admin.createSession is not available in this client).
     try {
       const { sendWelcomeEmail } = await import('../services/emailService');
       const { data: userData } = await client.from('users').select('email, first_name').eq('id', userId).single();
@@ -642,7 +635,7 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     } catch (_) {
       /* ignore */
     }
-    res.status(200).json({ success: true, data: { token: tokenToReturn } });
+    res.status(200).json({ success: true, data: { token: access_token } });
   } catch (err: any) {
     logger.error('[Confirm from token] Error', { message: err?.message ?? err, stack: err?.stack });
     res.status(500).json({ success: false, message: err?.message || 'Server error' });
