@@ -657,22 +657,39 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
     const client = getSupabaseClient();
 
-    // If we have token_hash and token, verify them
-    if (token_hash && token) {
+    // Verify using token_hash only. Supabase verifyOtp accepts EITHER token_hash OR (email+token), not both.
+    // Use type 'email' for signup confirmation (Supabase deprecated type 'signup' for verifyOtp).
+    if (token_hash) {
       try {
-        // Verify the token using Supabase
-        // Use 'signup' type for email confirmation (not 'email')
-        const { data: verifyData, error: verifyError } = await client.auth.admin.verifyOtp({
-          type: (type as string) === 'signup' ? 'signup' : 'email',
+        const otpType = (type as string) === 'signup' ? 'email' : ((type as string) || 'email');
+        let verifyData: { user?: { id: string } } | null = null;
+        let verifyError: any = null;
+        const hashResult = await client.auth.admin.verifyOtp({
+          type: otpType as 'email' | 'recovery' | 'signup' | 'invite' | 'magiclink',
           token_hash: token_hash as string,
-          token: token as string,
         });
+        verifyData = hashResult.data;
+        verifyError = hashResult.error;
 
-        if (verifyError || !verifyData.user) {
-          logger.error('[Email Confirmation] Token verification error', verifyError);
-          // Token may be "already used": email clients often prefetch links (Gmail, etc.), consuming the one-time token
-          // before the user clicks. When the user clicks, verifyOtp fails but the account is already confirmed.
-          // If we have email and that user is already verified, log them in instead of showing "invalid link".
+        if (verifyError || !verifyData?.user) {
+          logger.warn('[Email Confirmation] token_hash verifyOtp failed', { message: verifyError?.message, code: (verifyError as any)?.code });
+          // Fallback: try email + token (OTP) verification if link included raw token
+          if (email && token && typeof email === 'string' && typeof token === 'string') {
+            const fallbackResult = await client.auth.verifyOtp({
+              type: otpType as 'email' | 'recovery' | 'signup' | 'invite' | 'magiclink',
+              email: email.trim(),
+              token: token as string,
+            });
+            if (!fallbackResult.error && fallbackResult.data?.user) {
+              verifyData = fallbackResult.data;
+              verifyError = null;
+            }
+          }
+        }
+        if (verifyError || !verifyData?.user) {
+          logger.error('[Email Confirmation] Token verification failed', verifyError);
+          // Token may be "already used": email clients often prefetch links, consuming the one-time token.
+          // If we have email and that user is already verified, log them in instead.
           if (email && typeof email === 'string') {
             const { data: users } = await client
               .from('users')

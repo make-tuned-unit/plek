@@ -304,7 +304,8 @@ export class SupabaseAuthService {
       // Construct link pointing to our backend endpoint via frontend API proxy
       // Using frontend URL ensures it works with ngrok and Next.js rewrites
       // The backend will verify the token and redirect to frontend with session token
-      const confirmationLink = `${frontendUrl}/api/auth/confirm-email?token_hash=${hashedToken}&token=${verificationToken}&type=signup&email=${encodeURIComponent(email)}`;
+      // verifyOtp expects token_hash and type 'email'; token in URL kept for fallback OTP flow
+      const confirmationLink = `${frontendUrl}/api/auth/confirm-email?token_hash=${encodeURIComponent(hashedToken)}&token=${encodeURIComponent(verificationToken)}&type=email&email=${encodeURIComponent(email)}`;
       
       console.log(`[Email] Successfully generated confirmation link for ${email}`);
       return { link: confirmationLink, error: null };
