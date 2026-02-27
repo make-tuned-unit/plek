@@ -280,34 +280,29 @@ export class SupabaseAuthService {
         };
       }
 
-      // Extract tokens from Supabase's response
-      // We'll construct our own link pointing to our backend endpoint
-      const hashedToken = result.data.properties?.hashed_token;
-      const verificationToken = result.data.properties?.verification_token;
-      
-      if (!hashedToken || !verificationToken) {
-        console.error('[Email] No tokens in Supabase response. Full data:', JSON.stringify(result.data, null, 2));
-        
-        // Fallback: try to use action_link if available
-        const actionLink = result.data.properties?.action_link;
-        if (actionLink) {
-          console.log('[Email] Using Supabase action_link as fallback');
-          return { link: actionLink, error: null };
-        }
-        
-        return { 
-          link: null, 
-          error: { message: 'Failed to generate confirmation link - no tokens in response', name: 'LinkGenerationError', status: 500 } as AuthError 
-        };
+      // Debug: log shape of generateLink response (no PII) — check backend/console when testing
+      const raw = result.data as Record<string, unknown>;
+      const propKeys = (raw?.properties as Record<string, unknown> | undefined) ? Object.keys(raw.properties as object) : [];
+      console.log('[Email] generateLink: action_link present=', !!(raw?.action_link || (raw?.properties as Record<string, unknown>)?.action_link), '| data keys=', Object.keys(raw), '| properties keys=', propKeys);
+
+      // Prefer action_link: user clicks -> Supabase /auth/v1/verify -> redirect to redirectTo with session in URL hash.
+      // Ensure redirectTo (e.g. https://parkplekk.com/auth/confirm-email) is in Supabase Dashboard -> Auth -> URL Configuration -> Redirect URLs.
+      const data = result.data as { action_link?: string; properties?: { action_link?: string; hashed_token?: string; email_otp?: string; verification_token?: string } };
+      const actionLink = data.action_link || data.properties?.action_link;
+      if (actionLink) {
+        console.log('[Email] Using Supabase action_link (Supabase verifies and redirects to app)');
+        return { link: actionLink, error: null };
       }
 
-      // Construct link pointing to our backend endpoint via frontend API proxy
-      // Using frontend URL ensures it works with ngrok and Next.js rewrites
-      // The backend will verify the token and redirect to frontend with session token
-      // verifyOtp expects token_hash and type 'email'; token in URL kept for fallback OTP flow
-      const confirmationLink = `${frontendUrl}/api/auth/confirm-email?token_hash=${encodeURIComponent(hashedToken)}&token=${encodeURIComponent(verificationToken)}&type=email&email=${encodeURIComponent(email)}`;
-      
-      console.log(`[Email] Successfully generated confirmation link for ${email}`);
+      // Fallback: build link and verify in our backend
+      const hashedToken = data.properties?.hashed_token;
+      const rawToken = data.properties?.email_otp || data.properties?.verification_token;
+      if (!hashedToken) {
+        console.error('[Email] No action_link or hashed_token. Response keys:', Object.keys(data));
+        return { link: null, error: { message: 'No action_link or hashed_token', name: 'LinkGenerationError', status: 500 } as AuthError };
+      }
+      const confirmationLink = `${frontendUrl}/api/auth/confirm-email?token_hash=${encodeURIComponent(hashedToken)}&type=email&email=${encodeURIComponent(email)}${rawToken ? `&token=${encodeURIComponent(rawToken)}` : ''}`;
+      console.log('[Email] Generated custom confirmation link (no action_link; using token_hash)');
       return { link: confirmationLink, error: null };
     } catch (error: any) {
       console.error('[Email] Supabase generate link error:', error);

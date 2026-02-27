@@ -673,7 +673,7 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
         if (verifyError || !verifyData?.user) {
           logger.warn('[Email Confirmation] token_hash verifyOtp failed', { message: verifyError?.message, code: (verifyError as any)?.code });
-          // Fallback: try email + token (OTP) verification if link included raw token
+          // Fallback 1: email + token (OTP)
           if (email && token && typeof email === 'string' && typeof token === 'string') {
             const fallbackResult = await client.auth.verifyOtp({
               type: otpType as 'email' | 'recovery' | 'signup' | 'invite' | 'magiclink',
@@ -683,6 +683,29 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
             if (!fallbackResult.error && fallbackResult.data?.user) {
               verifyData = fallbackResult.data;
               verifyError = null;
+            }
+          }
+          // Fallback 2: call Supabase Auth REST verify directly (in case JS client behaves differently)
+          if ((verifyError || !verifyData?.user) && token_hash) {
+            const supabaseUrl = process.env['SUPABASE_URL'];
+            const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+            if (supabaseUrl && serviceKey) {
+              const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  apikey: serviceKey,
+                  Authorization: `Bearer ${serviceKey}`,
+                },
+                body: JSON.stringify({ token_hash: token_hash as string, type: otpType }),
+              });
+              if (verifyRes.ok) {
+                const body = (await verifyRes.json()) as { user?: { id: string }; access_token?: string };
+                if (body?.user?.id) {
+                  verifyData = { user: { id: body.user.id } };
+                  verifyError = null;
+                }
+              }
             }
           }
         }
