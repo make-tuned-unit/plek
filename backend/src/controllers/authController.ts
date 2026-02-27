@@ -644,7 +644,7 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
     }
     res.status(200).json({ success: true, data: { token: tokenToReturn } });
   } catch (err: any) {
-    logger.error('[Confirm from token] Error', err?.message ?? err, err?.stack);
+    logger.error('[Confirm from token] Error', { message: err?.message ?? err, stack: err?.stack });
     res.status(500).json({ success: false, message: err?.message || 'Server error' });
   }
 };
