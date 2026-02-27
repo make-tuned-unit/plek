@@ -608,7 +608,7 @@ export const confirmEmailFromAccessToken = async (req: Request, res: Response): 
       res.status(401).json({ success: false, message: 'Invalid or expired link' });
       return;
     }
-    const userJson = await userRes.json();
+    const userJson = (await userRes.json()) as { id?: string };
     const userId = userJson?.id;
     if (!userId) {
       res.status(401).json({ success: false, message: 'Invalid or expired link' });
@@ -682,13 +682,19 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
             if (users?.[0]?.is_verified) {
               const { data: session } = await client.auth.admin.createSession({ userId: users[0].id });
               if (session?.session?.access_token) {
-                if (wantsJson) return res.status(200).json({ success: true, data: { token: session.session.access_token } });
+                if (wantsJson) {
+                  res.status(200).json({ success: true, data: { token: session.session.access_token } });
+                  return;
+                }
                 res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
                 return;
               }
             }
           }
-          if (wantsJson) return res.status(400).json({ success: false, error: 'invalid' });
+          if (wantsJson) {
+            res.status(400).json({ success: false, error: 'invalid' });
+            return;
+          }
           res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=invalid`);
           return;
         }
@@ -701,7 +707,10 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
         if (profileError) {
           console.error('Profile update error:', profileError);
-          if (wantsJson) return res.status(400).json({ success: false, error: 'profile' });
+          if (wantsJson) {
+            res.status(400).json({ success: false, error: 'profile' });
+            return;
+          }
           res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=profile`);
           return;
         }
@@ -733,17 +742,26 @@ export const confirmEmail = async (req: Request, res: Response): Promise<void> =
 
         if (sessionCreateError || !session?.session?.access_token) {
           logger.error('Session creation error', sessionCreateError);
-          if (wantsJson) return res.status(200).json({ success: true, error: 'session' });
+          if (wantsJson) {
+            res.status(200).json({ success: true, error: 'session' });
+            return;
+          }
           res.redirect(`${frontendUrl}/auth/confirm-email?success=true&error=session`);
           return;
         }
 
-        if (wantsJson) return res.status(200).json({ success: true, data: { token: session.session.access_token } });
+        if (wantsJson) {
+          res.status(200).json({ success: true, data: { token: session.session.access_token } });
+          return;
+        }
         res.redirect(`${frontendUrl}/auth/confirm-email?token=${session.session.access_token}&success=true`);
         return;
       } catch (error: any) {
         console.error('Confirmation processing error:', error);
-        if (wantsJson) return res.status(500).json({ success: false, error: 'server' });
+        if (wantsJson) {
+          res.status(500).json({ success: false, error: 'server' });
+          return;
+        }
         res.redirect(`${frontendUrl}/auth/confirm-email?success=false&error=server`);
         return;
       }
