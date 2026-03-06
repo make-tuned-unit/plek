@@ -22,6 +22,22 @@ import { useAuth } from '@/contexts/AuthContext'
 import { apiService } from '@/services/api'
 import toast from 'react-hot-toast'
 
+const PROVINCES = [
+  { value: 'NS', label: 'Nova Scotia' },
+  { value: 'AB', label: 'Alberta' },
+  { value: 'BC', label: 'British Columbia' },
+  { value: 'MB', label: 'Manitoba' },
+  { value: 'NB', label: 'New Brunswick' },
+  { value: 'NL', label: 'Newfoundland and Labrador' },
+  { value: 'NT', label: 'Northwest Territories' },
+  { value: 'NU', label: 'Nunavut' },
+  { value: 'ON', label: 'Ontario' },
+  { value: 'PE', label: 'Prince Edward Island' },
+  { value: 'QC', label: 'Quebec' },
+  { value: 'SK', label: 'Saskatchewan' },
+  { value: 'YT', label: 'Yukon' },
+] as const
+
 const propertySchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(20, 'Description must be at least 20 characters'),
@@ -113,11 +129,14 @@ export default function ListYourDrivewayPage() {
       },
       startTime: '00:00',
       endTime: '23:59',
+      state: 'NS',
       requireApproval: false,
       leadTimeHours: 24, // Default: 24 hours lead time
     },
   })
 
+  const watchedProvince = watch('state')
+  const isProvinceBlocked = watchedProvince !== 'NS'
   const watchedFeatures = watch('features')
 
   // Load property for edit mode
@@ -500,16 +519,23 @@ export default function ListYourDrivewayPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    State
+                    Province
                   </label>
-                  <input
+                  <select
                     {...register('state')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
-                    placeholder="NS"
-                  />
+                    className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none cursor-pointer"
+                  >
+                    {PROVINCES.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
                   {errors.state && (
                     <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+                  )}
+                  {isProvinceBlocked && (
+                    <p className="mt-2 text-sm text-amber-600">
+                      Driveway listings in {PROVINCES.find(p => p.value === watchedProvince)?.label ?? watchedProvince} are coming soon! We&apos;re currently available in Nova Scotia only.
+                    </p>
                   )}
                 </div>
 
@@ -814,7 +840,8 @@ export default function ListYourDrivewayPage() {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex items-center px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600"
+                disabled={isProvinceBlocked}
+                className="flex items-center px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -822,7 +849,7 @@ export default function ListYourDrivewayPage() {
             ) : (
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isProvinceBlocked}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Sending...' : 'Send for review'}

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getSupabaseClient } from '../services/supabaseService';
 import { photoService } from '../services/photoService';
 import { calculateDistance } from '../utils/distance';
+import { isBetaRegionEnabled, isAllowedProvince } from '../config/beta';
 
 // Types for property data
 interface PropertyData {
@@ -232,7 +233,15 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       instant_booking: instantBookingRequest !== undefined ? instantBookingRequest : true,
       require_approval: requireApprovalRequest !== undefined ? requireApprovalRequest : false
     };
-    
+
+    // Beta region gate: reject non-NS listings during beta
+    if (isBetaRegionEnabled() && !isAllowedProvince(propertyData.state)) {
+      res.status(403).json({
+        error: 'Driveway listings are currently only available in Nova Scotia. Your region is coming soon!'
+      });
+      return;
+    }
+
     // Extract coordinates if provided (Mapbox returns [longitude, latitude])
     let latitude: number | undefined;
     let longitude: number | undefined;
