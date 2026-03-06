@@ -353,6 +353,7 @@ class ApiService {
   async getAdminStats(params?: { startDate?: string; endDate?: string; bookingStatus?: 'all' | 'paid' }): Promise<ApiResponse<{
     bookings: number;
     users: number;
+    usersByRegion: { region: string; count: number }[];
     listings: number;
     totalRevenue: number;
     totalFees: number;

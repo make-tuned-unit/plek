@@ -53,6 +53,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<{
     bookings: number;
     users: number;
+    usersByRegion: { region: string; count: number }[];
     listings: number;
     totalRevenue: number;
     totalFees: number;
@@ -92,6 +93,7 @@ export default function AdminDashboardPage() {
         setStats({
           bookings: response.data.bookings,
           users: response.data.users,
+          usersByRegion: response.data.usersByRegion ?? [],
           listings: response.data.listings,
           totalRevenue: response.data.totalRevenue ?? response.data.totalBookingValue ?? 0,
           totalFees: response.data.totalFees ?? response.data.totalServiceFeeRevenue ?? 0,
@@ -429,6 +431,22 @@ export default function AdminDashboardPage() {
                 <p className="text-2xl font-bold text-charcoal-900">{stats.listings.toLocaleString()}</p>
               </div>
             </div>
+            {stats.usersByRegion && stats.usersByRegion.length > 0 && (
+              <div className="mt-4 bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-charcoal-800 mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-accent-600" />
+                  By province / state
+                </h3>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  {stats.usersByRegion.map(({ region, count }) => (
+                    <span key={region} className="text-charcoal-700">
+                      <span className="font-medium text-charcoal-900">{region}</span>
+                      <span className="text-charcoal-500 ml-1">({count})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           )}
           {stats && dateRange !== 'all' && typeof dateRange === 'object' && (
             <p className="text-xs text-charcoal-500 mt-2">

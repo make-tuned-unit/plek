@@ -66,20 +66,29 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
       bookingsCount = count || 0;
     }
 
-    // 2. Total Users
+    // 2. Total Users (role = 'user' only, exclude admins)
     let usersCount = 0;
-    if (start || end) {
-      let query = supabase.from('users').select('id', { count: 'exact', head: true });
-      if (start) query = query.gte('created_at', start.toISOString());
-      if (end) query = query.lte('created_at', end.toISOString());
-      const { count } = await query;
-      usersCount = count || 0;
-    } else {
-      const { count } = await supabase.from('users').select('id', { count: 'exact', head: true });
-      usersCount = count || 0;
-    }
+    let queryUsers = supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'user');
+    if (start) queryUsers = queryUsers.gte('created_at', start.toISOString());
+    if (end) queryUsers = queryUsers.lte('created_at', end.toISOString());
+    const { count: usersCountResult } = await queryUsers;
+    usersCount = usersCountResult || 0;
 
-    // 3. Total Listings (Properties)
+    // 3. Users by province/state (all-time, role = 'user' only)
+    const { data: usersForRegion } = await supabase
+      .from('users')
+      .select('state')
+      .eq('role', 'user');
+    const regionCounts: Record<string, number> = {};
+    (usersForRegion || []).forEach((u: { state: string | null }) => {
+      const key = u.state && u.state.trim() ? u.state.trim() : 'Not set';
+      regionCounts[key] = (regionCounts[key] || 0) + 1;
+    });
+    const usersByRegion = Object.entries(regionCounts)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // 4. Total Listings (Properties)
     let listingsCount = 0;
     if (start || end) {
       let query = supabase.from('properties').select('id', { count: 'exact', head: true }).neq('status', 'deleted');
@@ -95,7 +104,7 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
       listingsCount = count || 0;
     }
 
-    // 4. Total Value of Bookings (sum of total_amount for completed/confirmed bookings)
+    // 5. Total Value of Bookings (sum of total_amount for completed/confirmed bookings)
     let totalBookingValue = 0;
     if (start || end) {
       let query = supabase
@@ -116,7 +125,7 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
       totalBookingValue = (bookings || []).reduce((sum: number, b: any) => sum + (b.total_amount || 0), 0);
     }
 
-    // 5. Total Service Fee Revenue
+    // 6. Total Service Fee Revenue
     // Service fee is stored in bookings table as service_fee (booker's fee)
     // We also need to calculate host service fees from payments
     let totalServiceFeeRevenue = 0;
@@ -177,6 +186,7 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
       data: {
         bookings: bookingsCount,
         users: usersCount,
+        usersByRegion,
         listings: listingsCount,
         totalRevenue: Math.round(totalBookingValue * 100) / 100,
         totalFees: Math.round(totalServiceFeeRevenue * 100) / 100,
