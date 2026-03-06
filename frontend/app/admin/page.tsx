@@ -394,59 +394,61 @@ export default function AdminDashboardPage() {
               <Loader2 className="h-8 w-8 animate-spin text-accent-500" />
             </div>
           ) : stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 min-w-0">
-              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
-                  <Calendar className="h-4 w-4" />
-                  Bookings
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 min-w-0">
+                <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
+                    <Calendar className="h-4 w-4" />
+                    Bookings
+                  </div>
+                  <p className="text-2xl font-bold text-charcoal-900">{stats.bookings.toLocaleString()}</p>
                 </div>
-                <p className="text-2xl font-bold text-charcoal-900">{stats.bookings.toLocaleString()}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
-                  <TrendingUp className="h-4 w-4" />
-                  Total Revenue
+                <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
+                    <TrendingUp className="h-4 w-4" />
+                    Total Revenue
+                  </div>
+                  <p className="text-2xl font-bold text-charcoal-900">${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <p className="text-2xl font-bold text-charcoal-900">${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
-                  <Receipt className="h-4 w-4" />
-                  Total Fees
+                <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
+                    <Receipt className="h-4 w-4" />
+                    Total Fees
+                  </div>
+                  <p className="text-2xl font-bold text-charcoal-900">${stats.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <p className="text-2xl font-bold text-charcoal-900">${stats.totalFees.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
-                  <User className="h-4 w-4" />
-                  Total Users
+                <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
+                    <User className="h-4 w-4" />
+                    Total Users
+                  </div>
+                  <p className="text-2xl font-bold text-charcoal-900">{stats.users.toLocaleString()}</p>
                 </div>
-                <p className="text-2xl font-bold text-charcoal-900">{stats.users.toLocaleString()}</p>
-              </div>
-              <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
-                  <List className="h-4 w-4" />
-                  Total Listings
-                </div>
-                <p className="text-2xl font-bold text-charcoal-900">{stats.listings.toLocaleString()}</p>
-              </div>
-            </div>
-            {stats.usersByRegion && stats.usersByRegion.length > 0 && (
-              <div className="mt-4 bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-charcoal-800 mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-accent-600" />
-                  By province / state
-                </h3>
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                  {stats.usersByRegion.map(({ region, count }) => (
-                    <span key={region} className="text-charcoal-700">
-                      <span className="font-medium text-charcoal-900">{region}</span>
-                      <span className="text-charcoal-500 ml-1">({count})</span>
-                    </span>
-                  ))}
+                <div className="bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-charcoal-500 text-sm mb-1">
+                    <List className="h-4 w-4" />
+                    Total Listings
+                  </div>
+                  <p className="text-2xl font-bold text-charcoal-900">{stats.listings.toLocaleString()}</p>
                 </div>
               </div>
-            )}
+              {stats.usersByRegion && stats.usersByRegion.length > 0 && (
+                <div className="mt-4 bg-white rounded-xl border border-mist-200 p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold text-charcoal-800 mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-accent-600" />
+                    By province / state
+                  </h3>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    {stats.usersByRegion.map(({ region, count }) => (
+                      <span key={region} className="text-charcoal-700">
+                        <span className="font-medium text-charcoal-900">{region}</span>
+                        <span className="text-charcoal-500 ml-1">({count})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {stats && dateRange !== 'all' && typeof dateRange === 'object' && (
             <p className="text-xs text-charcoal-500 mt-2">
