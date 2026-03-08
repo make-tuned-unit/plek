@@ -589,6 +589,36 @@ export default function ListYourDrivewayPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Features */}
+              <div>
+                <label className="block text-sm font-medium text-charcoal-700 mb-2">
+                  Features <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {features.map((feature) => {
+                    const isSelected = watchedFeatures?.includes(feature.id)
+                    return (
+                      <button
+                        key={feature.id}
+                        type="button"
+                        onClick={() => handleFeatureToggle(feature.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                          isSelected
+                            ? 'border-accent-400 bg-accent-50 text-accent-700'
+                            : 'border-mist-300 bg-white text-charcoal-700 hover:border-mist-400'
+                        }`}
+                      >
+                        <span>{feature.icon}</span>
+                        <span>{feature.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {errors.features && (
+                  <p className="mt-1 text-sm text-red-600">{errors.features.message}</p>
+                )}
+              </div>
             </div>
           )}
 
