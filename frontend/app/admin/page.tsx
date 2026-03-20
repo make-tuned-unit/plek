@@ -884,7 +884,7 @@ export default function AdminDashboardPage() {
                       }
                     }}
                     placeholder="Search by email, first name, or last name..."
-                    className="flex-1 min-w-0 rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                    className="flex-1 min-w-0 rounded-lg border border-mist-300 px-3 py-2 text-base focus:ring-2 focus:ring-accent-500 focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -988,32 +988,32 @@ export default function AdminDashboardPage() {
                     <div>
                       <label className="block text-sm font-medium text-charcoal-700 mb-1">Listing Title</label>
                       <input type="text" value={clForm.title} onChange={(e) => setClForm(f => ({ ...f, title: e.target.value }))}
-                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                        className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                         placeholder="e.g., Downtown Parking Spot" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-charcoal-700 mb-1">Description</label>
                       <textarea rows={3} value={clForm.description} onChange={(e) => setClForm(f => ({ ...f, description: e.target.value }))}
-                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                        className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                         placeholder="Describe the parking space..." />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Street Address</label>
                         <input type="text" value={clForm.address} onChange={(e) => setClForm(f => ({ ...f, address: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                           placeholder="1234 Barrington St" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">City</label>
                         <input type="text" value={clForm.city} onChange={(e) => setClForm(f => ({ ...f, city: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                           placeholder="Halifax" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Province</label>
                         <select value={clForm.state} onChange={(e) => setClForm(f => ({ ...f, state: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
                           {[
                             { value: 'NS', label: 'Nova Scotia' }, { value: 'AB', label: 'Alberta' },
                             { value: 'BC', label: 'British Columbia' }, { value: 'MB', label: 'Manitoba' },
@@ -1028,7 +1028,7 @@ export default function AdminDashboardPage() {
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Postal Code</label>
                         <input type="text" value={clForm.zipCode} onChange={(e) => setClForm(f => ({ ...f, zipCode: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                           placeholder="B3J 1Y2" />
                       </div>
                     </div>
@@ -1036,7 +1036,7 @@ export default function AdminDashboardPage() {
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Property Type</label>
                         <select value={clForm.propertyType} onChange={(e) => setClForm(f => ({ ...f, propertyType: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
                           <option value="driveway">Driveway</option>
                           <option value="garage">Garage</option>
                           <option value="warehouse">Warehouse</option>
@@ -1048,7 +1048,7 @@ export default function AdminDashboardPage() {
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Max Vehicle Size</label>
                         <select value={clForm.maxVehicleSize} onChange={(e) => setClForm(f => ({ ...f, maxVehicleSize: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
                           <option value="compact">Compact</option>
                           <option value="sedan">Sedan</option>
                           <option value="suv">SUV</option>
@@ -1094,14 +1094,14 @@ export default function AdminDashboardPage() {
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Hourly Rate ($)</label>
                         <input type="number" min="1" step="0.50" value={clForm.hourlyRate}
                           onChange={(e) => setClForm(f => ({ ...f, hourlyRate: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                           placeholder="15.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-charcoal-700 mb-1">Daily Rate ($)</label>
                         <input type="number" min="1" step="0.50" value={clForm.dailyRate}
                           onChange={(e) => setClForm(f => ({ ...f, dailyRate: e.target.value }))}
-                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
                           placeholder="50.00" />
                       </div>
                     </div>
@@ -1128,13 +1128,13 @@ export default function AdminDashboardPage() {
                           <label className="block text-xs text-charcoal-600 mb-1">Start Time</label>
                           <input type="time" value={clForm.startTime}
                             onChange={(e) => setClForm(f => ({ ...f, startTime: e.target.value }))}
-                            className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
+                            className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
                         </div>
                         <div>
                           <label className="block text-xs text-charcoal-600 mb-1">End Time</label>
                           <input type="time" value={clForm.endTime}
                             onChange={(e) => setClForm(f => ({ ...f, endTime: e.target.value }))}
-                            className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
+                            className="w-full px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
                         </div>
                       </div>
                     </div>
@@ -1142,7 +1142,7 @@ export default function AdminDashboardPage() {
                       <label className="block text-sm font-medium text-charcoal-700 mb-1">Booking Lead Time</label>
                       <select value={clForm.leadTimeHours}
                         onChange={(e) => setClForm(f => ({ ...f, leadTimeHours: Number(e.target.value) }))}
-                        className="px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                        className="px-3 py-2 text-base border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
                         <option value={0}>Same day</option>
                         <option value={12}>12 hours</option>
                         <option value={24}>24 hours</option>
