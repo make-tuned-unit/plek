@@ -746,6 +746,201 @@ export const rejectProperty = async (req: Request, res: Response): Promise<void>
   }
 };
 
+// @desc    Admin create property on behalf of a user
+// @route   POST /api/properties/admin/create
+// @access  Private (Admin)
+export const adminCreateProperty = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const supabase = getSupabaseClient();
+    const hostId = req.body.host_id;
+
+    if (!hostId) {
+      res.status(400).json({ success: false, error: 'host_id is required' });
+      return;
+    }
+
+    // Verify the target user exists
+    const { data: targetUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', hostId)
+      .single();
+
+    if (userError || !targetUser) {
+      res.status(404).json({ success: false, error: 'Target user not found' });
+      return;
+    }
+
+    const instantBookingRequest =
+      typeof req.body.instant_booking === 'boolean'
+        ? req.body.instant_booking
+        : typeof req.body.instantBooking === 'boolean'
+        ? req.body.instantBooking
+        : undefined;
+
+    const requireApprovalRequest =
+      typeof req.body.require_approval === 'boolean'
+        ? req.body.require_approval
+        : typeof req.body.requireApproval === 'boolean'
+        ? req.body.requireApproval
+        : undefined;
+
+    const propertyData: PropertyData = {
+      title: req.body.title,
+      description: req.body.description,
+      address: req.body.address,
+      city: req.body.city || '',
+      state: req.body.state || '',
+      zip_code: req.body.zip_code || '',
+      hourly_rate: parseFloat(req.body.price),
+      property_type: req.body.property_type || 'driveway',
+      max_vehicles: req.body.max_vehicles || 1,
+      features: req.body.features || [],
+      restrictions: req.body.restrictions || [],
+      access_instructions: req.body.access_instructions || '',
+      instant_booking: instantBookingRequest !== undefined ? instantBookingRequest : true,
+      require_approval: requireApprovalRequest !== undefined ? requireApprovalRequest : false
+    };
+
+    // Extract coordinates if provided
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    if (req.body.coordinates && Array.isArray(req.body.coordinates) && req.body.coordinates.length === 2) {
+      longitude = req.body.coordinates[0];
+      latitude = req.body.coordinates[1];
+    }
+
+    // Admin can optionally auto-approve
+    const status = req.body.auto_approve ? 'active' : 'pending_review';
+
+    const insertPayload: Record<string, unknown> = {
+      ...propertyData,
+      host_id: hostId,
+      status,
+      is_verified: req.body.auto_approve ? true : false,
+      latitude,
+      longitude
+    };
+
+    if (req.body.start_time != null && typeof req.body.start_time === 'string') {
+      insertPayload.start_time = req.body.start_time;
+    }
+    if (req.body.end_time != null && typeof req.body.end_time === 'string') {
+      insertPayload.end_time = req.body.end_time;
+    }
+    if (typeof req.body.monday_available === 'boolean') insertPayload.monday_available = req.body.monday_available;
+    if (typeof req.body.tuesday_available === 'boolean') insertPayload.tuesday_available = req.body.tuesday_available;
+    if (typeof req.body.wednesday_available === 'boolean') insertPayload.wednesday_available = req.body.wednesday_available;
+    if (typeof req.body.thursday_available === 'boolean') insertPayload.thursday_available = req.body.thursday_available;
+    if (typeof req.body.friday_available === 'boolean') insertPayload.friday_available = req.body.friday_available;
+    if (typeof req.body.saturday_available === 'boolean') insertPayload.saturday_available = req.body.saturday_available;
+    if (typeof req.body.sunday_available === 'boolean') insertPayload.sunday_available = req.body.sunday_available;
+
+    const { data: property, error: propertyError } = await supabase
+      .from('properties')
+      .insert(insertPayload as any)
+      .select()
+      .single();
+
+    if (propertyError) throw propertyError;
+
+    // Update user to be a host
+    await supabase
+      .from('users')
+      .update({ is_host: true })
+      .eq('id', hostId);
+
+    res.status(201).json({
+      success: true,
+      data: { property },
+      message: `Property created for user ${hostId}${req.body.auto_approve ? ' (auto-approved)' : ''}`
+    });
+  } catch (error: any) {
+    console.error('Error in adminCreateProperty:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create property',
+      message: error.message
+    });
+  }
+};
+
+// @desc    Admin upload photo for any property
+// @route   POST /api/properties/:id/photos/admin
+// @access  Private (Admin)
+export const adminUploadPropertyPhoto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const supabase = getSupabaseClient();
+
+    // Verify property exists (no ownership check for admin)
+    const { data: property, error: fetchError } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !property) {
+      res.status(404).json({ success: false, error: 'Property not found' });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No photo file provided' });
+      return;
+    }
+
+    let uploadedPhoto;
+    try {
+      uploadedPhoto = await photoService.uploadPhoto(req.file, id);
+    } catch (uploadError: any) {
+      console.error('Admin photo upload error:', uploadError);
+      throw uploadError;
+    }
+
+    const { data: existingPhotos } = await supabase
+      .from('property_photos')
+      .select('id')
+      .eq('property_id', id);
+
+    const orderIndex = existingPhotos?.length || 0;
+    const isPrimary = orderIndex === 0;
+
+    const { data: savedPhoto, error: saveError } = await supabase
+      .from('property_photos')
+      .insert({
+        property_id: id,
+        url: uploadedPhoto.url,
+        caption: uploadedPhoto.caption || '',
+        is_primary: isPrimary,
+        order_index: orderIndex
+      } as any)
+      .select()
+      .single();
+
+    if (saveError) throw saveError;
+
+    res.json({
+      success: true,
+      data: {
+        id: savedPhoto.id,
+        url: savedPhoto.url,
+        caption: savedPhoto.caption,
+        is_primary: savedPhoto.is_primary,
+        order_index: savedPhoto.order_index
+      },
+      message: 'Photo uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Error in adminUploadPropertyPhoto:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload photo',
+      message: error.message
+    });
+  }
+};
+
 // @desc    Upload photo for property
 // @route   POST /api/properties/:id/photos
 // @access  Private (Host)

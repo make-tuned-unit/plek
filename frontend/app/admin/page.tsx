@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiService } from '../../services/api'
 import toast from 'react-hot-toast'
-import { 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  MapPin, 
+import {
+  Shield,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MapPin,
   DollarSign,
   User,
   Mail,
@@ -24,7 +24,11 @@ import {
   Search,
   MessageCircle,
   Send,
-  X
+  X,
+  PlusCircle,
+  Upload,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -38,7 +42,7 @@ export default function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState<{ [key: string]: string }>({})
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users' | 'create-listing'>('pending')
   // User search (admin)
   const [userSearch, setUserSearch] = useState('')
   const [userSearchResults, setUserSearchResults] = useState<any[]>([])
@@ -78,6 +82,39 @@ export default function AdminDashboardPage() {
     threshold_cad: number;
     revenue_last_synced_at: string | null;
   } | null>(null)
+
+  // Create listing state
+  const [clSelectedUser, setClSelectedUser] = useState<any>(null)
+  const [clUserSearch, setClUserSearch] = useState('')
+  const [clUserResults, setClUserResults] = useState<any[]>([])
+  const [clUserSearchLoading, setClUserSearchLoading] = useState(false)
+  const [clAutoApprove, setClAutoApprove] = useState(false)
+  const [clStep, setClStep] = useState(1)
+  const [clSubmitting, setClSubmitting] = useState(false)
+  const [clSuccess, setClSuccess] = useState<string | null>(null)
+  const [clImages, setClImages] = useState<string[]>([])
+  const [clImageFiles, setClImageFiles] = useState<File[]>([])
+  const [clForm, setClForm] = useState({
+    title: '',
+    description: '',
+    address: '',
+    city: '',
+    state: 'NS',
+    zipCode: '',
+    propertyType: 'driveway' as string,
+    hourlyRate: '',
+    dailyRate: '',
+    maxVehicleSize: 'sedan' as string,
+    features: [] as string[],
+    availability: {
+      monday: true, tuesday: true, wednesday: true, thursday: true,
+      friday: true, saturday: true, sunday: true,
+    },
+    startTime: '00:00',
+    endTime: '23:59',
+    requireApproval: false,
+    leadTimeHours: 24,
+  })
 
   const fetchAdminStats = async () => {
     try {
@@ -523,6 +560,17 @@ export default function AdminDashboardPage() {
               <User className="h-4 w-4 inline mr-2" />
               Users
             </button>
+            <button
+              onClick={() => setActiveTab('create-listing')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'create-listing'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
+              }`}
+            >
+              <PlusCircle className="h-4 w-4 inline mr-2" />
+              Create Listing
+            </button>
           </nav>
         </div>
 
@@ -784,6 +832,494 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Create Listing Tab */}
+        {activeTab === 'create-listing' && (
+          <div className="space-y-6">
+            {clSuccess ? (
+              <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-8 text-center">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-charcoal-900 mb-2">Listing Created</h3>
+                <p className="text-charcoal-600 mb-6">{clSuccess}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClSuccess(null)
+                    setClSelectedUser(null)
+                    setClStep(1)
+                    setClImages([])
+                    setClImageFiles([])
+                    setClAutoApprove(false)
+                    setClForm({
+                      title: '', description: '', address: '', city: '', state: 'NS', zipCode: '',
+                      propertyType: 'driveway', hourlyRate: '', dailyRate: '', maxVehicleSize: 'sedan',
+                      features: [], availability: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: true, sunday: true },
+                      startTime: '00:00', endTime: '23:59', requireApproval: false, leadTimeHours: 24,
+                    })
+                  }}
+                  className="px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600"
+                >
+                  Create Another
+                </button>
+              </div>
+            ) : !clSelectedUser ? (
+              /* Step 1: Select User */
+              <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-4 sm:p-6">
+                <h2 className="text-lg font-semibold text-charcoal-900 mb-4 flex items-center gap-2">
+                  <Search className="h-5 w-5 text-accent-600" />
+                  Select a user to create listing for
+                </h2>
+                <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={clUserSearch}
+                    onChange={(e) => setClUserSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setClUserSearchLoading(true)
+                        apiService.searchUsers(clUserSearch).then((res) => {
+                          setClUserResults(res.success && res.data ? res.data.users || [] : [])
+                        }).catch(() => setClUserResults([])).finally(() => setClUserSearchLoading(false))
+                      }
+                    }}
+                    placeholder="Search by email, first name, or last name..."
+                    className="flex-1 min-w-0 rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClUserSearchLoading(true)
+                      apiService.searchUsers(clUserSearch).then((res) => {
+                        setClUserResults(res.success && res.data ? res.data.users || [] : [])
+                      }).catch(() => setClUserResults([])).finally(() => setClUserSearchLoading(false))
+                    }}
+                    disabled={clUserSearchLoading}
+                    className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {clUserSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Search
+                  </button>
+                </div>
+                {clUserResults.length === 0 && !clUserSearchLoading && (
+                  <p className="text-charcoal-500 text-sm">
+                    {clUserSearch ? 'No users found.' : 'Enter a search term and click Search.'}
+                  </p>
+                )}
+                {clUserResults.length > 0 && (
+                  <ul className="space-y-2">
+                    {clUserResults.map((u: any) => (
+                      <li
+                        key={u.id}
+                        className="flex items-center justify-between py-3 px-4 rounded-lg border border-mist-200 hover:bg-mist-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-charcoal-200 flex items-center justify-center text-charcoal-600 font-medium">
+                            {(u.first_name?.[0] || u.email?.[0] || '?').toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-charcoal-900">
+                              {u.first_name} {u.last_name}
+                            </p>
+                            <p className="text-sm text-charcoal-500">{u.email}</p>
+                            {u.is_host && <span className="text-xs text-accent-600 font-medium">Host</span>}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setClSelectedUser(u)}
+                          className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 text-sm"
+                        >
+                          Select
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : (
+              /* Step 2: Listing Form */
+              <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-charcoal-900">Create Listing</h2>
+                    <p className="text-sm text-charcoal-500">
+                      For: <span className="font-medium text-charcoal-700">{clSelectedUser.first_name} {clSelectedUser.last_name}</span> ({clSelectedUser.email})
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setClSelectedUser(null)}
+                    className="text-sm text-accent-600 hover:text-accent-700 font-medium"
+                  >
+                    Change User
+                  </button>
+                </div>
+
+                {/* Step indicators */}
+                <div className="flex items-center gap-2 sm:gap-4 mb-6">
+                  {[
+                    { id: 1, title: 'Basic Info' },
+                    { id: 2, title: 'Pricing' },
+                    { id: 3, title: 'Photos' },
+                    { id: 4, title: 'Review' },
+                  ].map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      onClick={() => setClStep(step.id)}
+                      className="flex-1 min-w-0 flex flex-col items-center gap-1 focus:outline-none"
+                    >
+                      <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 ${
+                        clStep >= step.id
+                          ? 'bg-accent-500 border-accent-500 text-white'
+                          : 'border-mist-300 text-mist-600'
+                      }`}>
+                        {clStep > step.id ? <CheckCircle className="h-5 w-5" /> : <span className="text-sm font-medium">{step.id}</span>}
+                      </div>
+                      <span className={`hidden sm:block text-xs font-medium ${clStep >= step.id ? 'text-charcoal-900' : 'text-mist-600'}`}>{step.title}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Step 1: Basic Info */}
+                {clStep === 1 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-1">Listing Title</label>
+                      <input type="text" value={clForm.title} onChange={(e) => setClForm(f => ({ ...f, title: e.target.value }))}
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                        placeholder="e.g., Downtown Parking Spot" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-1">Description</label>
+                      <textarea rows={3} value={clForm.description} onChange={(e) => setClForm(f => ({ ...f, description: e.target.value }))}
+                        className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                        placeholder="Describe the parking space..." />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Street Address</label>
+                        <input type="text" value={clForm.address} onChange={(e) => setClForm(f => ({ ...f, address: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="1234 Barrington St" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">City</label>
+                        <input type="text" value={clForm.city} onChange={(e) => setClForm(f => ({ ...f, city: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="Halifax" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Province</label>
+                        <select value={clForm.state} onChange={(e) => setClForm(f => ({ ...f, state: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          {[
+                            { value: 'NS', label: 'Nova Scotia' }, { value: 'AB', label: 'Alberta' },
+                            { value: 'BC', label: 'British Columbia' }, { value: 'MB', label: 'Manitoba' },
+                            { value: 'NB', label: 'New Brunswick' }, { value: 'NL', label: 'Newfoundland and Labrador' },
+                            { value: 'NT', label: 'Northwest Territories' }, { value: 'NU', label: 'Nunavut' },
+                            { value: 'ON', label: 'Ontario' }, { value: 'PE', label: 'Prince Edward Island' },
+                            { value: 'QC', label: 'Quebec' }, { value: 'SK', label: 'Saskatchewan' },
+                            { value: 'YT', label: 'Yukon' },
+                          ].map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Postal Code</label>
+                        <input type="text" value={clForm.zipCode} onChange={(e) => setClForm(f => ({ ...f, zipCode: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="B3J 1Y2" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Property Type</label>
+                        <select value={clForm.propertyType} onChange={(e) => setClForm(f => ({ ...f, propertyType: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          <option value="driveway">Driveway</option>
+                          <option value="garage">Garage</option>
+                          <option value="warehouse">Warehouse</option>
+                          <option value="barn">Barn</option>
+                          <option value="storage">Storage</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Max Vehicle Size</label>
+                        <select value={clForm.maxVehicleSize} onChange={(e) => setClForm(f => ({ ...f, maxVehicleSize: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                          <option value="compact">Compact</option>
+                          <option value="sedan">Sedan</option>
+                          <option value="suv">SUV</option>
+                          <option value="truck">Truck</option>
+                          <option value="any">Any Size</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-2">Features</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { id: 'covered', label: 'Covered Parking' }, { id: 'security', label: 'Security Camera' },
+                          { id: 'lighting', label: 'Well Lit' }, { id: 'access', label: '24/7 Access' },
+                          { id: 'ev', label: 'EV Charging' }, { id: 'wifi', label: 'Free WiFi' },
+                          { id: 'guard', label: 'Security Guard' }, { id: 'easy', label: 'Easy Access' },
+                        ].map((feat) => (
+                          <button key={feat.id} type="button"
+                            onClick={() => setClForm(f => ({
+                              ...f,
+                              features: f.features.includes(feat.id)
+                                ? f.features.filter(x => x !== feat.id)
+                                : [...f.features, feat.id]
+                            }))}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                              clForm.features.includes(feat.id)
+                                ? 'border-accent-400 bg-accent-50 text-accent-700'
+                                : 'border-mist-300 bg-white text-charcoal-700 hover:border-mist-400'
+                            }`}>
+                            {feat.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Pricing */}
+                {clStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Hourly Rate ($)</label>
+                        <input type="number" min="1" step="0.50" value={clForm.hourlyRate}
+                          onChange={(e) => setClForm(f => ({ ...f, hourlyRate: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="15.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 mb-1">Daily Rate ($)</label>
+                        <input type="number" min="1" step="0.50" value={clForm.dailyRate}
+                          onChange={(e) => setClForm(f => ({ ...f, dailyRate: e.target.value }))}
+                          className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent"
+                          placeholder="50.00" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-2">Available Days</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {Object.entries(clForm.availability).map(([day, checked]) => (
+                          <label key={day} className="flex items-center">
+                            <input type="checkbox" checked={checked}
+                              onChange={(e) => setClForm(f => ({
+                                ...f,
+                                availability: { ...f.availability, [day]: e.target.checked }
+                              }))}
+                              className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded" />
+                            <span className="ml-2 text-sm text-charcoal-700 capitalize">{day}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-2">Available Times</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-charcoal-600 mb-1">Start Time</label>
+                          <input type="time" value={clForm.startTime}
+                            onChange={(e) => setClForm(f => ({ ...f, startTime: e.target.value }))}
+                            className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-charcoal-600 mb-1">End Time</label>
+                          <input type="time" value={clForm.endTime}
+                            onChange={(e) => setClForm(f => ({ ...f, endTime: e.target.value }))}
+                            className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent" />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 mb-1">Booking Lead Time</label>
+                      <select value={clForm.leadTimeHours}
+                        onChange={(e) => setClForm(f => ({ ...f, leadTimeHours: Number(e.target.value) }))}
+                        className="px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent">
+                        <option value={0}>Same day</option>
+                        <option value={12}>12 hours</option>
+                        <option value={24}>24 hours</option>
+                        <option value={48}>48 hours</option>
+                        <option value={72}>72 hours</option>
+                        <option value={168}>1 week</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={clForm.requireApproval}
+                        onChange={(e) => setClForm(f => ({ ...f, requireApproval: e.target.checked }))}
+                        className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded" />
+                      <span className="text-sm text-charcoal-700">Always require approval</span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Step 3: Photos */}
+                {clStep === 3 && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-charcoal-700">Upload photos of the space</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {clImages.map((img, idx) => (
+                        <div key={idx} className="relative">
+                          <img src={img} alt={`Upload ${idx + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                          <button type="button"
+                            onClick={() => {
+                              URL.revokeObjectURL(clImages[idx])
+                              setClImages(prev => prev.filter((_, i) => i !== idx))
+                              setClImageFiles(prev => prev.filter((_, i) => i !== idx))
+                            }}
+                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="border-2 border-dashed border-mist-300 rounded-lg p-6 text-center hover:border-mist-400 cursor-pointer">
+                        <input type="file" multiple accept="image/*" className="hidden"
+                          onChange={(e) => {
+                            const files = e.target.files
+                            if (files) {
+                              const fileList = Array.from(files)
+                              setClImages(prev => [...prev, ...fileList.map(f => URL.createObjectURL(f))])
+                              setClImageFiles(prev => [...prev, ...fileList])
+                            }
+                            e.target.value = ''
+                          }} />
+                        <Upload className="h-8 w-8 text-mist-500 mx-auto mb-2" />
+                        <p className="text-sm text-charcoal-600">Upload Photos</p>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Review */}
+                {clStep === 4 && (
+                  <div className="space-y-4">
+                    <div className="bg-mist-100 rounded-lg p-4">
+                      <h3 className="font-medium text-charcoal-900 mb-3">Listing Summary</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-charcoal-600">Host:</span><span className="font-medium">{clSelectedUser.first_name} {clSelectedUser.last_name} ({clSelectedUser.email})</span></div>
+                        <div className="flex justify-between"><span className="text-charcoal-600">Title:</span><span className="font-medium">{clForm.title}</span></div>
+                        <div className="flex justify-between"><span className="text-charcoal-600">Type:</span><span className="font-medium capitalize">{clForm.propertyType}</span></div>
+                        <div className="flex justify-between"><span className="text-charcoal-600">Location:</span><span className="font-medium">{clForm.address}, {clForm.city}, {clForm.state} {clForm.zipCode}</span></div>
+                        <div className="flex justify-between"><span className="text-charcoal-600">Hourly Rate:</span><span className="font-medium">${clForm.hourlyRate}/hr</span></div>
+                        {clForm.dailyRate && <div className="flex justify-between"><span className="text-charcoal-600">Daily Rate:</span><span className="font-medium">${clForm.dailyRate}/day</span></div>}
+                        <div className="flex justify-between"><span className="text-charcoal-600">Features:</span><span className="font-medium">{clForm.features.join(', ') || 'None'}</span></div>
+                        <div className="flex justify-between"><span className="text-charcoal-600">Photos:</span><span className="font-medium">{clImages.length} uploaded</span></div>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 p-3 bg-accent-50 rounded-lg">
+                      <input type="checkbox" checked={clAutoApprove}
+                        onChange={(e) => setClAutoApprove(e.target.checked)}
+                        className="h-4 w-4 text-accent-600 focus:ring-accent-400 border-mist-300 rounded" />
+                      <span className="text-sm text-charcoal-700 font-medium">Auto-approve (skip pending review)</span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex items-center justify-between pt-6 mt-6 border-t">
+                  <button type="button"
+                    onClick={() => clStep > 1 ? setClStep(clStep - 1) : setClSelectedUser(null)}
+                    className="flex items-center px-4 py-2 text-charcoal-600 border border-mist-300 rounded-lg hover:bg-mist-100">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    {clStep === 1 ? 'Back' : 'Previous'}
+                  </button>
+                  {clStep < 4 ? (
+                    <button type="button" onClick={() => setClStep(clStep + 1)}
+                      className="flex items-center px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600">
+                      Next <ArrowRight className="h-4 w-4 ml-2" />
+                    </button>
+                  ) : (
+                    <button type="button" disabled={clSubmitting}
+                      onClick={async () => {
+                        if (!clForm.title || !clForm.description || !clForm.address || !clForm.hourlyRate) {
+                          toast.error('Please fill in all required fields (title, description, address, hourly rate)')
+                          return
+                        }
+                        if (clForm.features.length === 0) {
+                          toast.error('Please select at least one feature')
+                          return
+                        }
+                        setClSubmitting(true)
+                        try {
+                          // Geocode
+                          let coordinates: [number, number] | undefined
+                          const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                          if (mapboxToken) {
+                            try {
+                              const parts = [clForm.address, clForm.city, clForm.state, clForm.zipCode].filter(Boolean)
+                              const geoRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(parts.join(', '))}.json?access_token=${mapboxToken}&limit=1&types=address,place`)
+                              const geo = await geoRes.json()
+                              if (geo?.features?.length && geo.features[0].center?.length >= 2) {
+                                coordinates = geo.features[0].center as [number, number]
+                              }
+                            } catch (_) { /* continue */ }
+                          }
+
+                          const payload = {
+                            host_id: clSelectedUser.id,
+                            auto_approve: clAutoApprove,
+                            title: clForm.title,
+                            description: clForm.description,
+                            address: clForm.address,
+                            city: clForm.city,
+                            state: clForm.state,
+                            zip_code: clForm.zipCode,
+                            price: parseFloat(clForm.hourlyRate),
+                            property_type: clForm.propertyType,
+                            max_vehicles: 1,
+                            features: clForm.features,
+                            restrictions: [],
+                            require_approval: clForm.requireApproval,
+                            instant_booking: !clForm.requireApproval,
+                            coordinates,
+                            start_time: clForm.startTime,
+                            end_time: clForm.endTime,
+                            monday_available: clForm.availability.monday,
+                            tuesday_available: clForm.availability.tuesday,
+                            wednesday_available: clForm.availability.wednesday,
+                            thursday_available: clForm.availability.thursday,
+                            friday_available: clForm.availability.friday,
+                            saturday_available: clForm.availability.saturday,
+                            sunday_available: clForm.availability.sunday,
+                          }
+
+                          const response = await apiService.adminCreateProperty(payload)
+                          if (!response.success || !response.data?.property?.id) {
+                            throw new Error(response.error || 'Failed to create listing')
+                          }
+
+                          const propertyId = response.data.property.id
+
+                          // Upload photos
+                          for (const file of clImageFiles) {
+                            await apiService.adminUploadPropertyPhoto(propertyId, file)
+                          }
+
+                          toast.success('Listing created successfully!')
+                          setClSuccess(`Listing "${clForm.title}" created for ${clSelectedUser.first_name} ${clSelectedUser.last_name}${clAutoApprove ? ' (auto-approved)' : ' (pending review)'}`)
+                          fetchPendingProperties()
+                          fetchAllProperties()
+                        } catch (error: any) {
+                          toast.error(error.message || 'Failed to create listing')
+                        } finally {
+                          setClSubmitting(false)
+                        }
+                      }}
+                      className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {clSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Creating...</> : 'Create Listing'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Users Tab */}

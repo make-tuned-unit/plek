@@ -8,7 +8,7 @@ interface ApiResponse<T = any> {
 }
 
 class ApiService {
-  private getBaseURL(): string {
+  public getBaseURL(): string {
     // Prefer explicit backend URL when provided (staging/production).
     // This avoids relying on Next.js rewrites that depend on BACKEND_URL.
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -321,6 +321,28 @@ class ApiService {
     return this.request(`/properties/${propertyId}/admin`, {
       method: 'DELETE',
     });
+  }
+
+  async adminCreateProperty(propertyData: any): Promise<ApiResponse<{ property: any }>> {
+    return this.request('/properties/admin/create', {
+      method: 'POST',
+      body: JSON.stringify(propertyData),
+    });
+  }
+
+  async adminUploadPropertyPhoto(propertyId: string, file: File): Promise<ApiResponse> {
+    const baseURL = this.getBaseURL();
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('photo', file);
+    const response = await fetch(`${baseURL}/properties/${propertyId}/photos/admin`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    return response.json();
   }
 
   async searchUsers(search?: string): Promise<ApiResponse<{ users: any[] }>> {

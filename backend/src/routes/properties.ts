@@ -12,7 +12,9 @@ import {
   approveProperty,
   rejectProperty,
   adminDeleteProperty,
-  uploadPropertyPhoto
+  uploadPropertyPhoto,
+  adminCreateProperty,
+  adminUploadPropertyPhoto
 } from '../controllers/propertyController';
 
 // Configure multer for file uploads
@@ -37,6 +39,7 @@ router.get('/user/my-properties', protect, getUserProperties);
 
 // Admin routes (must come before /:id to avoid route conflicts)
 router.get('/admin/pending', protect, requireAdmin, getPendingProperties);
+router.post('/admin/create', protect, requireAdmin, adminCreateProperty);
 
 // Public routes
 router.get('/', getProperties);
@@ -53,5 +56,6 @@ router.post('/:id/photos', protect, requireHost, upload.single('photo'), uploadP
 router.put('/:id/approve', protect, requireAdmin, approveProperty);
 router.put('/:id/reject', protect, requireAdmin, rejectProperty);
 router.delete('/:id/admin', protect, requireAdmin, adminDeleteProperty);
+router.post('/:id/photos/admin', protect, requireAdmin, upload.single('photo'), adminUploadPropertyPhoto);
 
 export { router as propertyRoutes }; 
