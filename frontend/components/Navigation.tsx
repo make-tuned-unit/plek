@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect, MouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Menu, X, User, Car, MapPin, LogOut, ChevronDown, CreditCard, Calendar, Shield } from 'lucide-react'
+import { Menu, X, User, Car, MapPin, LogOut, ChevronDown, CreditCard, Calendar, Shield, Building2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -94,6 +94,12 @@ export function Navigation() {
               className="px-4 py-2 text-white hover:text-white/90 rounded-lg transition-all duration-200 hover:bg-white/10 font-medium text-sm"
             >
               List Your Driveway
+            </Link>
+            <Link
+              href="/commercial-parking"
+              className="px-4 py-2 text-white hover:text-white/90 rounded-lg transition-all duration-200 hover:bg-white/10 font-medium text-sm"
+            >
+              List Commercial Parking
             </Link>
           </div>
 
@@ -252,6 +258,16 @@ export function Navigation() {
                 >
                   List Your Driveway
                 </button>
+                <Link
+                  href="/commercial-parking"
+                  className="block px-4 py-3.5 text-white hover:bg-white/10 rounded-xl transition-all duration-150 font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-3">
+                    <Building2 className="h-5 w-5 flex-shrink-0" />
+                    List Commercial Parking
+                  </span>
+                </Link>
                 {user && (
                   <>
                     <div className="pt-6 border-t border-white/20 mt-4">

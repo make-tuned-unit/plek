@@ -15,9 +15,11 @@ import {
   ArrowRight,
   Upload,
   X,
-  PartyPopper
+  PartyPopper,
+  Building2
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiService } from '@/services/api'
 import toast from 'react-hot-toast'
@@ -395,6 +397,25 @@ export default function ListYourDrivewayPage() {
 
   return (
     <div className="min-h-screen bg-mist-100">
+      <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-accent-200 bg-accent-50 px-5 py-4 text-sm text-charcoal-700 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-700" />
+              <div>
+                <p className="font-semibold text-charcoal-900">Have 20+ spaces?</p>
+                <p>Use the commercial onboarding flow for pooled inventory, lot zones, spreadsheets, and mixed vehicle types.</p>
+              </div>
+            </div>
+            <Link
+              href="/commercial-parking"
+              className="inline-flex items-center justify-center rounded-xl bg-accent-500 px-4 py-2 font-semibold text-white transition hover:bg-accent-600"
+            >
+              List Commercial Parking
+            </Link>
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

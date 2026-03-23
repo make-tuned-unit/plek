@@ -259,6 +259,92 @@ export const RegisterFormSchema = z.object({
   phone: z.string().optional(),
 });
 
+export const CommercialLeadStatusSchema = z.enum(['new', 'reviewing', 'needs-info', 'approved', 'rejected']);
+export type CommercialLeadStatus = z.infer<typeof CommercialLeadStatusSchema>;
+
+export const CommercialPropertyStatusSchema = z.enum(['draft', 'reviewing', 'active', 'inactive']);
+export type CommercialPropertyStatus = z.infer<typeof CommercialPropertyStatusSchema>;
+
+export const CommercialLeadSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  status: CommercialLeadStatusSchema,
+  companyName: z.string(),
+  contactName: z.string(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  city: z.string(),
+  province: z.string(),
+  approximateSpaceCount: z.number().nullable().optional(),
+  propertyType: z.string(),
+  vehicleTypesAllowed: z.array(z.string()),
+  bookingTypesSupported: z.array(z.string()),
+  hasSpreadsheet: z.boolean(),
+  spreadsheetLater: z.boolean().optional(),
+  stripeReadiness: z.string().optional(),
+  notes: z.string().optional(),
+  internalNotes: z.string().nullable().optional(),
+  followUpState: z.string().nullable().optional(),
+  uploadedFileReference: z.string().nullable().optional(),
+});
+
+export type CommercialLead = z.infer<typeof CommercialLeadSchema>;
+
+export const CommercialPropertySchema = z.object({
+  id: z.string(),
+  hostId: z.string().nullable().optional(),
+  name: z.string(),
+  address: z.string(),
+  city: z.string(),
+  province: z.string(),
+  postalCode: z.string().optional(),
+  lat: z.number().nullable().optional(),
+  lng: z.number().nullable().optional(),
+  propertyType: z.string(),
+  accessInstructions: z.string().nullable().optional(),
+  restrictions: z.string().nullable().optional(),
+  isCommercial: z.boolean(),
+  status: CommercialPropertyStatusSchema,
+});
+
+export type CommercialProperty = z.infer<typeof CommercialPropertySchema>;
+
+export const CommercialZoneSchema = z.object({
+  id: z.string(),
+  propertyId: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  lat: z.number().nullable().optional(),
+  lng: z.number().nullable().optional(),
+  polygonGeojson: z.record(z.any()).nullable().optional(),
+  sortOrder: z.number().nullable().optional(),
+  accessInstructions: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
+  isDefaultZone: z.boolean(),
+  isActive: z.boolean(),
+});
+
+export type CommercialZone = z.infer<typeof CommercialZoneSchema>;
+
+export const CommercialInventoryBucketSchema = z.object({
+  id: z.string(),
+  propertyId: z.string(),
+  zoneId: z.string().nullable().optional(),
+  label: z.string(),
+  vehicleType: z.string(),
+  quantity: z.number(),
+  spaceType: z.string().nullable().optional(),
+  pricingMode: z.string(),
+  dailyPrice: z.number().nullable().optional(),
+  monthlyPrice: z.number().nullable().optional(),
+  accessType: z.string().nullable().optional(),
+  availabilityRules: z.record(z.any()).nullable().optional(),
+  restrictions: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+
+export type CommercialInventoryBucket = z.infer<typeof CommercialInventoryBucketSchema>;
+
 export type RegisterForm = z.infer<typeof RegisterFormSchema>;
 
 export const PropertyFormSchema = z.object({

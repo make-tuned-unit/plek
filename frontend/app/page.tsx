@@ -101,6 +101,13 @@ export default function HomePage() {
                 List Your Driveway
                 <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
               </Link>
+              <Link
+                href="/commercial-parking"
+                className="group inline-flex items-center justify-center min-h-[52px] px-8 py-4 rounded-xl text-lg font-bold bg-charcoal-900/80 text-white border border-white/20 shadow-md hover:bg-charcoal-900 hover:-translate-y-0.5 transition-all duration-300"
+              >
+                Have 20+ spaces? Add them in bulk
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </Link>
             </motion.div>
 
             <motion.div variants={slideUp} transition={slideUpTransition} className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-5 md:mb-6">

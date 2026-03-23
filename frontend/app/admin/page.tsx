@@ -28,7 +28,8 @@ import {
   PlusCircle,
   Upload,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Building2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -42,7 +43,7 @@ export default function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState<{ [key: string]: string }>({})
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users' | 'create-listing'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users' | 'create-listing' | 'commercial'>('pending')
   // User search (admin)
   const [userSearch, setUserSearch] = useState('')
   const [userSearchResults, setUserSearchResults] = useState<any[]>([])
@@ -82,6 +83,9 @@ export default function AdminDashboardPage() {
     threshold_cad: number;
     revenue_last_synced_at: string | null;
   } | null>(null)
+  const [commercialLeads, setCommercialLeads] = useState<any[]>([])
+  const [commercialNotes, setCommercialNotes] = useState<Record<string, string>>({})
+  const [commercialFollowUp, setCommercialFollowUp] = useState<Record<string, string>>({})
 
   // Create listing state
   const [clSelectedUser, setClSelectedUser] = useState<any>(null)
@@ -160,6 +164,7 @@ export default function AdminDashboardPage() {
       
       fetchPendingProperties()
       fetchAllProperties()
+      fetchCommercialLeads()
       fetchAdminStats()
       apiService.getAdminTaxConfig().then((r) => {
         if (r.success && r.data) setTaxConfig(r.data as any)
@@ -199,6 +204,20 @@ export default function AdminDashboardPage() {
       toast.error('Failed to load properties')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCommercialLeads = async () => {
+    try {
+      const response = await apiService.getAdminCommercialLeads()
+      if (response.success && response.data) {
+        const leads = response.data.leads || []
+        setCommercialLeads(leads)
+        setCommercialNotes(Object.fromEntries(leads.map((lead: any) => [lead.id, lead.internalNotes || ''])))
+        setCommercialFollowUp(Object.fromEntries(leads.map((lead: any) => [lead.id, lead.followUpState || ''])))
+      }
+    } catch (error) {
+      toast.error('Failed to load commercial submissions')
     }
   }
 
@@ -309,6 +328,26 @@ export default function AdminDashboardPage() {
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete property')
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
+  const updateCommercialLead = async (leadId: string, status?: string) => {
+    try {
+      setProcessingId(leadId)
+      const response = await apiService.updateAdminCommercialLead(leadId, {
+        status,
+        internalNotes: commercialNotes[leadId] || '',
+        followUpState: commercialFollowUp[leadId] || '',
+      })
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update commercial submission')
+      }
+      toast.success('Commercial submission updated')
+      await fetchCommercialLeads()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update commercial submission')
     } finally {
       setProcessingId(null)
     }
@@ -570,6 +609,17 @@ export default function AdminDashboardPage() {
             >
               <PlusCircle className="h-4 w-4 inline mr-2" />
               Create Listing
+            </button>
+            <button
+              onClick={() => setActiveTab('commercial')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'commercial'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
+              }`}
+            >
+              <Building2 className="h-4 w-4 inline mr-2" />
+              Commercial ({commercialLeads.length})
             </button>
           </nav>
         </div>
@@ -1322,6 +1372,158 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {activeTab === 'commercial' && (
+          <>
+            {commercialLeads.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <Building2 className="h-16 w-16 text-charcoal-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-charcoal-900 mb-2">
+                  No Commercial Submissions
+                </h3>
+                <p className="text-charcoal-600">
+                  Commercial intake submissions will appear here for manual review.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {commercialLeads.map((lead) => (
+                  <div key={lead.id} className="bg-white rounded-lg shadow-sm border border-mist-200 overflow-hidden">
+                    <div className="p-4 sm:p-6">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:justify-between">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-3 mb-4">
+                            <h3 className="text-lg sm:text-xl font-semibold text-charcoal-900">{lead.companyName}</h3>
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-mist-100 text-charcoal-800">
+                              {lead.status}
+                            </span>
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-accent-50 text-accent-700">
+                              {lead.approximateSpaceCount || 'n/a'} spaces
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-charcoal-600">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 flex-shrink-0" />
+                              <span>{lead.contactName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 flex-shrink-0" />
+                              <span>{lead.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 flex-shrink-0" />
+                              <span>{lead.phone || 'No phone provided'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 flex-shrink-0" />
+                              <span>{lead.city}, {lead.province}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 flex-shrink-0" />
+                              <span>Submitted {new Date(lead.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 flex-shrink-0" />
+                              <span>Stripe: {lead.stripeReadiness || 'n/a'}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <div className="rounded-lg bg-mist-100 p-4">
+                              <p className="text-sm font-semibold text-charcoal-900 mb-2">Commercial setup</p>
+                              <p className="text-sm text-charcoal-600 mb-2">Property type: {lead.propertyType}</p>
+                              <p className="text-sm text-charcoal-600 mb-2">
+                                Vehicle types: {(lead.vehicleTypesAllowed || []).join(', ') || 'n/a'}
+                              </p>
+                              <p className="text-sm text-charcoal-600">
+                                Booking types: {(lead.bookingTypesSupported || []).join(', ') || 'n/a'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-mist-100 p-4">
+                              <p className="text-sm font-semibold text-charcoal-900 mb-2">Founder ops</p>
+                              <p className="text-sm text-charcoal-600 mb-2">
+                                Spreadsheet: {lead.hasSpreadsheet ? 'Yes' : 'No'}{lead.spreadsheetLater ? ' (sending later)' : ''}
+                              </p>
+                              <p className="text-sm text-charcoal-600 mb-2">
+                                Upload: {lead.uploadedFileName || 'None attached'}
+                              </p>
+                              <p className="text-sm text-charcoal-600">Follow-up: {lead.followUpState || 'Not set'}</p>
+                            </div>
+                          </div>
+
+                          {lead.properties?.length > 0 && (
+                            <div className="mt-4 space-y-3">
+                              {lead.properties.map((property: any) => (
+                                <div key={property.id} className="rounded-lg border border-mist-200 p-4">
+                                  <p className="font-semibold text-charcoal-900">{property.name}</p>
+                                  <p className="text-sm text-charcoal-600">{property.address}, {property.city}, {property.province}</p>
+                                  <p className="mt-2 text-sm text-charcoal-600">
+                                    {property.zones?.length || 0} zones, {property.inventoryBuckets?.length || 0} pooled buckets
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {lead.notes && (
+                            <div className="mt-4 rounded-lg bg-amber-50 border border-amber-100 p-4">
+                              <p className="text-sm font-semibold text-charcoal-900 mb-1">Operator notes</p>
+                              <p className="text-sm text-charcoal-700 whitespace-pre-wrap">{lead.notes}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="w-full lg:w-[320px] space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-charcoal-700 mb-2">Internal notes</label>
+                            <textarea
+                              value={commercialNotes[lead.id] || ''}
+                              onChange={(e) => setCommercialNotes((prev) => ({ ...prev, [lead.id]: e.target.value }))}
+                              rows={5}
+                              className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                              placeholder="Manual setup checklist, payout follow-up, questions for operator..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-charcoal-700 mb-2">Follow-up state</label>
+                            <input
+                              value={commercialFollowUp[lead.id] || ''}
+                              onChange={(e) => setCommercialFollowUp((prev) => ({ ...prev, [lead.id]: e.target.value }))}
+                              className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                              placeholder="e.g. waiting-on-csv, ready-for-activation"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {['reviewing', 'needs-info', 'approved', 'rejected'].map((status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                onClick={() => updateCommercialLead(lead.id, status)}
+                                disabled={processingId === lead.id}
+                                className="px-3 py-2 rounded-lg bg-charcoal-900 text-white text-sm font-medium disabled:opacity-50"
+                              >
+                                {status}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateCommercialLead(lead.id)}
+                              disabled={processingId === lead.id}
+                              className="px-3 py-2 rounded-lg border border-mist-300 text-charcoal-700 text-sm font-medium disabled:opacity-50"
+                            >
+                              Save notes
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {/* Users Tab */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-4 sm:p-6 min-w-0">
@@ -1525,5 +1727,3 @@ export default function AdminDashboardPage() {
     </div>
   )
 }
-
-

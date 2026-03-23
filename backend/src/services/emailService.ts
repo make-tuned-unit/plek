@@ -161,6 +161,25 @@ export interface HostPayoutEmailData {
   hasConnectAccount: boolean; // true if transfer was sent to their Stripe Connect account
 }
 
+export interface CommercialLeadNotificationData {
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone?: string;
+  city: string;
+  province: string;
+  approximateSpaceCount?: number | null;
+  propertyType: string;
+  vehicleTypesAllowed: string[];
+  bookingTypesSupported: string[];
+  hasSpreadsheet: boolean;
+  spreadsheetLater: boolean;
+  stripeReadiness: string;
+  notes?: string;
+  uploadedFileName?: string | null;
+  statusUrl: string;
+}
+
 export interface BookingCancelledEmailData {
   recipientName: string;
   recipientEmail: string;
@@ -1161,5 +1180,133 @@ export async function sendContactFormEmail(
       </html>
     `,
     text: `From: ${name} <${email}>\nTopic: ${topicLabel}\n\n${message}`,
+  });
+}
+
+export async function sendCommercialLeadConfirmationEmail(
+  email: string,
+  contactName: string,
+  submissionId: string,
+  submissionToken: string,
+  statusUrl: string
+): Promise<void> {
+  try {
+    const client = getResendClient();
+    await client.emails.send({
+      from: getFromEmail(),
+      to: email,
+      subject: 'We received your commercial parking intake',
+      text: `Hi ${contactName},
+
+We received your commercial parking submission and queued it for manual review.
+
+Reference: ${submissionId}
+Status link: ${statusUrl}
+Status token: ${submissionToken}
+
+What happens next:
+1. Plekk reviews your property details and pooled inventory setup.
+2. If we need clarification, we will follow up by email.
+3. Once approved, we activate your commercial locations.
+
+Plekk is a booking marketplace. Most commercial locations can launch with pooled inventory, optional zones, and existing site signage.
+`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+          <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+            <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${getEmailHeader('Commercial intake received')}
+              <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+                <p style="font-size: 16px; margin: 0 0 16px 0;">Hi ${contactName},</p>
+                <p style="font-size: 16px; margin: 0 0 20px 0;">We received your commercial parking submission and queued it for manual review.</p>
+                <div style="padding: 16px; border-radius: 8px; background: ${BRAND_COLORS.background}; margin-bottom: 24px;">
+                  <p style="margin: 0 0 8px 0;"><strong>Reference:</strong> ${submissionId}</p>
+                  <p style="margin: 0;"><strong>Status token:</strong> ${submissionToken}</p>
+                </div>
+                <ol style="padding-left: 20px; margin: 0 0 24px 0;">
+                  <li style="margin-bottom: 10px;">Plekk reviews your property details and pooled inventory setup.</li>
+                  <li style="margin-bottom: 10px;">If we need clarification, we follow up by email.</li>
+                  <li>Plekk activates approved commercial locations.</li>
+                </ol>
+                <p style="font-size: 14px; color: ${BRAND_COLORS.textLight}; margin-bottom: 24px;">
+                  Most commercial locations can launch with pooled inventory, optional zones, and existing operator signage. Numbered stalls are optional, not required.
+                </p>
+                <div style="text-align: center;">
+                  <a href="${statusUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">Track submission status</a>
+                </div>
+              </div>
+              ${getEmailFooter()}
+            </div>
+          </body>
+        </html>
+      `,
+    });
+  } catch (error) {
+    logger.error('[Email] Error sending commercial confirmation email', error);
+    throw error;
+  }
+}
+
+export async function sendCommercialLeadAdminNotificationEmail(
+  to: string,
+  data: CommercialLeadNotificationData
+): Promise<void> {
+  const client = getResendClient();
+  await client.emails.send({
+    from: getFromEmail(),
+    to,
+    replyTo: data.email,
+    subject: `Commercial intake: ${data.companyName} (${data.approximateSpaceCount || 'n/a'} spaces)`,
+    text: `Commercial intake received
+
+Company: ${data.companyName}
+Contact: ${data.contactName}
+Email: ${data.email}
+Phone: ${data.phone || 'n/a'}
+Location: ${data.city}, ${data.province}
+Approximate spaces: ${data.approximateSpaceCount || 'n/a'}
+Property type: ${data.propertyType}
+Vehicle types: ${data.vehicleTypesAllowed.join(', ') || 'n/a'}
+Booking types: ${data.bookingTypesSupported.join(', ') || 'n/a'}
+Has spreadsheet: ${data.hasSpreadsheet ? 'Yes' : 'No'}
+Spreadsheet later: ${data.spreadsheetLater ? 'Yes' : 'No'}
+Stripe readiness: ${data.stripeReadiness}
+Uploaded file: ${data.uploadedFileName || 'None'}
+
+Notes:
+${data.notes || 'None'}
+
+Review:
+${data.statusUrl}
+`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 680px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+          <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            ${getEmailHeader('Commercial intake')}
+            <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+              <p style="margin: 0 0 12px 0;"><strong>Company:</strong> ${data.companyName}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Contact:</strong> ${data.contactName} &lt;${data.email}&gt;</p>
+              <p style="margin: 0 0 12px 0;"><strong>Phone:</strong> ${data.phone || 'n/a'}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Location:</strong> ${data.city}, ${data.province}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Approximate spaces:</strong> ${data.approximateSpaceCount || 'n/a'}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Property type:</strong> ${data.propertyType}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Vehicle types:</strong> ${data.vehicleTypesAllowed.join(', ') || 'n/a'}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Booking types:</strong> ${data.bookingTypesSupported.join(', ') || 'n/a'}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Spreadsheet:</strong> ${data.hasSpreadsheet ? 'Included or indicated' : 'No'}${data.spreadsheetLater ? ' (sending later)' : ''}</p>
+              <p style="margin: 0 0 12px 0;"><strong>Stripe readiness:</strong> ${data.stripeReadiness}</p>
+              <p style="margin: 0 0 20px 0;"><strong>Uploaded file:</strong> ${data.uploadedFileName || 'None'}</p>
+              <div style="font-size: 15px; padding: 16px; background: ${BRAND_COLORS.background}; border-radius: 8px; white-space: pre-wrap; margin-bottom: 24px;">${(data.notes || 'None').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <a href="${data.statusUrl}" style="background: ${BRAND_COLORS.accent}; color: ${BRAND_COLORS.white}; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">Open submission</a>
+            </div>
+            ${getEmailFooter()}
+          </div>
+        </body>
+      </html>
+    `,
   });
 }

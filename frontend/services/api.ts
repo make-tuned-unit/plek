@@ -171,6 +171,34 @@ class ApiService {
     });
   }
 
+  async getCommercialTemplate(): Promise<ApiResponse<{
+    downloadUrl: string;
+    templateColumns: string[];
+    notes: string[];
+  }>> {
+    return this.request('/commercial/template');
+  }
+
+  async submitCommercialLead(formData: FormData): Promise<ApiResponse<{
+    id: string;
+    createdAt: string;
+    status: string;
+    submissionToken: string;
+    statusUrl: string;
+  }>> {
+    const baseURL = this.getBaseURL();
+    const response = await fetch(`${baseURL}/commercial/submissions`, {
+      method: 'POST',
+      body: formData,
+    });
+    return response.json();
+  }
+
+  async getCommercialLeadStatus(id: string, token: string): Promise<ApiResponse<any>> {
+    const query = new URLSearchParams({ token }).toString();
+    return this.request(`/commercial/submissions/${encodeURIComponent(id)}?${query}`);
+  }
+
   async getMe(): Promise<ApiResponse<{ user: any }>> {
     return this.request('/auth/me');
   }
@@ -390,6 +418,20 @@ class ApiService {
     if (params?.bookingStatus) searchParams.set('bookingStatus', params.bookingStatus);
     const query = searchParams.toString();
     return this.request(`/admin/stats${query ? `?${query}` : ''}`);
+  }
+
+  async getAdminCommercialLeads(): Promise<ApiResponse<{ leads: any[]; count: number }>> {
+    return this.request('/commercial/admin/submissions');
+  }
+
+  async updateAdminCommercialLead(
+    leadId: string,
+    payload: { status?: string; internalNotes?: string; followUpState?: string }
+  ): Promise<ApiResponse<any>> {
+    return this.request(`/commercial/admin/submissions/${encodeURIComponent(leadId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
   }
 
   // Stripe Connect
