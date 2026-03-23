@@ -306,7 +306,7 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
     // Update user to be a host if they aren't already
     await supabase
       .from('users')
-      .update({ is_host: true })
+      .update({ is_host: true, host_type: 'residential' })
       .eq('id', hostId);
     
     res.status(201).json({
@@ -847,7 +847,7 @@ export const adminCreateProperty = async (req: Request, res: Response): Promise<
     // Update user to be a host
     await supabase
       .from('users')
-      .update({ is_host: true })
+      .update({ is_host: true, host_type: 'residential' })
       .eq('id', hostId);
 
     res.status(201).json({

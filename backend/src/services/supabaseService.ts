@@ -17,6 +17,7 @@ export interface DatabaseUser {
   country: string;
   is_verified: boolean;
   is_host: boolean;
+  host_type?: 'residential' | 'commercial' | null;
   role: 'user' | 'host' | 'admin' | 'super_admin';
   stripe_customer_id?: string;
   stripe_account_id?: string;
@@ -40,6 +41,7 @@ export interface CreateUserData {
   last_name: string;
   phone?: string;
   isHost?: boolean;
+  hostType?: 'residential' | 'commercial';
 }
 
 export interface UpdateUserData {
@@ -131,6 +133,7 @@ export class SupabaseAuthService {
           role: 'user',
           is_verified: false, // Require email confirmation
           is_host: userData.isHost || false,
+          host_type: userData.hostType || null,
           total_bookings: 0,
           total_earnings: 0,
           rating: 0,

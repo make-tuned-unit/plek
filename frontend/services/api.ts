@@ -95,6 +95,7 @@ class ApiService {
     lastName: string;
     phone: string;
     isHost: boolean;
+    hostType?: 'residential' | 'commercial';
     province?: string;
   }): Promise<ApiResponse<{ user?: any; token?: string; waitlist?: boolean }>> {
     return this.request('/auth/register', {
@@ -106,6 +107,7 @@ class ApiService {
         lastName: userData.lastName,
         phone: userData.phone,
         isHost: userData.isHost,
+        ...(userData.hostType != null && { hostType: userData.hostType }),
         ...(userData.province != null && { province: userData.province }),
       }),
     });
@@ -187,8 +189,12 @@ class ApiService {
     statusUrl: string;
   }>> {
     const baseURL = this.getBaseURL();
+    const token = localStorage.getItem('auth_token');
     const response = await fetch(`${baseURL}/commercial/submissions`, {
       method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: formData,
     });
     return response.json();

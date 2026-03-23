@@ -186,7 +186,7 @@ async function persistPropertyDrafts(leadId: string, submission: JsonMap) {
     .from('commercial_properties')
     .insert({
       lead_id: leadId,
-      host_id: null,
+      host_id: submission.hostId || null,
       name: propertyDraft.name,
       address: propertyDraft.address,
       city: propertyDraft.city,
@@ -271,6 +271,12 @@ export async function submitCommercialLead(req: Request, res: Response): Promise
   try {
     const supabase = getSupabaseClient();
     const submission = req.body as JsonMap;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
 
     const leadInsert = {
       status: 'new',
@@ -315,6 +321,14 @@ export async function submitCommercialLead(req: Request, res: Response): Promise
 
     if (insertError) throw insertError;
 
+    await supabase
+      .from('users')
+      .update({
+        is_host: true,
+        host_type: 'commercial',
+      } as any)
+      .eq('id', userId);
+
     let uploadedFileReference: string | null = null;
     let uploadedFileUrl: string | null = null;
     let uploadedFileName: string | null = null;
@@ -335,7 +349,7 @@ export async function submitCommercialLead(req: Request, res: Response): Promise
         .eq('id', lead.id);
     }
 
-    await persistPropertyDrafts(lead.id, submission);
+    await persistPropertyDrafts(lead.id, { ...submission, hostId: userId });
 
     const statusUrl = `${process.env['FRONTEND_URL'] || 'http://localhost:3000'}/commercial-parking?submission=${lead.id}&token=${lead.submission_token}`;
 

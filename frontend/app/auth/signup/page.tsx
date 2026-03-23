@@ -59,7 +59,9 @@ function SignUpContent() {
   if (redirectTarget && typeof window !== 'undefined') {
     localStorage.setItem('plekk_auth_redirect', redirectTarget)
   }
-  const hostIntent = searchParams.get('host') === 'true' || searchParams.get('intent') === 'host'
+  const intent = searchParams.get('intent')
+  const hostIntent = searchParams.get('host') === 'true' || intent === 'host' || intent === 'commercial-host'
+  const commercialIntent = intent === 'commercial-host'
   const checkEmail = searchParams.get('check-email') === 'true'
   const waitlistSuccess = searchParams.get('waitlist') === 'true'
   const pendingEmail = searchParams.get('email') || ''
@@ -100,6 +102,7 @@ function SignUpContent() {
         data.lastName,
         data.phone,
         data.isHost,
+        commercialIntent ? 'commercial' : data.isHost ? 'residential' : undefined,
         data.province
       )
       if (result.success && result.waitlist) {
@@ -257,8 +260,10 @@ function SignUpContent() {
           <h1 className="text-3xl font-bold text-charcoal-900">Create your account</h1>
           <p className="mt-2 text-charcoal-600">
             {hostIntent
-              ? 'Create an account to start listing your driveway.'
-              : 'Join plekk and start earning from your driveway'}
+              ? commercialIntent
+                ? 'Create your account to submit commercial parking inventory.'
+                : 'Create an account to start listing your driveway.'
+              : 'Join plekk and start earning from your parking space'}
           </p>
 
         </div>
@@ -382,10 +387,12 @@ function SignUpContent() {
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="isHost" className="text-charcoal-700">
-                  I want to list my driveway and become a host
+                  {commercialIntent ? 'I want to list parking and become a host' : 'I want to list my driveway and become a host'}
                 </label>
                 <p className="text-charcoal-500 mt-1">
-                  Check this if you want to rent out your driveway to other drivers
+                  {commercialIntent
+                    ? 'Your account will be set up for commercial parking onboarding.'
+                    : 'Check this if you want to rent out your driveway to other drivers'}
                 </p>
               </div>
             </div>

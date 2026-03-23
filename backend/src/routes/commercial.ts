@@ -33,6 +33,7 @@ router.get('/template', getCommercialTemplate);
 router.get('/submissions/:id', getCommercialLeadStatus);
 router.post(
   '/submissions',
+  protect,
   commercialLimiter,
   upload.single('spreadsheetUpload'),
   [

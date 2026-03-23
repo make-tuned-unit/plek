@@ -18,6 +18,7 @@ interface User {
   country?: string
   isVerified?: boolean
   isHost?: boolean
+  hostType?: string | null
   role?: string
   createdAt?: string
   rating?: number
@@ -41,6 +42,7 @@ interface AuthContextType {
     lastName: string,
     phone: string,
     isHost?: boolean,
+    hostType?: 'residential' | 'commercial',
     province?: string
   ) => Promise<{ success: boolean; waitlist?: boolean }>
   logout: () => Promise<void>
@@ -128,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName: string,
     phone: string,
     isHost: boolean = false,
+    hostType?: 'residential' | 'commercial',
     province?: string
   ): Promise<{ success: boolean; waitlist?: boolean }> => {
     setIsLoading(true)
@@ -139,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastName,
         phone,
         isHost,
+        hostType,
         province,
       })
 

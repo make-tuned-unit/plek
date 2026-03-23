@@ -12,6 +12,7 @@ declare global {
         lastName: string;
         isVerified: boolean;
         isHost: boolean;
+        hostType?: string | null;
         avatar: string | undefined;
         role: string;
       };
@@ -56,6 +57,7 @@ export const protect = async (
         lastName: user.last_name,
         isVerified: user.is_verified,
         isHost: user.is_host,
+        hostType: (user as any).host_type ?? null,
         avatar: user.avatar || undefined,
         role: user.role,
       };

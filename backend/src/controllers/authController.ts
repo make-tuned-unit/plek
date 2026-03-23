@@ -52,7 +52,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 // @access  Public
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, phone, isHost, province } = req.body;
+    const { email, password, firstName, lastName, phone, isHost, province, hostType } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
@@ -103,6 +103,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       last_name: lastName,
       phone,
       isHost: isHost || false,
+      hostType: hostType === 'commercial' ? 'commercial' : hostType === 'residential' ? 'residential' : undefined,
     });
 
     if (error) {
