@@ -245,7 +245,7 @@ const COMMERCIAL_FAQS = [
     answer: 'You need an account to save the submission, track status, and connect the property to the payout profile that will receive earnings.',
   },
   {
-    question: 'Can Plekk support monthly or long-term parking?',
+    question: 'Can plekk support monthly or long-term parking?',
     answer: 'Yes. The flow supports recurring-style inventory such as monthly parking, overnight parking, and long-term storage scenarios.',
   },
 ]
@@ -271,7 +271,7 @@ const HOW_PLEKK_WORKS = [
     description: 'After sign-in, you add the site, inventory structure, and any supporting file inside the authenticated workflow.',
   },
   {
-    title: 'Plekk turns it into a bookable product',
+    title: 'plekk turns it into a bookable product',
     description: 'We structure the property for real booking behaviour, including zones, durations, and vehicle types.',
   },
   {
@@ -285,7 +285,7 @@ const PUBLIC_PREVIEW_STEPS = [
     id: 1,
     eyebrow: 'Step 1',
     title: 'Add the basics',
-    description: 'Start with the property, operator, and inventory profile so Plekk can shape the right commercial setup.',
+    description: 'Start with the property, operator, and inventory profile so plekk can shape the right commercial setup.',
     bullets: [
       'Property type, city, and approximate space count',
       'Vehicle types and booking types you want to support',
@@ -297,7 +297,7 @@ const PUBLIC_PREVIEW_STEPS = [
     id: 2,
     eyebrow: 'Step 2',
     title: 'Bring your existing inventory',
-    description: 'If you already track spaces in a spreadsheet, Plekk meets you there instead of forcing a rebuild.',
+    description: 'If you already track spaces in a spreadsheet, plekk meets you there instead of forcing a rebuild.',
     bullets: [
       'Upload CSV or spreadsheet files inside the authenticated workflow',
       'Keep existing inventory logic as the starting point',
@@ -321,11 +321,11 @@ const PUBLIC_PREVIEW_STEPS = [
     id: 4,
     eyebrow: 'Step 4',
     title: 'Review and submit for launch',
-    description: 'Once the structure is clear, create your account, finish the real flow, and submit the property to Plekk.',
+    description: 'Once the structure is clear, create your account, finish the real flow, and submit the property to plekk.',
     bullets: [
       'Authenticated setup keeps uploads and operational details private',
       'Submission status stays tied to your host account',
-      'Plekk reviews the setup before launch',
+      'plekk reviews the setup before launch',
     ],
     effort: 'Ready to submit',
   },
@@ -591,7 +591,7 @@ export default function CommercialParkingPage() {
                   Turn commercial parking into a cleaner, bookable revenue stream
                 </h1>
                 <p className="mt-5 max-w-2xl text-lg text-mist-200">
-                  Plekk helps operators list lots, garages, mixed-use sites, and oversized inventory in a format drivers can actually understand and book.
+                  plekk helps operators list lots, garages, mixed-use sites, and oversized inventory in a format drivers can actually understand and book.
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 text-sm text-mist-100">
@@ -620,7 +620,7 @@ export default function CommercialParkingPage() {
                 </div>
               </div>
               <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 backdrop-blur-sm">
-                <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Why operators use Plekk</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Why operators use plekk</p>
                 <div className="mt-5 space-y-4">
                   {COMMERCIAL_BENEFITS.map((item) => (
                     <div key={item.title} className="rounded-2xl border border-white/10 bg-white/10 p-4">
@@ -717,7 +717,7 @@ export default function CommercialParkingPage() {
 
                 <div className="mt-6 rounded-2xl border border-accent-100 bg-accent-50 p-4 text-sm text-charcoal-700">
                   {publicPreviewStep < 4
-                    ? 'You can preview the flow step by step here. When you are ready to enter real property data, Plekk moves you into the authenticated host workflow.'
+                    ? 'You can preview the flow step by step here. When you are ready to enter real property data, plekk moves you into the authenticated host workflow.'
                     : 'This is the handoff point: create an account to continue with the real commercial setup, uploads, and submission.'}
                 </div>
 
@@ -760,7 +760,7 @@ export default function CommercialParkingPage() {
                 The model works when a property is bigger than a simple driveway listing
               </h2>
               <p className="mt-4 text-lg text-charcoal-600">
-                If your site has multiple rows, mixed durations, oversized vehicles, or access instructions that matter, Plekk&apos;s commercial flow is designed to present that inventory clearly.
+                If your site has multiple rows, mixed durations, oversized vehicles, or access instructions that matter, plekk&apos;s commercial flow is designed to present that inventory clearly.
               </p>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -789,7 +789,7 @@ export default function CommercialParkingPage() {
                   The public page explains the model. The authenticated workflow handles the real setup. That keeps the marketing page focused and the operational tooling where it belongs.
                 </p>
                 <div className="mt-6 rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
-                  <p className="text-sm font-semibold text-charcoal-900">What Plekk makes easier</p>
+                  <p className="text-sm font-semibold text-charcoal-900">What plekk makes easier</p>
                   <div className="mt-4 space-y-3">
                     {COMMERCIAL_FEATURES.map((item) => (
                       <div key={item} className="flex items-start gap-3 text-sm text-charcoal-700">
@@ -829,7 +829,7 @@ export default function CommercialParkingPage() {
                   You do not need to figure out the structure alone
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  Plekk reviews the setup before launch so the property, inventory logic, and driver guidance make sense in the real world, not just in a spreadsheet.
+                  plekk reviews the setup before launch so the property, inventory logic, and driver guidance make sense in the real world, not just in a spreadsheet.
                 </p>
                 {callUrl && (
                   <Link
@@ -1514,7 +1514,7 @@ export default function CommercialParkingPage() {
                 </div>
 
                 <div className="rounded-2xl border border-accent-100 bg-accent-50 p-5 text-sm text-charcoal-700">
-                  Plekk is a booking marketplace. It does not provide insurance. Most commercial locations can launch with pooled inventory, clear zone instructions, and existing on-site signage.
+                  plekk is a booking marketplace. It does not provide insurance. Most commercial locations can launch with pooled inventory, clear zone instructions, and existing on-site signage.
                 </div>
 
                 <div className="flex items-center justify-between gap-3">
