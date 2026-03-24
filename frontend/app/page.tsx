@@ -11,6 +11,7 @@ import {
   Clock,
   MapPin,
   DollarSign,
+  Building2,
   TrendingUp,
   Leaf,
   ArrowRight,
@@ -100,13 +101,6 @@ export default function HomePage() {
               >
                 List Your Driveway
                 <DollarSign className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-              </Link>
-              <Link
-                href="/commercial-parking"
-                className="group inline-flex items-center justify-center min-h-[52px] px-8 py-4 rounded-xl text-lg font-bold bg-charcoal-900/80 text-white border border-white/20 shadow-md hover:bg-charcoal-900 hover:-translate-y-0.5 transition-all duration-300"
-              >
-                Have 20+ spaces? Add them in bulk
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
               </Link>
             </motion.div>
 
@@ -308,6 +302,35 @@ export default function HomePage() {
               </Link>
             </motion.div>
           </div>
+
+          <motion.div
+            variants={slideUp}
+            transition={slideUpTransition}
+            className="mt-8 lg:mt-10"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-charcoal-200 bg-charcoal-900 px-6 py-5 shadow-lg">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-300">
+                    Commercial parking
+                  </p>
+                  <p className="mt-1 text-base text-white sm:text-lg">
+                    Managing a lot, condo, or business with 20+ spaces? Use the bulk onboarding flow instead.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/commercial-parking"
+                className="group inline-flex items-center font-semibold text-white hover:text-accent-300 transition-colors"
+              >
+                Explore commercial onboarding
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </Link>
+            </div>
+          </motion.div>
         </motion.div>
       </section>
 
