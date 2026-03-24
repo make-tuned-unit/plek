@@ -12,9 +12,14 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+
 export const metadata = {
   title: 'Help Center | plekk',
   description: 'Get answers to common questions about using plekk as a host or driver.',
+  alternates: {
+    canonical: `${baseUrl}/help`,
+  },
 }
 
 const faqs = [

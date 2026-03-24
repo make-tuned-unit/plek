@@ -1,6 +1,11 @@
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+
 export const metadata = {
   title: 'Privacy Policy | plekk',
   description: 'Learn how plekk collects, uses, and protects your information.',
+  alternates: {
+    canonical: `${baseUrl}/privacy`,
+  },
 }
 
 const sections = [
@@ -102,7 +107,6 @@ export default function PrivacyPage() {
     </div>
   )
 }
-
 
 
 

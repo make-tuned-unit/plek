@@ -1,6 +1,11 @@
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+
 export const metadata = {
   title: 'Terms of Service | plekk',
   description: 'Review the terms that govern your use of plekk as a host or driver.',
+  alternates: {
+    canonical: `${baseUrl}/terms`,
+  },
 }
 
 type Section = {

@@ -1,8 +1,13 @@
 import { ContactForm } from '@/components/ContactForm'
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+
 export const metadata = {
   title: 'Contact Us | plekk',
   description: 'Reach out to the plekk team for support, partnerships, or general inquiries.',
+  alternates: {
+    canonical: `${baseUrl}/contact`,
+  },
 }
 
 export default function ContactPage() {

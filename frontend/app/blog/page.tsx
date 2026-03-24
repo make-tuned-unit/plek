@@ -8,6 +8,9 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
 export const metadata: Metadata = {
   title: 'Blog | Parking Tips, Driveway Rental & More',
   description: 'Tips for finding parking, listing your driveway, and making the most of hourly parking and the parking marketplace. Read the plekk blog.',
+  alternates: {
+    canonical: `${baseUrl}/blog`,
+  },
   openGraph: {
     title: 'Blog | plekk - Parking & Driveway Rental Tips',
     description: 'Tips for finding parking, listing your driveway, and hourly parking. Read the plekk blog.',

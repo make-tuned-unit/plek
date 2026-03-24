@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -25,7 +25,6 @@ export const metadata: Metadata = {
   creator: 'plekk',
   publisher: 'plekk',
   formatDetection: { email: false, address: false, telephone: false },
-  viewport: 'width=device-width, initial-scale=1',
   robots: {
     index: true,
     follow: true,
@@ -57,10 +56,12 @@ export const metadata: Metadata = {
     description: 'Find and rent driveways, parking spaces, and storage by the hour. List your driveway and earn.',
     images: ['/PlekkFeaturedImage.png'],
   },
-  alternates: {
-    canonical: appUrl,
-  },
   category: 'marketplace',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 const jsonLd = {

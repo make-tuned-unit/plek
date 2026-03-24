@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: 'List Commercial Parking in Bulk | plekk',
   description:
     'Onboard commercial parking supply with pooled inventory, simple lot zones, spreadsheet imports, and manual review. Built for businesses, landlords, and lot operators.',
+  alternates: {
+    canonical: `${baseUrl}/commercial-parking`,
+  },
   openGraph: {
     title: 'List Commercial Parking in Bulk | plekk',
     description:
