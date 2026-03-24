@@ -250,6 +250,87 @@ const COMMERCIAL_FAQS = [
   },
 ]
 
+const COMMERCIAL_BENEFITS = [
+  {
+    title: 'Turn idle capacity into revenue',
+    description: 'Open daily, monthly, overnight, event, or mixed-use inventory without creating one listing per stall.',
+  },
+  {
+    title: 'Keep operational control',
+    description: 'Set booking types, access rules, and where drivers should park while keeping your on-site process clear.',
+  },
+  {
+    title: 'Launch without rebuilding everything',
+    description: 'Use pooled inventory, zone guidance, and your existing site signage instead of a heavy custom rollout.',
+  },
+]
+
+const HOW_PLEKK_WORKS = [
+  {
+    title: 'Define the property once',
+    description: 'After sign-in, you add the site, inventory structure, and any supporting file inside the authenticated workflow.',
+  },
+  {
+    title: 'Plekk turns it into a bookable product',
+    description: 'We structure the property for real booking behaviour, including zones, durations, and vehicle types.',
+  },
+  {
+    title: 'Drivers book with clarity',
+    description: 'Customers know what they are booking, where to go, and how the property works before they arrive.',
+  },
+]
+
+const PUBLIC_PREVIEW_STEPS = [
+  {
+    id: 1,
+    eyebrow: 'Step 1',
+    title: 'Add the basics',
+    description: 'Start with the property, operator, and inventory profile so Plekk can shape the right commercial setup.',
+    bullets: [
+      'Property type, city, and approximate space count',
+      'Vehicle types and booking types you want to support',
+      'A structure designed for lots, garages, yards, and mixed-use sites',
+    ],
+    effort: 'About 2 minutes',
+  },
+  {
+    id: 2,
+    eyebrow: 'Step 2',
+    title: 'Bring your existing inventory',
+    description: 'If you already track spaces in a spreadsheet, Plekk meets you there instead of forcing a rebuild.',
+    bullets: [
+      'Upload CSV or spreadsheet files inside the authenticated workflow',
+      'Keep existing inventory logic as the starting point',
+      'Use the template only if you need a cleaner format',
+    ],
+    effort: 'About 3 minutes',
+  },
+  {
+    id: 3,
+    eyebrow: 'Step 3',
+    title: 'Define where drivers should go',
+    description: 'Use simple zones and pooled counts so the property makes sense operationally without mapping every stall.',
+    bullets: [
+      'Zone-based instructions for larger properties',
+      'Pooled inventory by vehicle type or use case',
+      'Cleaner driver guidance with less operational overhead',
+    ],
+    effort: 'About 4 minutes',
+  },
+  {
+    id: 4,
+    eyebrow: 'Step 4',
+    title: 'Review and submit for launch',
+    description: 'Once the structure is clear, create your account, finish the real flow, and submit the property to Plekk.',
+    bullets: [
+      'Authenticated setup keeps uploads and operational details private',
+      'Submission status stays tied to your host account',
+      'Plekk reviews the setup before launch',
+    ],
+    effort: 'Ready to submit',
+  },
+] as const
+
 export default function CommercialParkingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -258,6 +339,7 @@ export default function CommercialParkingPage() {
   const submissionToken = searchParams.get('token')
   const callUrl = process.env.NEXT_PUBLIC_COMMERCIAL_CALL_URL
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1)
+  const [publicPreviewStep, setPublicPreviewStep] = useState<1 | 2 | 3 | 4>(1)
   const [propertyDraft, setPropertyDraft] = useState<PropertyDraft>(defaultPropertyDraft)
   const [zones, setZones] = useState<CommercialZoneDraft[]>([defaultZone()])
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(undefined)
@@ -493,70 +575,177 @@ export default function CommercialParkingPage() {
 
   if (!user) {
     const redirectTarget = encodeURIComponent('/commercial-parking')
+    const activePublicStep = PUBLIC_PREVIEW_STEPS.find((step) => step.id === publicPreviewStep) || PUBLIC_PREVIEW_STEPS[0]
+    const publicProgress = (publicPreviewStep / PUBLIC_PREVIEW_STEPS.length) * 100
     return (
       <div className="min-h-screen bg-gradient-to-br from-mist-100 via-white to-sand-100">
-        <section className="border-b border-mist-200 bg-charcoal-900 text-white">
+        <section className="overflow-hidden border-b border-mist-200 bg-charcoal-900 text-white">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-            <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
               <div>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium">
                   <Building2 className="h-4 w-4 text-accent-300" />
                   Commercial parking
                 </div>
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                  Bring large parking inventory online with one guided setup
+                  Turn commercial parking into a cleaner, bookable revenue stream
                 </h1>
                 <p className="mt-5 max-w-2xl text-lg text-mist-200">
-                  Learn how Plekk commercial onboarding works, what information we need, and how larger properties can launch with pooled inventory, zone guidance, and existing site operations.
+                  Plekk helps operators list lots, garages, mixed-use sites, and oversized inventory in a format drivers can actually understand and book.
                 </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 text-sm text-mist-100">
+                    Pooled inventory for larger properties
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 text-sm text-mist-100">
+                    Daily, monthly, overnight, event, and storage-ready setups
+                  </div>
+                </div>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
                     href={`/auth/signup?redirect=${redirectTarget}&host=true&intent=commercial-host`}
                     className="inline-flex items-center rounded-xl bg-accent-400 px-5 py-3 font-semibold text-charcoal-900 transition hover:bg-accent-300"
                   >
-                    Create account when you&apos;re ready
+                    Start setup
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
+                  {callUrl && (
+                    <Link
+                      href={callUrl}
+                      className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                    >
+                      Book a call
+                    </Link>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-[2rem] border border-white/10 bg-white/10 p-6 backdrop-blur-sm">
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Why operators use Plekk</p>
+                <div className="mt-5 space-y-4">
+                  {COMMERCIAL_BENEFITS.map((item) => (
+                    <div key={item.title} className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                      <p className="font-semibold text-white">{item.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-mist-200">{item.description}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-charcoal-950/40 p-4 text-sm text-mist-200">
+                  Visitors can preview the onboarding flow here. Uploads, property details, and final submission stay inside the authenticated host workflow.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-mist-200 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">Try the setup flow</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
+                  See the onboarding before you commit to it
+                </h2>
+                <p className="mt-4 text-charcoal-600">
+                  Strong PLG onboarding reduces friction. This preview shows the commercial setup in manageable steps, then asks you to create an account at the point where real data and uploads begin to matter.
+                </p>
+
+                <div className="mt-8 rounded-3xl border border-mist-200 bg-mist-50 p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-charcoal-900">Preview progress</p>
+                      <p className="mt-1 text-sm text-charcoal-600">
+                        Step {publicPreviewStep} of {PUBLIC_PREVIEW_STEPS.length}
+                      </p>
+                    </div>
+                    <p className="text-sm font-medium text-accent-700">{Math.round(publicProgress)}%</p>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-mist-200">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-accent-500 to-primary-600 transition-all duration-300"
+                      style={{ width: `${publicProgress}%` }}
+                    />
+                  </div>
+                  <div className="mt-5 space-y-2">
+                    {PUBLIC_PREVIEW_STEPS.map((step) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => setPublicPreviewStep(step.id)}
+                        className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                          publicPreviewStep === step.id
+                            ? 'border-accent-300 bg-white shadow-sm'
+                            : 'border-transparent bg-transparent hover:border-mist-200 hover:bg-white/80'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-charcoal-900">{step.title}</p>
+                          <p className="mt-1 text-xs text-charcoal-500">{step.effort}</p>
+                        </div>
+                        {step.id > publicPreviewStep ? (
+                          <Lock className="h-4 w-4 text-charcoal-400" />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-charcoal-900 text-xs font-bold text-white">
+                            {step.id}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[2rem] border border-mist-200 bg-white p-6 shadow-sm sm:p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">{activePublicStep.eyebrow}</p>
+                    <h3 className="mt-2 text-2xl font-bold tracking-tight text-charcoal-900">{activePublicStep.title}</h3>
+                  </div>
+                  <div className="rounded-full bg-accent-50 px-3 py-1 text-xs font-semibold text-accent-700">
+                    {activePublicStep.effort}
+                  </div>
+                </div>
+                <p className="mt-4 text-charcoal-600">{activePublicStep.description}</p>
+
+                <div className="mt-6 space-y-3">
+                  {activePublicStep.bullets.map((bullet) => (
+                    <div key={bullet} className="flex items-start gap-3 rounded-2xl bg-mist-50 px-4 py-3 text-sm text-charcoal-700">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent-600" />
+                      <span>{bullet}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-accent-100 bg-accent-50 p-4 text-sm text-charcoal-700">
+                  {publicPreviewStep < 4
+                    ? 'You can preview the flow step by step here. When you are ready to enter real property data, Plekk moves you into the authenticated host workflow.'
+                    : 'This is the handoff point: create an account to continue with the real commercial setup, uploads, and submission.'}
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  {publicPreviewStep < 4 ? (
+                    <button
+                      type="button"
+                      onClick={() => setPublicPreviewStep((Math.min(4, publicPreviewStep + 1) as 1 | 2 | 3 | 4))}
+                      className="inline-flex items-center rounded-xl bg-charcoal-900 px-5 py-3 font-semibold text-white"
+                    >
+                      Continue preview
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/auth/signup?redirect=${redirectTarget}&host=true&intent=commercial-host`}
+                      className="inline-flex items-center rounded-xl bg-accent-500 px-5 py-3 font-semibold text-white transition hover:bg-accent-600"
+                    >
+                      Create account to continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  )}
                   <Link
                     href={`/auth/signin?redirect=${redirectTarget}`}
-                    className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                    className="inline-flex items-center rounded-xl border border-mist-300 bg-white px-5 py-3 font-semibold text-charcoal-800 transition hover:bg-mist-50"
                   >
                     Sign in
                   </Link>
-                  <a
-                    href="/commercial-inventory-template.csv"
-                    className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
-                  >
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download template
-                  </a>
-                </div>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/10 p-3">
-                    <Lock className="h-5 w-5 text-accent-300" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Account required</p>
-                    <p className="text-sm text-mist-200">
-                      You can read everything on this page without signing in. An account is only required when you want to save and submit a real property.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 space-y-4">
-                  {[
-                    'Review the onboarding approach and download the spreadsheet template first.',
-                    'Create an account only when you are ready to save your submission.',
-                    'Submit your property, zones, and pooled inventory for review.',
-                  ].map((item, index) => (
-                    <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/10 p-4 text-sm">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-300 font-bold text-charcoal-900">
-                        {index + 1}
-                      </div>
-                      <p>{item}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -566,12 +755,12 @@ export default function CommercialParkingPage() {
         <section className="border-b border-mist-200 bg-white">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">Who this is for</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">Built for commercial operators</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
-                Built for operators managing more than a handful of spaces
+                The model works when a property is bigger than a simple driveway listing
               </h2>
               <p className="mt-4 text-lg text-charcoal-600">
-                The commercial flow is designed for properties where simple residential listing tools stop being practical.
+                If your site has multiple rows, mixed durations, oversized vehicles, or access instructions that matter, Plekk&apos;s commercial flow is designed to present that inventory clearly.
               </p>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -594,13 +783,13 @@ export default function CommercialParkingPage() {
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">How it works</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
-                  A lighter setup for larger properties
+                  Commercial onboarding without a messy listing experience
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  Instead of treating a commercial lot like dozens of residential listings, Plekk lets you describe the property once, define simple operating zones, and assign pooled counts where drivers should park.
+                  The public page explains the model. The authenticated workflow handles the real setup. That keeps the marketing page focused and the operational tooling where it belongs.
                 </p>
                 <div className="mt-6 rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
-                  <p className="text-sm font-semibold text-charcoal-900">What you can launch with</p>
+                  <p className="text-sm font-semibold text-charcoal-900">What Plekk makes easier</p>
                   <div className="mt-4 space-y-3">
                     {COMMERCIAL_FEATURES.map((item) => (
                       <div key={item} className="flex items-start gap-3 text-sm text-charcoal-700">
@@ -613,11 +802,11 @@ export default function CommercialParkingPage() {
               </div>
 
               <div className="space-y-4">
-                {STEPS.map((step) => (
-                  <div key={step.id} className="rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
+                {HOW_PLEKK_WORKS.map((step, index) => (
+                  <div key={step.title} className="rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
                     <div className="flex items-start gap-4">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-500 text-base font-bold text-white">
-                        {step.id}
+                        {index + 1}
                       </div>
                       <div>
                         <p className="text-lg font-semibold text-charcoal-900">{step.title}</p>
@@ -635,12 +824,12 @@ export default function CommercialParkingPage() {
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">After you submit</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">Launch support</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
-                  What review looks like
+                  You do not need to figure out the structure alone
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  The submission is reviewed before launch so payout setup, zone instructions, and inventory logic are aligned with how the property actually operates.
+                  Plekk reviews the setup before launch so the property, inventory logic, and driver guidance make sense in the real world, not just in a spreadsheet.
                 </p>
                 {callUrl && (
                   <Link
@@ -674,10 +863,10 @@ export default function CommercialParkingPage() {
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">FAQ</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
-                  Common commercial onboarding questions
+                  Common operator questions
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  Most operators do not need to sign in immediately. Start here, review the structure, and create an account once you are ready to submit a live property.
+                  This page is here to explain the product and reduce the fear of starting. The actual setup, uploads, and submission actions happen only after sign-in.
                 </p>
               </div>
               <div className="space-y-4">
@@ -694,9 +883,9 @@ export default function CommercialParkingPage() {
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Ready to submit?</p>
-                  <h3 className="mt-2 text-2xl font-bold">Create an account when you want to save your property and send it for review.</h3>
+                  <h3 className="mt-2 text-2xl font-bold">If the model fits your property, create an account and continue the real setup.</h3>
                   <p className="mt-3 text-sm text-mist-200">
-                    Until then, you can use this page to understand the workflow, download the template, and decide how you want to structure your inventory.
+                    This public page previews the flow and sells the product. The authenticated host flow is where your property details, files, and submission are actually managed.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -704,16 +893,17 @@ export default function CommercialParkingPage() {
                     href={`/auth/signup?redirect=${redirectTarget}&host=true&intent=commercial-host`}
                     className="inline-flex items-center rounded-xl bg-accent-400 px-5 py-3 font-semibold text-charcoal-900 transition hover:bg-accent-300"
                   >
-                    Create account
+                    Create account to start
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
-                  <a
-                    href="/commercial-inventory-template.csv"
-                    className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
-                  >
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download template
-                  </a>
+                  {callUrl && (
+                    <Link
+                      href={callUrl}
+                      className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                    >
+                      Book a call
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
