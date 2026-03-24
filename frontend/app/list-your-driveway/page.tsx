@@ -131,14 +131,12 @@ export default function ListYourDrivewayPage() {
       },
       startTime: '00:00',
       endTime: '23:59',
-      state: 'NS',
+      state: '',
       requireApproval: false,
       leadTimeHours: 24, // Default: 24 hours lead time
     },
   })
 
-  const watchedProvince = watch('state')
-  const isProvinceBlocked = watchedProvince !== 'NS'
   const watchedFeatures = watch('features')
 
   // Load property for edit mode
@@ -540,23 +538,19 @@ export default function ListYourDrivewayPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-charcoal-700 mb-2">
-                    Province
+                    Province or Territory
                   </label>
                   <select
                     {...register('state')}
                     className="w-full px-3 py-2 border border-mist-300 rounded-lg focus:ring-2 focus:ring-accent-400 focus:border-transparent appearance-none cursor-pointer"
                   >
+                    <option value="">Select province or territory</option>
                     {PROVINCES.map((p) => (
                       <option key={p.value} value={p.value}>{p.label}</option>
                     ))}
                   </select>
                   {errors.state && (
                     <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
-                  )}
-                  {isProvinceBlocked && (
-                    <p className="mt-2 text-sm text-amber-600">
-                      Driveway listings in {PROVINCES.find(p => p.value === watchedProvince)?.label ?? watchedProvince} are coming soon! We&apos;re currently available in Nova Scotia only.
-                    </p>
                   )}
                 </div>
 
@@ -891,7 +885,6 @@ export default function ListYourDrivewayPage() {
               <button
                 type="button"
                 onClick={nextStep}
-                disabled={isProvinceBlocked}
                 className="flex items-center px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
@@ -900,7 +893,7 @@ export default function ListYourDrivewayPage() {
             ) : (
               <button
                 type="submit"
-                disabled={isSubmitting || isProvinceBlocked}
+                disabled={isSubmitting}
                 className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Sending...' : 'Send for review'}

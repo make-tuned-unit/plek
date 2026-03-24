@@ -201,6 +201,55 @@ const STEPS = [
   { id: 4, title: 'Review and submit', description: 'Confirm the details and send for review.' },
 ] as const
 
+const WHO_ITS_FOR = [
+  {
+    title: 'Lots, garages, and parkades',
+    description: 'Bring structured parking inventory online without rebuilding your operation around individual stall mapping.',
+  },
+  {
+    title: 'Condo, office, and mixed-use properties',
+    description: 'Offer resident overflow, staff parking, guest inventory, or after-hours availability with clear zone instructions.',
+  },
+  {
+    title: 'Industrial yards, RV, and storage-style parking',
+    description: 'Handle oversized vehicles, trailers, and long-term storage inventory with pooled counts and access notes.',
+  },
+]
+
+const COMMERCIAL_FEATURES = [
+  'Pooled inventory instead of mapping every stall one by one',
+  'Simple zone pins so drivers know where to go on larger properties',
+  'Daily, monthly, overnight, event, and storage-style booking support',
+  'Mixed vehicle types including passenger, oversized, RV, truck, and trailer',
+  'Spreadsheet-first onboarding when your inventory already lives in a file',
+  'Manual review before launch so signage, access, and payout setup are correct',
+]
+
+const REVIEW_TIMELINE = [
+  'You submit business details, site information, and any spreadsheet you already have.',
+  'We review the setup, confirm the inventory structure, and flag anything missing.',
+  'Once approved, we activate the property with pooled counts, zones, and booking rules.',
+]
+
+const COMMERCIAL_FAQS = [
+  {
+    question: 'Do I need to map every parking stall?',
+    answer: 'No. Most commercial operators launch faster with pooled inventory by zone, vehicle type, or booking type.',
+  },
+  {
+    question: 'Can I use my existing spreadsheet?',
+    answer: 'Yes. If you already manage inventory in CSV or Excel, you can upload it and use the template as a guide.',
+  },
+  {
+    question: 'Do I need an account before submitting?',
+    answer: 'You need an account to save the submission, track status, and connect the property to the payout profile that will receive earnings.',
+  },
+  {
+    question: 'Can Plekk support monthly or long-term parking?',
+    answer: 'Yes. The flow supports recurring-style inventory such as monthly parking, overnight parking, and long-term storage scenarios.',
+  },
+]
+
 export default function CommercialParkingPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -458,14 +507,14 @@ export default function CommercialParkingPage() {
                   Bring large parking inventory online with one guided setup
                 </h1>
                 <p className="mt-5 max-w-2xl text-lg text-mist-200">
-                  Create an account first, then submit your lot details, upload your spreadsheet, and place simple zone pins for your property.
+                  Learn how Plekk commercial onboarding works, what information we need, and how larger properties can launch with pooled inventory, zone guidance, and existing site operations.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
                     href={`/auth/signup?redirect=${redirectTarget}&host=true&intent=commercial-host`}
                     className="inline-flex items-center rounded-xl bg-accent-400 px-5 py-3 font-semibold text-charcoal-900 transition hover:bg-accent-300"
                   >
-                    Create account to continue
+                    Create account when you&apos;re ready
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                   <Link
@@ -474,6 +523,13 @@ export default function CommercialParkingPage() {
                   >
                     Sign in
                   </Link>
+                  <a
+                    href="/commercial-inventory-template.csv"
+                    className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download template
+                  </a>
                 </div>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-sm">
@@ -484,15 +540,15 @@ export default function CommercialParkingPage() {
                   <div>
                     <p className="font-semibold">Account required</p>
                     <p className="text-sm text-mist-200">
-                      We save your submission, keep your status visible, and connect it to your host account.
+                      You can read everything on this page without signing in. An account is only required when you want to save and submit a real property.
                     </p>
                   </div>
                 </div>
                 <div className="mt-6 space-y-4">
                   {[
-                    'Tell us about your business and parking types.',
-                    'Upload your spreadsheet and confirm the property location.',
-                    'Drop a few zone pins and assign pooled inventory counts.',
+                    'Review the onboarding approach and download the spreadsheet template first.',
+                    'Create an account only when you are ready to save your submission.',
+                    'Submit your property, zones, and pooled inventory for review.',
                   ].map((item, index) => (
                     <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/10 p-4 text-sm">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-300 font-bold text-charcoal-900">
@@ -501,6 +557,163 @@ export default function CommercialParkingPage() {
                       <p>{item}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-mist-200 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">Who this is for</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
+                Built for operators managing more than a handful of spaces
+              </h2>
+              <p className="mt-4 text-lg text-charcoal-600">
+                The commercial flow is designed for properties where simple residential listing tools stop being practical.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {WHO_ITS_FOR.map((item) => (
+                <div key={item.title} className="rounded-3xl border border-mist-200 bg-mist-50 p-6 shadow-sm">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-charcoal-900 text-white">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold text-charcoal-900">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-charcoal-600">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-mist-200 bg-gradient-to-br from-mist-50 to-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">How it works</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
+                  A lighter setup for larger properties
+                </h2>
+                <p className="mt-4 text-charcoal-600">
+                  Instead of treating a commercial lot like dozens of residential listings, Plekk lets you describe the property once, define simple operating zones, and assign pooled counts where drivers should park.
+                </p>
+                <div className="mt-6 rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-charcoal-900">What you can launch with</p>
+                  <div className="mt-4 space-y-3">
+                    {COMMERCIAL_FEATURES.map((item) => (
+                      <div key={item} className="flex items-start gap-3 text-sm text-charcoal-700">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent-600" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {STEPS.map((step) => (
+                  <div key={step.id} className="rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-500 text-base font-bold text-white">
+                        {step.id}
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold text-charcoal-900">{step.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-charcoal-600">{step.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-mist-200 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">After you submit</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
+                  What review looks like
+                </h2>
+                <p className="mt-4 text-charcoal-600">
+                  The submission is reviewed before launch so payout setup, zone instructions, and inventory logic are aligned with how the property actually operates.
+                </p>
+                {callUrl && (
+                  <Link
+                    href={callUrl}
+                    className="mt-6 inline-flex items-center rounded-xl bg-charcoal-900 px-5 py-3 font-semibold text-white"
+                  >
+                    Book a call
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                )}
+              </div>
+              <div className="space-y-4">
+                {REVIEW_TIMELINE.map((item, index) => (
+                  <div key={item} className="rounded-3xl border border-mist-200 bg-mist-50 p-6 shadow-sm">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-charcoal-900 shadow-sm">
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-6 text-charcoal-700">{item}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-accent-700">FAQ</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-900">
+                  Common commercial onboarding questions
+                </h2>
+                <p className="mt-4 text-charcoal-600">
+                  Most operators do not need to sign in immediately. Start here, review the structure, and create an account once you are ready to submit a live property.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {COMMERCIAL_FAQS.map((item) => (
+                  <div key={item.question} className="rounded-3xl border border-mist-200 bg-mist-50 p-6 shadow-sm">
+                    <p className="text-base font-semibold text-charcoal-900">{item.question}</p>
+                    <p className="mt-3 text-sm leading-6 text-charcoal-600">{item.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-12 rounded-[2rem] border border-charcoal-200 bg-charcoal-900 px-6 py-8 text-white shadow-lg sm:px-8">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Ready to submit?</p>
+                  <h3 className="mt-2 text-2xl font-bold">Create an account when you want to save your property and send it for review.</h3>
+                  <p className="mt-3 text-sm text-mist-200">
+                    Until then, you can use this page to understand the workflow, download the template, and decide how you want to structure your inventory.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href={`/auth/signup?redirect=${redirectTarget}&host=true&intent=commercial-host`}
+                    className="inline-flex items-center rounded-xl bg-accent-400 px-5 py-3 font-semibold text-charcoal-900 transition hover:bg-accent-300"
+                  >
+                    Create account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                  <a
+                    href="/commercial-inventory-template.csv"
+                    className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download template
+                  </a>
                 </div>
               </div>
             </div>

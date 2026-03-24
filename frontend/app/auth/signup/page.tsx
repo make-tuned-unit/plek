@@ -63,7 +63,6 @@ function SignUpContent() {
   const hostIntent = searchParams.get('host') === 'true' || intent === 'host' || intent === 'commercial-host'
   const commercialIntent = intent === 'commercial-host'
   const checkEmail = searchParams.get('check-email') === 'true'
-  const waitlistSuccess = searchParams.get('waitlist') === 'true'
   const pendingEmail = searchParams.get('email') || ''
   const [isResending, setIsResending] = useState(false)
   const [resendEmailInput, setResendEmailInput] = useState('')
@@ -74,7 +73,7 @@ function SignUpContent() {
     lastName: '',
     email: '',
     phone: '',
-    province: 'NS',
+    province: '',
     isHost: hostIntent,
     password: '',
     confirmPassword: '',
@@ -105,10 +104,7 @@ function SignUpContent() {
         commercialIntent ? 'commercial' : data.isHost ? 'residential' : undefined,
         data.province
       )
-      if (result.success && result.waitlist) {
-        toast.success("You're on the list! We'll be in touch when plekk is available in your area.", { duration: 5000 })
-        router.push('/auth/signup?waitlist=true')
-      } else if (result.success) {
+      if (result.success) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
         const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
         router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
@@ -117,10 +113,7 @@ function SignUpContent() {
       }
     } catch (error: any) {
       const res = error?.response?.data
-      if (res?.success && res?.waitlist) {
-        toast.success("You're on the list! We'll be in touch when plekk is available in your area.", { duration: 5000 })
-        router.push('/auth/signup?waitlist=true')
-      } else if (res?.success && (res?.data?.user || res?.user || res?.message?.includes('check your email'))) {
+      if (res?.success && (res?.data?.user || res?.user || res?.message?.includes('check your email'))) {
         toast.success('Account created! Please check your email to confirm your account.', { duration: 5000 })
         const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
         router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
@@ -130,31 +123,6 @@ function SignUpContent() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  // Show waitlist success when user signed up from outside allowed region
-  if (waitlistSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100 flex items-center justify-center px-4 py-8">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <div className="mb-6">
-            <div className="mx-auto w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="h-8 w-8 text-accent-600" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-charcoal-900 mb-4">You&apos;re on the list</h1>
-          <p className="text-charcoal-600 mb-6">
-            We&apos;ll contact you as soon as plekk becomes available in your area.
-          </p>
-          <Link
-            href="/"
-            className="inline-block text-accent-600 hover:text-accent-700 font-semibold text-sm"
-          >
-            Back to home
-          </Link>
-        </div>
-      </div>
-    )
   }
 
   // Show check email message if redirected here after successful signup
@@ -354,7 +322,7 @@ function SignUpContent() {
 
             <div>
               <label htmlFor="province" className="block text-sm font-medium text-charcoal-700 mb-2">
-                Province
+                Province or Territory
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-400 h-5 w-5 pointer-events-none" />
@@ -364,6 +332,7 @@ function SignUpContent() {
                   autoComplete="address-level1"
                   className="input pl-10 appearance-none cursor-pointer"
                 >
+                  <option value="">Select province or territory</option>
                   {PROVINCES.map((p) => (
                     <option key={p.value} value={p.value}>
                       {p.label}
