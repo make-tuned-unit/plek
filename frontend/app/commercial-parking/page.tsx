@@ -204,7 +204,7 @@ const STEPS = [
 const WHO_ITS_FOR = [
   {
     title: 'Lots, garages, and parkades',
-    description: 'Bring structured parking inventory online without rebuilding your operation around individual stall mapping.',
+    description: 'Bring larger parking inventory online without rebuilding your day-to-day operation around individual stall mapping.',
   },
   {
     title: 'Condo, office, and mixed-use properties',
@@ -242,7 +242,7 @@ const COMMERCIAL_FAQS = [
   },
   {
     question: 'Do I need an account before submitting?',
-    answer: 'You need an account to save the submission, track status, and connect the property to the payout profile that will receive earnings.',
+    answer: 'Yes. Your account lets you save your progress, come back later, track review status, and set up payouts before launch.',
   },
   {
     question: 'Can plekk support monthly or long-term parking?',
@@ -256,8 +256,8 @@ const COMMERCIAL_BENEFITS = [
     description: 'Open daily, monthly, overnight, event, or mixed-use inventory without creating one listing per stall.',
   },
   {
-    title: 'Keep operational control',
-    description: 'Set booking types, access rules, and where drivers should park while keeping your on-site process clear.',
+    title: 'Stay in control',
+    description: 'Set booking types, access rules, and parking directions while keeping your on-site process clear.',
   },
   {
     title: 'Launch without rebuilding everything',
@@ -268,10 +268,10 @@ const COMMERCIAL_BENEFITS = [
 const HOW_PLEKK_WORKS = [
   {
     title: 'Define the property once',
-    description: 'After sign-in, you add the site, inventory structure, and any supporting file inside the authenticated workflow.',
+    description: 'Once you create an account, you add the property, parking setup, and any supporting file in one guided place.',
   },
   {
-    title: 'plekk turns it into a bookable product',
+    title: 'plekk makes it easy to book',
     description: 'We structure the property for real booking behaviour, including zones, durations, and vehicle types.',
   },
   {
@@ -299,8 +299,8 @@ const PUBLIC_PREVIEW_STEPS = [
     title: 'Bring your existing inventory',
     description: 'If you already track spaces in a spreadsheet, plekk meets you there instead of forcing a rebuild.',
     bullets: [
-      'Upload CSV or spreadsheet files inside the authenticated workflow',
-      'Keep existing inventory logic as the starting point',
+      'Upload CSV or spreadsheet files once you create an account',
+      'Use your current parking setup as the starting point',
       'Use the template only if you need a cleaner format',
     ],
     effort: 'About 3 minutes',
@@ -309,11 +309,11 @@ const PUBLIC_PREVIEW_STEPS = [
     id: 3,
     eyebrow: 'Step 3',
     title: 'Define where drivers should go',
-    description: 'Use simple zones and pooled counts so the property makes sense operationally without mapping every stall.',
+    description: 'Use simple zones and pooled counts so the property is easy to manage without mapping every stall.',
     bullets: [
       'Zone-based instructions for larger properties',
       'Pooled inventory by vehicle type or use case',
-      'Cleaner driver guidance with less operational overhead',
+      'Cleaner driver guidance with less manual work',
     ],
     effort: 'About 4 minutes',
   },
@@ -323,8 +323,8 @@ const PUBLIC_PREVIEW_STEPS = [
     title: 'Review and submit for launch',
     description: 'Once the structure is clear, create your account, finish the real flow, and submit the property to plekk.',
     bullets: [
-      'Authenticated setup keeps uploads and operational details private',
-      'Submission status stays tied to your host account',
+      'Your files and property details stay inside your account',
+      'You can come back and check your review status anytime',
       'plekk reviews the setup before launch',
     ],
     effort: 'Ready to submit',
@@ -630,7 +630,7 @@ export default function CommercialParkingPage() {
                   ))}
                 </div>
                 <div className="mt-5 rounded-2xl border border-white/10 bg-charcoal-950/40 p-4 text-sm text-mist-200">
-                  Visitors can preview the onboarding flow here. Uploads, property details, and final submission stay inside the authenticated host workflow.
+                  You can explore how the setup works here. When you&apos;re ready to add your property and files, we&apos;ll ask you to create an account.
                 </div>
               </div>
             </div>
@@ -646,7 +646,7 @@ export default function CommercialParkingPage() {
                   See the onboarding before you commit to it
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  Strong PLG onboarding reduces friction. This preview shows the commercial setup in manageable steps, then asks you to create an account at the point where real data and uploads begin to matter.
+                  This preview breaks the process into manageable steps so it feels clear, not overwhelming. When you&apos;re ready to continue with your property, you can create an account and pick up from there.
                 </p>
 
                 <div className="mt-8 rounded-3xl border border-mist-200 bg-mist-50 p-5 shadow-sm">
@@ -717,8 +717,8 @@ export default function CommercialParkingPage() {
 
                 <div className="mt-6 rounded-2xl border border-accent-100 bg-accent-50 p-4 text-sm text-charcoal-700">
                   {publicPreviewStep < 4
-                    ? 'You can preview the flow step by step here. When you are ready to enter real property data, plekk moves you into the authenticated host workflow.'
-                    : 'This is the handoff point: create an account to continue with the real commercial setup, uploads, and submission.'}
+                    ? 'You can explore the setup step by step here. When you&apos;re ready to add your property details, we&apos;ll ask you to create an account so you can save everything and come back anytime.'
+                    : 'You&apos;re at the final step. Create an account to add your property, upload your files, and send everything to plekk for review.'}
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -786,7 +786,7 @@ export default function CommercialParkingPage() {
                   Commercial onboarding without a messy listing experience
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  The public page explains the model. The authenticated workflow handles the real setup. That keeps the marketing page focused and the operational tooling where it belongs.
+                  You can learn how plekk works here first. Once you&apos;re ready, your account gives you one place to complete setup, upload files, and send your property for review.
                 </p>
                 <div className="mt-6 rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
                   <p className="text-sm font-semibold text-charcoal-900">What plekk makes easier</p>
@@ -829,7 +829,7 @@ export default function CommercialParkingPage() {
                   You do not need to figure out the structure alone
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  plekk reviews the setup before launch so the property, inventory logic, and driver guidance make sense in the real world, not just in a spreadsheet.
+                  plekk reviews the setup before launch so your property details, parking setup, and driver directions make sense in the real world, not just in a spreadsheet.
                 </p>
                 {callUrl && (
                   <Link
@@ -866,7 +866,7 @@ export default function CommercialParkingPage() {
                   Common operator questions
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  This page is here to explain the product and reduce the fear of starting. The actual setup, uploads, and submission actions happen only after sign-in.
+                  This page is meant to make the process easier to understand before you begin. Once you sign in, you can work through the setup at your own pace.
                 </p>
               </div>
               <div className="space-y-4">
@@ -883,9 +883,9 @@ export default function CommercialParkingPage() {
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Ready to submit?</p>
-                  <h3 className="mt-2 text-2xl font-bold">If the model fits your property, create an account and continue the real setup.</h3>
+                  <h3 className="mt-2 text-2xl font-bold">If this looks right for your property, create an account and keep going.</h3>
                   <p className="mt-3 text-sm text-mist-200">
-                    This public page previews the flow and sells the product. The authenticated host flow is where your property details, files, and submission are actually managed.
+                    You&apos;ve seen how the setup works. Create an account to add your property, upload any files you already have, and finish setting up your commercial listing.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
