@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getSupabaseClient } from '../services/supabaseService';
+import { getSupabaseClient, updateUserHostFlags } from '../services/supabaseService';
 import { photoService } from '../services/photoService';
 import { calculateDistance } from '../utils/distance';
 
@@ -295,10 +295,7 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
     }
     
     // Update user to be a host if they aren't already
-    await supabase
-      .from('users')
-      .update({ is_host: true, host_type: 'residential' })
-      .eq('id', hostId);
+    await updateUserHostFlags(hostId, { is_host: true, host_type: 'residential' });
     
     res.status(201).json({
       success: true,
@@ -836,10 +833,7 @@ export const adminCreateProperty = async (req: Request, res: Response): Promise<
     if (propertyError) throw propertyError;
 
     // Update user to be a host
-    await supabase
-      .from('users')
-      .update({ is_host: true, host_type: 'residential' })
-      .eq('id', hostId);
+    await updateUserHostFlags(hostId, { is_host: true, host_type: 'residential' });
 
     res.status(201).json({
       success: true,

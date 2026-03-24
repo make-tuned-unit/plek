@@ -44,7 +44,7 @@ interface AuthContextType {
     isHost?: boolean,
     hostType?: 'residential' | 'commercial',
     province?: string
-  ) => Promise<{ success: boolean; waitlist?: boolean }>
+  ) => Promise<{ success: boolean; waitlist?: boolean; error?: string; code?: string }>
   logout: () => Promise<void>
   updateProfile: (profileData: Partial<User>) => Promise<boolean>
   refreshUser: () => Promise<void>
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isHost: boolean = false,
     hostType?: 'residential' | 'commercial',
     province?: string
-  ): Promise<{ success: boolean; waitlist?: boolean }> => {
+  ): Promise<{ success: boolean; waitlist?: boolean; error?: string; code?: string }> => {
     setIsLoading(true)
     try {
       const response = await apiService.register({
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true }
       }
       setIsLoading(false)
-      return { success: false }
+      return { success: false, error: response.message || response.error || 'Failed to create account' }
     } catch (error: any) {
       const res = error?.response?.data
       if (res?.success && res?.waitlist) {
@@ -186,7 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.removeItem('auth_token')
       setIsLoading(false)
-      return { success: false }
+      return {
+        success: false,
+        error: res?.message || error?.message || 'An error occurred during sign up',
+        code: res?.code,
+      }
     }
   }
 

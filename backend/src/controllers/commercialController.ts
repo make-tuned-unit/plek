@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { getSupabaseClient } from '../services/supabaseService';
+import { getSupabaseClient, updateUserHostFlags } from '../services/supabaseService';
 import { commercialStorageService } from '../services/commercialService';
 import {
   sendCommercialLeadAdminNotificationEmail,
@@ -321,13 +321,10 @@ export async function submitCommercialLead(req: Request, res: Response): Promise
 
     if (insertError) throw insertError;
 
-    await supabase
-      .from('users')
-      .update({
-        is_host: true,
-        host_type: 'commercial',
-      } as any)
-      .eq('id', userId);
+    await updateUserHostFlags(userId, {
+      is_host: true,
+      host_type: 'commercial',
+    });
 
     let uploadedFileReference: string | null = null;
     let uploadedFileUrl: string | null = null;

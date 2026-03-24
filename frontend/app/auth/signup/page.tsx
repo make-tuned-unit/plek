@@ -64,6 +64,7 @@ function SignUpContent() {
   const commercialIntent = intent === 'commercial-host'
   const checkEmail = searchParams.get('check-email') === 'true'
   const pendingEmail = searchParams.get('email') || ''
+  const existingAccount = searchParams.get('existing-account') === 'true'
   const [isResending, setIsResending] = useState(false)
   const [resendEmailInput, setResendEmailInput] = useState('')
   const [googleTermsAccepted, setGoogleTermsAccepted] = useState(false)
@@ -109,7 +110,14 @@ function SignUpContent() {
         const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
         router.push(`/auth/signup?check-email=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
       } else {
-        toast.error('Failed to create account. Please try again.')
+        if (result.code === 'already_registered') {
+          toast.error(result.error || 'This email already has an account. Try signing in or resend your confirmation email.')
+          const redirectQ = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ''
+          router.push(`/auth/signup?check-email=true&existing-account=true&email=${encodeURIComponent(data.email)}${redirectQ}`)
+          return
+        }
+
+        toast.error(result.error || 'Failed to create account. Please try again.')
       }
     } catch (error: any) {
       const res = error?.response?.data
@@ -138,7 +146,9 @@ function SignUpContent() {
           </div>
           <h1 className="text-3xl font-bold text-charcoal-900 mb-4">Check your email</h1>
           <p className="text-charcoal-600 mb-6">
-            We've sent a confirmation email to your inbox. Please click the link in the email to confirm your account and activate it.
+            {existingAccount
+              ? 'This email is already registered. If you have not confirmed it yet, resend the confirmation email below or sign in if your account is already active.'
+              : 'We\'ve sent a confirmation email to your inbox. Please click the link in the email to confirm your account and activate it.'}
           </p>
           <div className="bg-accent-50 border border-accent-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-charcoal-700">

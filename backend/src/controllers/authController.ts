@@ -75,9 +75,20 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     if (error) {
       console.error('Registration error:', error);
-      res.status(400).json({
+      const message = error.message || 'Registration failed';
+      const normalized = message.toLowerCase();
+      const alreadyRegistered =
+        normalized.includes('already registered') ||
+        normalized.includes('already exists') ||
+        normalized.includes('user already registered') ||
+        normalized.includes('duplicate');
+
+      res.status(alreadyRegistered ? 409 : 400).json({
         success: false,
-        message: error.message || 'Registration failed',
+        message: alreadyRegistered
+          ? 'An account with this email already exists. Try signing in or resend your confirmation email.'
+          : message,
+        ...(alreadyRegistered && { code: 'already_registered' }),
       });
       return;
     }

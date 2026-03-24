@@ -89,6 +89,39 @@ export function getSupabaseClient() {
   return supabase;
 }
 
+function isMissingUsersColumnError(error: any, columnName: string): boolean {
+  const message = error?.message || '';
+  return (
+    typeof message === 'string' &&
+    message.includes(`'${columnName}' column`) &&
+    message.includes(`'users'`)
+  );
+}
+
+export async function updateUserHostFlags(
+  userId: string,
+  updates: { is_host: boolean; host_type?: 'residential' | 'commercial' | null }
+): Promise<{ error: any | null }> {
+  const client = getSupabaseClient();
+
+  const { error } = await client
+    .from('users')
+    .update(updates as any)
+    .eq('id', userId);
+
+  if (error && isMissingUsersColumnError(error, 'host_type')) {
+    const fallbackUpdates = { is_host: updates.is_host };
+    const { error: fallbackError } = await client
+      .from('users')
+      .update(fallbackUpdates as any)
+      .eq('id', userId);
+
+    return { error: fallbackError || null };
+  }
+
+  return { error: error || null };
+}
+
 // Auth functions
 export class SupabaseAuthService {
   /**
@@ -122,28 +155,43 @@ export class SupabaseAuthService {
       }
 
       // Create user profile in our users table
-      const { data: profileData, error: profileError } = await client
+      const baseProfile = {
+        id: authData.user.id,
+        email: userData.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        phone: userData.phone,
+        role: 'user',
+        is_verified: false,
+        is_host: userData.isHost || false,
+        total_bookings: 0,
+        total_earnings: 0,
+        rating: 0,
+        review_count: 0,
+        country: 'CA',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as const;
+
+      let { data: profileData, error: profileError } = await client
         .from('users')
         .insert({
-          id: authData.user.id,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          phone: userData.phone,
-          role: 'user',
-          is_verified: false, // Require email confirmation
-          is_host: userData.isHost || false,
+          ...baseProfile,
           host_type: userData.hostType || null,
-          total_bookings: 0,
-          total_earnings: 0,
-          rating: 0,
-          review_count: 0,
-          country: 'CA',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
         } as any)
         .select()
         .single();
+
+      if (profileError && isMissingUsersColumnError(profileError, 'host_type')) {
+        const fallbackResult = await client
+          .from('users')
+          .insert(baseProfile as any)
+          .select()
+          .single();
+
+        profileData = fallbackResult.data;
+        profileError = fallbackResult.error;
+      }
 
       if (profileError) {
         // If profile creation fails, delete the auth user
