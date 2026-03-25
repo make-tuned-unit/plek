@@ -630,7 +630,7 @@ export default function CommercialParkingPage() {
                   ))}
                 </div>
                 <div className="mt-5 rounded-2xl border border-white/10 bg-charcoal-950/40 p-4 text-sm text-mist-200">
-                  You can explore how the setup works here. When you&apos;re ready to add your property and files, we&apos;ll ask you to create an account.
+                  You can explore how the setup works here. When you're ready to add your property and files, we'll ask you to create an account.
                 </div>
               </div>
             </div>
@@ -646,7 +646,7 @@ export default function CommercialParkingPage() {
                   See the onboarding before you commit to it
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  This preview breaks the process into manageable steps so it feels clear, not overwhelming. When you&apos;re ready to continue with your property, you can create an account and pick up from there.
+                  This preview breaks the process into manageable steps so it feels clear, not overwhelming. When you're ready to continue with your property, you can create an account and pick up from there.
                 </p>
 
                 <div className="mt-8 rounded-3xl border border-mist-200 bg-mist-50 p-5 shadow-sm">
@@ -717,8 +717,8 @@ export default function CommercialParkingPage() {
 
                 <div className="mt-6 rounded-2xl border border-accent-100 bg-accent-50 p-4 text-sm text-charcoal-700">
                   {publicPreviewStep < 4
-                    ? 'You can explore the setup step by step here. When you&apos;re ready to add your property details, we&apos;ll ask you to create an account so you can save everything and come back anytime.'
-                    : 'You&apos;re at the final step. Create an account to add your property, upload your files, and send everything to plekk for review.'}
+                    ? "You can explore the setup step by step here. When you're ready to add your property details, we'll ask you to create an account so you can save everything and come back anytime."
+                    : "You're at the final step. Create an account to add your property, upload your files, and send everything to plekk for review."}
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -760,7 +760,7 @@ export default function CommercialParkingPage() {
                 The model works when a property is bigger than a simple driveway listing
               </h2>
               <p className="mt-4 text-lg text-charcoal-600">
-                If your site has multiple rows, mixed durations, oversized vehicles, or access instructions that matter, plekk&apos;s commercial flow is designed to present that inventory clearly.
+                If your site has multiple rows, mixed durations, oversized vehicles, or access instructions that matter, plekk's commercial flow is designed to present that inventory clearly.
               </p>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -786,7 +786,7 @@ export default function CommercialParkingPage() {
                   Commercial onboarding without a messy listing experience
                 </h2>
                 <p className="mt-4 text-charcoal-600">
-                  You can learn how plekk works here first. Once you&apos;re ready, your account gives you one place to complete setup, upload files, and send your property for review.
+                  You can learn how plekk works here first. Once you're ready, your account gives you one place to complete setup, upload files, and send your property for review.
                 </p>
                 <div className="mt-6 rounded-3xl border border-mist-200 bg-white p-6 shadow-sm">
                   <p className="text-sm font-semibold text-charcoal-900">What plekk makes easier</p>
@@ -885,7 +885,7 @@ export default function CommercialParkingPage() {
                   <p className="text-sm font-semibold uppercase tracking-wide text-accent-300">Ready to submit?</p>
                   <h3 className="mt-2 text-2xl font-bold">If this looks right for your property, create an account and keep going.</h3>
                   <p className="mt-3 text-sm text-mist-200">
-                    You&apos;ve seen how the setup works. Create an account to add your property, upload any files you already have, and finish setting up your commercial listing.
+                    You've seen how the setup works. Create an account to add your property, upload any files you already have, and finish setting up your commercial listing.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
