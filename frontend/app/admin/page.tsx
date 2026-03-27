@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import {
   Shield,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Clock,
   MapPin,
@@ -29,7 +30,21 @@ import {
   Upload,
   ArrowLeft,
   ArrowRight,
-  Building2
+  Building2,
+  AlertTriangle,
+  UserCheck,
+  Repeat,
+  Eye,
+  Home,
+  BookOpen,
+  Star,
+  ShieldCheck,
+  CreditCard,
+  Bell,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Users,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -43,7 +58,7 @@ export default function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState<{ [key: string]: string }>({})
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users' | 'create-listing' | 'commercial'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'users' | 'crm' | 'create-listing' | 'commercial'>('pending')
   // User search (admin)
   const [userSearch, setUserSearch] = useState('')
   const [userSearchResults, setUserSearchResults] = useState<any[]>([])
@@ -86,6 +101,26 @@ export default function AdminDashboardPage() {
   const [commercialLeads, setCommercialLeads] = useState<any[]>([])
   const [commercialNotes, setCommercialNotes] = useState<Record<string, string>>({})
   const [commercialFollowUp, setCommercialFollowUp] = useState<Record<string, string>>({})
+
+  // CRM state
+  const [crmUsers, setCrmUsers] = useState<any[]>([])
+  const [crmTotal, setCrmTotal] = useState(0)
+  const [crmPage, setCrmPage] = useState(1)
+  const [crmSearch, setCrmSearch] = useState('')
+  const [crmStageFilter, setCrmStageFilter] = useState('all')
+  const [crmSortField, setCrmSortField] = useState('created_at')
+  const [crmSortOrder, setCrmSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [crmLoading, setCrmLoading] = useState(false)
+  // CRM user detail
+  const [crmSelectedUserId, setCrmSelectedUserId] = useState<string | null>(null)
+  const [crmUserDetail, setCrmUserDetail] = useState<any>(null)
+  const [crmDetailLoading, setCrmDetailLoading] = useState(false)
+  const [crmTimelineExpanded, setCrmTimelineExpanded] = useState(false)
+  // CRM email composer
+  const [showCrmEmailComposer, setShowCrmEmailComposer] = useState(false)
+  const [crmEmailSubject, setCrmEmailSubject] = useState('')
+  const [crmEmailBody, setCrmEmailBody] = useState('')
+  const [crmEmailSending, setCrmEmailSending] = useState(false)
 
   // Create listing state
   const [clSelectedUser, setClSelectedUser] = useState<any>(null)
@@ -220,6 +255,87 @@ export default function AdminDashboardPage() {
       toast.error('Failed to load commercial submissions')
     }
   }
+
+  // CRM functions
+  const fetchCrmUsers = async () => {
+    try {
+      setCrmLoading(true)
+      const res = await apiService.getCrmUsers({
+        search: crmSearch || undefined,
+        stage: crmStageFilter !== 'all' ? crmStageFilter : undefined,
+        sort: crmSortField,
+        order: crmSortOrder,
+        page: crmPage,
+        limit: 50,
+      })
+      if (res.success && res.data) {
+        setCrmUsers(res.data.users)
+        setCrmTotal(res.data.total)
+      }
+    } catch {
+      toast.error('Failed to load CRM users')
+    } finally {
+      setCrmLoading(false)
+    }
+  }
+
+  const fetchCrmUserDetail = async (userId: string) => {
+    try {
+      setCrmDetailLoading(true)
+      setCrmSelectedUserId(userId)
+      setCrmTimelineExpanded(false)
+      const res = await apiService.getCrmUserDetail(userId)
+      if (res.success && res.data) {
+        setCrmUserDetail(res.data)
+      } else {
+        toast.error('User not found')
+        setCrmSelectedUserId(null)
+      }
+    } catch {
+      toast.error('Failed to load user details')
+    } finally {
+      setCrmDetailLoading(false)
+    }
+  }
+
+  const handleCrmSort = (field: string) => {
+    if (crmSortField === field) {
+      setCrmSortOrder(crmSortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setCrmSortField(field)
+      setCrmSortOrder('desc')
+    }
+    setCrmPage(1)
+  }
+
+  const handleSendCrmEmail = async () => {
+    if (!crmSelectedUserId || !crmEmailSubject.trim() || !crmEmailBody.trim()) {
+      toast.error('Subject and body are required')
+      return
+    }
+    try {
+      setCrmEmailSending(true)
+      const res = await apiService.sendCrmEmail(crmSelectedUserId, crmEmailSubject.trim(), crmEmailBody.trim())
+      if (res.success) {
+        toast.success('Email sent!')
+        setShowCrmEmailComposer(false)
+        setCrmEmailSubject('')
+        setCrmEmailBody('')
+      } else {
+        throw new Error(res.error || 'Failed')
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send email')
+    } finally {
+      setCrmEmailSending(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'crm' && user && (user.role === 'admin' || user.role === 'super_admin')) {
+      fetchCrmUsers()
+    }
+  }, [activeTab, crmPage, crmSortField, crmSortOrder, crmStageFilter])
 
   const runUserSearch = async () => {
     try {
@@ -599,13 +715,17 @@ export default function AdminDashboardPage() {
               <User className="h-4 w-4 inline mr-2" />
               Users
             </button>
-            <a
-              href="/admin/crm"
-              className="py-4 px-1 border-b-2 border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300 font-medium text-sm inline-flex items-center"
+            <button
+              onClick={() => setActiveTab('crm')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'crm'
+                  ? 'border-accent-400 text-accent-600'
+                  : 'border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300'
+              }`}
             >
-              <BarChart3 className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 inline mr-2" />
               CRM
-            </a>
+            </button>
             <button
               onClick={() => setActiveTab('create-listing')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -1595,7 +1715,432 @@ export default function AdminDashboardPage() {
             )}
           </div>
         )}
+
+        {/* CRM Tab */}
+        {activeTab === 'crm' && !crmSelectedUserId && (
+          <div className="min-w-0">
+            {/* Funnel stage pills */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { key: 'all', label: 'All', color: 'bg-charcoal-100 text-charcoal-700' },
+                { key: 'signed_up', label: 'Signed Up', color: 'bg-gray-100 text-gray-700', icon: Clock },
+                { key: 'verified', label: 'Verified', color: 'bg-blue-100 text-blue-700', icon: UserCheck },
+                { key: 'active', label: 'Active', color: 'bg-amber-100 text-amber-700', icon: TrendingUp },
+                { key: 'completed', label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
+                { key: 'repeat', label: 'Repeat', color: 'bg-purple-100 text-purple-700', icon: Repeat },
+              ].map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => { setCrmStageFilter(s.key); setCrmPage(1) }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                    crmStageFilter === s.key
+                      ? 'bg-charcoal-800 text-white'
+                      : `${s.color} hover:opacity-80`
+                  }`}
+                >
+                  {s.icon && <s.icon className="h-3 w-3" />}
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-charcoal-400" />
+                <input
+                  type="text"
+                  value={crmSearch}
+                  onChange={(e) => setCrmSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { setCrmPage(1); fetchCrmUsers() } }}
+                  placeholder="Search by name or email..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-mist-300 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={() => { setCrmPage(1); fetchCrmUsers() }}
+                className="px-5 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 text-sm font-medium flex items-center gap-2"
+              >
+                <Search className="h-4 w-4" />
+                Search
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-lg shadow-sm border border-mist-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-mist-50 border-b border-mist-200">
+                      <th className="text-left px-4 py-3 font-medium text-charcoal-600">User</th>
+                      <th
+                        className="text-left px-4 py-3 font-medium text-charcoal-600 cursor-pointer hover:text-charcoal-900"
+                        onClick={() => handleCrmSort('created_at')}
+                      >
+                        Joined {crmSortField === 'created_at' && (crmSortOrder === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                      </th>
+                      <th className="text-left px-4 py-3 font-medium text-charcoal-600">Stage</th>
+                      <th
+                        className="text-center px-4 py-3 font-medium text-charcoal-600 cursor-pointer hover:text-charcoal-900"
+                        onClick={() => handleCrmSort('total_bookings')}
+                      >
+                        Bookings {crmSortField === 'total_bookings' && (crmSortOrder === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                      </th>
+                      <th className="text-center px-4 py-3 font-medium text-charcoal-600">Properties</th>
+                      <th className="text-left px-4 py-3 font-medium text-charcoal-600">Location</th>
+                      <th className="text-left px-4 py-3 font-medium text-charcoal-600">Friction</th>
+                      <th className="text-left px-4 py-3 font-medium text-charcoal-600">Last Active</th>
+                      <th className="text-center px-4 py-3 font-medium text-charcoal-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {crmLoading ? (
+                      <tr><td colSpan={9} className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto text-accent-500" /></td></tr>
+                    ) : crmUsers.length === 0 ? (
+                      <tr><td colSpan={9} className="text-center py-12 text-charcoal-500">No users found</td></tr>
+                    ) : (
+                      crmUsers.map((u: any) => {
+                        const stageMap: Record<string, { label: string; color: string }> = {
+                          signed_up: { label: 'Signed Up', color: 'bg-gray-100 text-gray-700' },
+                          verified: { label: 'Verified', color: 'bg-blue-100 text-blue-700' },
+                          active: { label: 'Active', color: 'bg-amber-100 text-amber-700' },
+                          completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
+                          repeat: { label: 'Repeat', color: 'bg-purple-100 text-purple-700' },
+                        }
+                        const frictionMap: Record<string, { label: string; color: string }> = {
+                          unverified_24h: { label: 'Unverified 24h+', color: 'bg-red-100 text-red-700' },
+                          incomplete_profile: { label: 'Incomplete profile', color: 'bg-orange-100 text-orange-700' },
+                          no_phone: { label: 'No phone', color: 'bg-yellow-100 text-yellow-700' },
+                          property_rejected: { label: 'Property rejected', color: 'bg-red-100 text-red-700' },
+                          only_cancelled_bookings: { label: 'Only cancellations', color: 'bg-red-100 text-red-700' },
+                        }
+                        const stageCfg = stageMap[u.funnel_stage] || stageMap.signed_up
+                        return (
+                          <tr key={u.id} className="border-b border-mist-100 hover:bg-mist-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-charcoal-200 flex items-center justify-center text-charcoal-600 font-medium text-sm shrink-0">
+                                  {(u.first_name?.[0] || u.email?.[0] || '?').toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-charcoal-900 truncate">
+                                    {u.first_name || u.last_name ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : '—'}
+                                  </p>
+                                  <p className="text-xs text-charcoal-500 truncate">{u.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-charcoal-600 whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${stageCfg.color}`}>
+                                {stageCfg.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="font-medium">{u.total_bookings}</span>
+                              {u.completed_bookings > 0 && <span className="text-xs text-green-600 ml-1">({u.completed_bookings})</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {u.total_properties > 0 ? <span>{u.active_properties}/{u.total_properties}</span> : <span className="text-charcoal-400">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-charcoal-600 whitespace-nowrap">
+                              {u.city || u.state ? (
+                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{[u.city, u.state].filter(Boolean).join(', ')}</span>
+                              ) : <span className="text-charcoal-400">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {u.friction_flags?.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {u.friction_flags.slice(0, 2).map((f: string) => {
+                                    const cfg = frictionMap[f]
+                                    return cfg ? (
+                                      <span key={f} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.color}`}>
+                                        <AlertTriangle className="h-2.5 w-2.5" />{cfg.label}
+                                      </span>
+                                    ) : null
+                                  })}
+                                  {u.friction_flags.length > 2 && <span className="text-[10px] text-charcoal-400">+{u.friction_flags.length - 2}</span>}
+                                </div>
+                              ) : <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                            </td>
+                            <td className="px-4 py-3 text-charcoal-600 text-xs whitespace-nowrap">
+                              {u.last_activity ? new Date(u.last_activity).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => fetchCrmUserDetail(u.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 text-xs font-medium"
+                              >
+                                <Eye className="h-3 w-3" />
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Pagination */}
+              {Math.ceil(crmTotal / 50) > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-mist-200 bg-mist-50">
+                  <p className="text-xs text-charcoal-500">Page {crmPage} of {Math.ceil(crmTotal / 50)} ({crmTotal} users)</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setCrmPage((p) => Math.max(1, p - 1))} disabled={crmPage <= 1} className="px-3 py-1.5 rounded border border-mist-300 text-xs hover:bg-white disabled:opacity-50">
+                      <ArrowLeft className="h-3 w-3" />
+                    </button>
+                    <button onClick={() => setCrmPage((p) => Math.min(Math.ceil(crmTotal / 50), p + 1))} disabled={crmPage >= Math.ceil(crmTotal / 50)} className="px-3 py-1.5 rounded border border-mist-300 text-xs hover:bg-white disabled:opacity-50">
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* CRM User Detail View */}
+        {activeTab === 'crm' && crmSelectedUserId && (
+          <div className="min-w-0">
+            {crmDetailLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-accent-500" /></div>
+            ) : crmUserDetail ? (() => {
+              const du = crmUserDetail.user
+              const ds = crmUserDetail.stats
+              const dtl = crmUserDetail.timeline || []
+              const dProps = crmUserDetail.properties || []
+              const dBookings = crmUserDetail.bookings || []
+              const dReviews = crmUserDetail.reviews || []
+              const dStage = crmUserDetail.funnel_stage
+              const dFriction = crmUserDetail.friction_flags || []
+              const stageMap: Record<string, { label: string; color: string }> = {
+                signed_up: { label: 'Signed Up', color: 'bg-gray-100 text-gray-700' },
+                verified: { label: 'Verified', color: 'bg-blue-100 text-blue-700' },
+                active: { label: 'Active', color: 'bg-amber-100 text-amber-700' },
+                completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
+                repeat: { label: 'Repeat', color: 'bg-purple-100 text-purple-700' },
+              }
+              const frictionMap: Record<string, { label: string; color: string }> = {
+                unverified_24h: { label: 'Unverified 24h+', color: 'bg-red-100 text-red-700' },
+                incomplete_profile: { label: 'Incomplete profile', color: 'bg-orange-100 text-orange-700' },
+                no_phone: { label: 'No phone', color: 'bg-yellow-100 text-yellow-700' },
+                property_rejected: { label: 'Property rejected', color: 'bg-red-100 text-red-700' },
+                only_cancelled_bookings: { label: 'Only cancellations', color: 'bg-red-100 text-red-700' },
+              }
+              const stageCfg = stageMap[dStage] || stageMap.signed_up
+              const visibleTimeline = crmTimelineExpanded ? dtl : dtl.slice(0, 10)
+              const timelineIcons: Record<string, any> = { signup: Calendar, verified: ShieldCheck, booking: BookOpen, property: Home, review: Star }
+
+              return (
+                <>
+                  {/* Back button */}
+                  <button
+                    onClick={() => { setCrmSelectedUserId(null); setCrmUserDetail(null) }}
+                    className="flex items-center gap-2 text-sm text-charcoal-600 hover:text-charcoal-900 mb-4"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to CRM list
+                  </button>
+
+                  {/* Profile + Actions */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-mist-200 p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-full bg-charcoal-200 flex items-center justify-center text-charcoal-600 font-bold text-xl shrink-0">
+                          {(du.first_name?.[0] || du.email?.[0] || '?').toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-bold text-charcoal-900">
+                              {du.first_name || du.last_name ? `${du.first_name || ''} ${du.last_name || ''}`.trim() : 'No name'}
+                            </h2>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${stageCfg.color}`}>{stageCfg.label}</span>
+                            {du.is_host && <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-100 text-accent-700"><Home className="h-3 w-3" />Host{du.host_type ? ` (${du.host_type})` : ''}</span>}
+                            {du.is_verified ? <span title="Verified"><CheckCircle2 className="h-4 w-4 text-green-500" /></span> : <span title="Unverified"><AlertTriangle className="h-4 w-4 text-amber-500" /></span>}
+                          </div>
+                          <div className="flex flex-wrap gap-4 mt-3 text-sm text-charcoal-600">
+                            <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{du.email}</span>
+                            {du.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{du.phone}</span>}
+                            {(du.city || du.state) && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{[du.address, du.city, du.state, du.zip_code].filter(Boolean).join(', ')}</span>}
+                            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Joined {new Date(du.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {du.bio && <p className="mt-3 text-sm text-charcoal-500 italic">&quot;{du.bio}&quot;</p>}
+                          {dFriction.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {dFriction.map((f: string) => { const cfg = frictionMap[f]; return cfg ? <span key={f} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${cfg.color}`}><AlertTriangle className="h-3 w-3" />{cfg.label}</span> : null })}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-3 mt-4 text-xs text-charcoal-500">
+                            <span className="flex items-center gap-1"><Bell className="h-3 w-3" />Email notifs: {du.email_notifications_bookings !== false ? 'On' : 'Off'}</span>
+                            <span>Marketing: {du.marketing_emails !== false ? 'On' : 'Off'}</span>
+                            {du.stripe_customer_id && <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" />Stripe connected</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-6 flex flex-col gap-3">
+                      <h3 className="font-semibold text-charcoal-900 mb-1">Actions</h3>
+                      <button
+                        onClick={() => { setMessageUserId(crmSelectedUserId) }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent-500 text-white rounded-lg hover:bg-accent-600 text-sm font-medium"
+                      >
+                        <MessageCircle className="h-4 w-4" />Send Message
+                      </button>
+                      <button
+                        onClick={() => setShowCrmEmailComposer(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-charcoal-800 text-white rounded-lg hover:bg-charcoal-900 text-sm font-medium"
+                      >
+                        <Mail className="h-4 w-4" />Send Email
+                      </button>
+                      <div className="border-t border-mist-200 pt-3 mt-1">
+                        <p className="text-xs text-charcoal-500">Role: <span className="font-medium text-charcoal-700">{du.role}</span></p>
+                        <p className="text-xs text-charcoal-500 mt-1">ID: <span className="font-mono text-[10px]">{du.id}</span></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+                    {[
+                      { label: 'Total Bookings', value: ds.total_bookings, sub: `${ds.completed_bookings} completed` },
+                      { label: 'As Renter', value: ds.bookings_as_renter },
+                      { label: 'As Host', value: ds.bookings_as_host },
+                      { label: 'Properties', value: ds.total_properties, sub: `${ds.active_properties} active` },
+                      { label: 'Earnings', value: `$${(ds.total_earnings || 0).toFixed(2)}` },
+                      { label: 'Rating', value: ds.rating ? `${ds.rating.toFixed(1)}/5` : '—', sub: ds.review_count ? `${ds.review_count} reviews` : undefined },
+                    ].map((s) => (
+                      <div key={s.label} className="bg-white rounded-lg shadow-sm border border-mist-200 p-4">
+                        <p className="text-xs text-charcoal-500">{s.label}</p>
+                        <p className="text-xl font-bold text-charcoal-900 mt-1">{s.value}</p>
+                        {s.sub && <p className="text-xs text-charcoal-400 mt-0.5">{s.sub}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Timeline + Sidebar */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-mist-200 p-6">
+                      <h3 className="font-semibold text-charcoal-900 mb-4 flex items-center gap-2"><Clock className="h-5 w-5 text-accent-500" />Activity Timeline</h3>
+                      {dtl.length === 0 ? <p className="text-sm text-charcoal-500">No activity recorded</p> : (
+                        <div className="space-y-0">
+                          {visibleTimeline.map((event: any, i: number) => {
+                            const Icon = timelineIcons[event.type] || Clock
+                            return (
+                              <div key={i} className="flex gap-3 pb-4 relative">
+                                {i < visibleTimeline.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-mist-200" />}
+                                <div className="w-8 h-8 rounded-full bg-mist-100 flex items-center justify-center shrink-0 relative z-10"><Icon className="h-4 w-4 text-charcoal-600" /></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-charcoal-900">{event.detail}</p>
+                                  <p className="text-xs text-charcoal-400 mt-0.5">{new Date(event.date).toLocaleString()}</p>
+                                  {event.meta?.amount && <p className="text-xs text-charcoal-500 mt-0.5">${event.meta.amount.toFixed(2)}</p>}
+                                  {event.meta?.comment && <p className="text-xs text-charcoal-500 mt-1 italic">&quot;{event.meta.comment}&quot;</p>}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {dtl.length > 10 && (
+                            <button onClick={() => setCrmTimelineExpanded(!crmTimelineExpanded)} className="text-sm text-accent-600 hover:text-accent-700 flex items-center gap-1 mt-2">
+                              {crmTimelineExpanded ? <>Show less <ChevronUp className="h-3 w-3" /></> : <>Show all {dtl.length} events <ChevronDown className="h-3 w-3" /></>}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-6">
+                      {/* Properties */}
+                      <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-6">
+                        <h3 className="font-semibold text-charcoal-900 mb-3 flex items-center gap-2"><Home className="h-4 w-4 text-accent-500" />Properties ({dProps.length})</h3>
+                        {dProps.length === 0 ? <p className="text-sm text-charcoal-500">No properties</p> : (
+                          <ul className="space-y-2">
+                            {dProps.slice(0, 5).map((p: any) => (
+                              <li key={p.id} className="text-sm border-b border-mist-100 pb-2 last:border-0">
+                                <p className="font-medium text-charcoal-900 truncate">{p.title}</p>
+                                <div className="flex items-center gap-2 text-xs text-charcoal-500">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${p.status === 'active' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : p.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>{p.status}</span>
+                                  <span>${p.hourly_rate}/hr</span>
+                                  {p.city && <span>{p.city}</span>}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {/* Bookings */}
+                      <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-6">
+                        <h3 className="font-semibold text-charcoal-900 mb-3 flex items-center gap-2"><BookOpen className="h-4 w-4 text-accent-500" />Recent Bookings ({dBookings.length})</h3>
+                        {dBookings.length === 0 ? <p className="text-sm text-charcoal-500">No bookings</p> : (
+                          <ul className="space-y-2">
+                            {dBookings.slice(0, 5).map((b: any) => (
+                              <li key={b.id} className="text-sm border-b border-mist-100 pb-2 last:border-0">
+                                <div className="flex items-center justify-between">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${b.status === 'completed' ? 'bg-green-100 text-green-700' : b.status === 'confirmed' ? 'bg-blue-100 text-blue-700' : b.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{b.status}</span>
+                                  <span className="text-xs text-charcoal-500">${(b.total_amount || 0).toFixed(2)}</span>
+                                </div>
+                                <p className="text-xs text-charcoal-500 mt-1">{b.renter_id === crmSelectedUserId ? 'As renter' : 'As host'} — {new Date(b.created_at).toLocaleDateString()}</p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {/* Reviews */}
+                      {dReviews.length > 0 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-mist-200 p-6">
+                          <h3 className="font-semibold text-charcoal-900 mb-3 flex items-center gap-2"><Star className="h-4 w-4 text-accent-500" />Reviews ({dReviews.length})</h3>
+                          <ul className="space-y-2">
+                            {dReviews.slice(0, 5).map((r: any) => (
+                              <li key={r.id} className="text-sm border-b border-mist-100 pb-2 last:border-0">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex gap-0.5">{[1,2,3,4,5].map((s) => <Star key={s} className={`h-3 w-3 ${s <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />)}</div>
+                                  <span className="text-xs text-charcoal-400">{r.reviewer_id === crmSelectedUserId ? 'Left' : 'Received'}</span>
+                                </div>
+                                {r.comment && <p className="text-xs text-charcoal-500 mt-1 italic">&quot;{r.comment}&quot;</p>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )
+            })() : null}
+          </div>
+        )}
       </div>
+
+      {/* CRM Email Composer Modal */}
+      {showCrmEmailComposer && crmUserDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-mist-200">
+              <h3 className="font-semibold text-charcoal-900"><Mail className="h-4 w-4 inline mr-2" />Send Plekk Email to {crmUserDetail.user.first_name || crmUserDetail.user.email}</h3>
+              <button onClick={() => setShowCrmEmailComposer(false)} className="p-2 rounded-lg hover:bg-mist-100"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-charcoal-700 mb-1">To</label>
+                <input type="text" value={crmUserDetail.user.email} disabled className="w-full rounded-lg border border-mist-300 px-3 py-2 text-sm bg-mist-50 text-charcoal-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-charcoal-700 mb-1">Subject</label>
+                <input type="text" value={crmEmailSubject} onChange={(e) => setCrmEmailSubject(e.target.value)} placeholder="Email subject..." className="w-full rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-charcoal-700 mb-1">Body</label>
+                <textarea value={crmEmailBody} onChange={(e) => setCrmEmailBody(e.target.value)} rows={8} placeholder="Write your message..." className="w-full rounded-lg border border-mist-300 px-3 py-2 text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent resize-none" />
+                <p className="text-xs text-charcoal-400 mt-1">Sent as a branded plekk email with header, footer, and logo.</p>
+              </div>
+            </div>
+            <div className="p-4 border-t border-mist-200 flex gap-3">
+              <button onClick={() => setShowCrmEmailComposer(false)} className="flex-1 px-4 py-2 text-charcoal-700 border border-mist-300 rounded-lg hover:bg-mist-100">Cancel</button>
+              <button onClick={handleSendCrmEmail} disabled={!crmEmailSubject.trim() || !crmEmailBody.trim() || crmEmailSending} className="flex-1 px-4 py-2 bg-charcoal-800 text-white rounded-lg hover:bg-charcoal-900 disabled:opacity-50 flex items-center justify-center gap-2">
+                {crmEmailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Direct message modal */}
       {messageUserId && (
