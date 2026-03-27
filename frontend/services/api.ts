@@ -426,6 +426,32 @@ class ApiService {
     return this.request(`/admin/stats${query ? `?${query}` : ''}`);
   }
 
+  // CRM
+  async getCrmUsers(params?: {
+    search?: string; stage?: string; sort?: string; order?: string; page?: number; limit?: number;
+  }): Promise<ApiResponse<{ users: any[]; total: number; page: number; pageSize: number }>> {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.set('search', params.search);
+    if (params?.stage) sp.set('stage', params.stage);
+    if (params?.sort) sp.set('sort', params.sort);
+    if (params?.order) sp.set('order', params.order);
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.limit) sp.set('limit', String(params.limit));
+    const q = sp.toString();
+    return this.request(`/admin/crm/users${q ? `?${q}` : ''}`);
+  }
+
+  async getCrmUserDetail(userId: string): Promise<ApiResponse<any>> {
+    return this.request(`/admin/crm/users/${encodeURIComponent(userId)}`);
+  }
+
+  async sendCrmEmail(userId: string, subject: string, body: string): Promise<ApiResponse<any>> {
+    return this.request(`/admin/crm/users/${encodeURIComponent(userId)}/email`, {
+      method: 'POST',
+      body: JSON.stringify({ subject, body }),
+    });
+  }
+
   async getAdminCommercialLeads(): Promise<ApiResponse<{ leads: any[]; count: number }>> {
     return this.request('/commercial/admin/submissions');
   }

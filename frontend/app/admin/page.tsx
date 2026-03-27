@@ -599,6 +599,13 @@ export default function AdminDashboardPage() {
               <User className="h-4 w-4 inline mr-2" />
               Users
             </button>
+            <a
+              href="/admin/crm"
+              className="py-4 px-1 border-b-2 border-transparent text-charcoal-500 hover:text-charcoal-600 hover:border-mist-300 font-medium text-sm inline-flex items-center"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              CRM
+            </a>
             <button
               onClick={() => setActiveTab('create-listing')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${

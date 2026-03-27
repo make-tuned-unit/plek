@@ -1310,3 +1310,44 @@ ${data.statusUrl}
     `,
   });
 }
+
+// ── Admin custom email ──────────────────────────────────────────────
+
+export interface AdminCustomEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+}
+
+/**
+ * Send a branded plekk email with custom subject/body from admin CRM.
+ */
+export async function sendAdminCustomEmail(data: AdminCustomEmailData): Promise<void> {
+  const client = getResendClient();
+  const safeBody = data.body.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+  await client.emails.send({
+    from: getFromEmail(),
+    to: data.recipientEmail,
+    subject: data.subject,
+    text: `Hi ${data.recipientName},\n\n${data.body}\n\n— The plekk team`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: ${BRAND_COLORS.text}; max-width: 600px; margin: 0 auto; padding: 0; background-color: ${BRAND_COLORS.background};">
+          <div style="background: ${BRAND_COLORS.white}; margin: 20px auto; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            ${getEmailHeader(data.subject)}
+            <div style="background: ${BRAND_COLORS.white}; padding: 40px 30px;">
+              <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${data.recipientName},</p>
+              <div style="font-size: 16px; margin: 0 0 30px 0; line-height: 1.7;">${safeBody}</div>
+              <p style="font-size: 16px; margin: 30px 0 0 0; color: ${BRAND_COLORS.textLight};">— The plekk team</p>
+            </div>
+            ${getEmailFooter()}
+          </div>
+        </body>
+      </html>
+    `,
+  });
+  logger.info('[Email] Admin custom email sent', { to: data.recipientEmail, subject: data.subject });
+}
