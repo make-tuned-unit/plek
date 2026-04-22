@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getAllBlogPosts } from '@/data/blogPosts'
 import { Calendar } from 'lucide-react'
+import { breadcrumbList, jsonLdScript, APP_URL } from '@/lib/seo'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+const baseUrl = APP_URL
 
 export const metadata: Metadata = {
   title: 'Blog | Parking Tips, Driveway Rental & More',
@@ -21,8 +22,40 @@ export const metadata: Metadata = {
 export default function BlogPage() {
   const posts = getAllBlogPosts()
 
+  const blogJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${baseUrl}/blog#blog`,
+    url: `${baseUrl}/blog`,
+    name: 'plekk Blog',
+    description:
+      'Parking tips, driveway rental advice, and how to find or list a parking space near you.',
+    inLanguage: 'en-CA',
+    publisher: { '@id': `${baseUrl}/#organization` },
+    blogPost: posts.map((post) => ({
+      '@type': 'BlogPosting',
+      headline: post.title,
+      description: post.description,
+      url: `${baseUrl}/blog/${post.slug}`,
+      datePublished: post.date,
+    })),
+  }
+
+  const breadcrumbJsonLd = breadcrumbList([
+    { name: 'Home', url: `${baseUrl}/` },
+    { name: 'Blog', url: `${baseUrl}/blog` },
+  ])
+
   return (
     <div className="min-h-screen bg-mist-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(blogJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd) }}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <header className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold text-charcoal-900 mb-4">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
+import { breadcrumbList, jsonLdScript, APP_URL } from '@/lib/seo'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+const baseUrl = APP_URL
 
 export const metadata: Metadata = {
   title: 'List Commercial Parking in Bulk | plekk',
@@ -17,10 +18,23 @@ export const metadata: Metadata = {
   },
 }
 
+const breadcrumbJsonLd = breadcrumbList([
+  { name: 'Home', url: `${baseUrl}/` },
+  { name: 'Commercial Parking', url: `${baseUrl}/commercial-parking` },
+])
+
 export default function CommercialParkingLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd) }}
+      />
+      {children}
+    </>
+  )
 }

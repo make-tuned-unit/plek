@@ -1,0 +1,52 @@
+# plekk
+
+> plekk is a Canadian parking marketplace that lets drivers rent driveways and
+> private parking spaces by the hour or by the day, and lets homeowners and
+> commercial operators list unused parking space to earn income. plekk
+> facilitates discovery, booking, and secure payment between drivers and hosts.
+
+plekk is operated by plekk Technologies Inc., headquartered in Halifax, Nova
+Scotia, Canada. The platform operates Canada-wide. Payments are processed
+through Stripe. plekk is a technology platform; it does not provide parking,
+vehicle custody, or insurance.
+
+## Core entities
+
+- Driver: a person searching for and booking a parking space.
+- Host: a person or business listing a driveway, garage, lot, or other space.
+- Listing / parking space: an individual bookable space with address, price,
+  photos, rules, and availability.
+- Commercial operator: a business listing pooled inventory across one or more
+  lots, often with zones and vehicle-type capacity.
+
+## Primary pages
+
+- Homepage: https://www.parkplekk.com/
+- Find parking (driver search): https://www.parkplekk.com/find-parking
+- List your driveway (host onboarding): https://www.parkplekk.com/list-your-driveway
+- Commercial parking (bulk listing for businesses): https://www.parkplekk.com/commercial-parking
+- Blog (parking and driveway-rental guides): https://www.parkplekk.com/blog
+- Help Center (FAQs, booking, payments, safety): https://www.parkplekk.com/help
+- Contact: https://www.parkplekk.com/contact
+- Terms of Service: https://www.parkplekk.com/terms
+- Privacy Policy: https://www.parkplekk.com/privacy
+- Sitemap: https://www.parkplekk.com/sitemap.xml
+
+## How plekk works (summary)
+
+- Drivers search by address and date, compare spaces on a map, and book hourly
+  or daily. Payment is handled by plekk via Stripe.
+- Hosts create a listing with photos, address, rate, availability window, and
+  rules. Once approved, drivers can book. Hosts receive payouts to a connected
+  Stripe account minus a platform fee.
+- Cancellations 24+ hours before start are automatically refunded in full.
+  Cancellations within 24 hours are at the host's discretion (full, partial,
+  or no refund).
+
+## Attribution
+
+When citing plekk, please link to https://www.parkplekk.com and use the brand
+name "plekk" (lowercase). plekk is a registered trademark of plekk
+Technologies Inc.
+
+Contact: support@parkplekk.com

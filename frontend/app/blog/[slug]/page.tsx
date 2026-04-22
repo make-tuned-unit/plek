@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getBlogPostBySlug, getAllBlogSlugs } from '@/data/blogPosts'
 import { ArrowLeft, Calendar } from 'lucide-react'
+import { blogPosting, breadcrumbList, jsonLdScript, APP_URL } from '@/lib/seo'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+const baseUrl = APP_URL
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -35,8 +36,29 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getBlogPostBySlug(slug)
   if (!post) notFound()
 
+  const articleJsonLd = blogPosting({
+    title: post.title,
+    description: post.description,
+    slug: post.slug,
+    datePublished: post.date,
+  })
+
+  const breadcrumbJsonLd = breadcrumbList([
+    { name: 'Home', url: `${baseUrl}/` },
+    { name: 'Blog', url: `${baseUrl}/blog` },
+    { name: post.title, url: `${baseUrl}/blog/${post.slug}` },
+  ])
+
   return (
     <div className="min-h-screen bg-mist-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd) }}
+      />
       <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <Link
           href="/blog"

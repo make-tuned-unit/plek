@@ -68,23 +68,57 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
-      '@type': 'Organization',
+      '@type': ['Organization', 'LocalBusiness'],
       '@id': `${appUrl}/#organization`,
       name: 'plekk',
+      legalName: 'plekk Technologies Inc.',
       url: appUrl,
       logo: { '@type': 'ImageObject', url: `${appUrl}/logo.png` },
-      description: 'Parking marketplace powered by local driveways. Rent driveways by the hour.',
+      image: `${appUrl}/PlekkFeaturedImage.png`,
+      description:
+        'Canadian parking marketplace powered by local driveways. Rent driveways and parking spaces by the hour or day, or list your driveway and earn.',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Halifax',
+        addressRegion: 'NS',
+        addressCountry: 'CA',
+      },
+      areaServed: { '@type': 'Country', name: 'Canada' },
+      contactPoint: [
+        {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          email: 'support@parkplekk.com',
+          telephone: '+1-270-309-9368',
+          areaServed: 'CA',
+          availableLanguage: ['English'],
+        },
+        {
+          '@type': 'ContactPoint',
+          contactType: 'press and partnerships',
+          email: 'partners@parkplekk.com',
+          areaServed: 'CA',
+        },
+      ],
+      sameAs: [
+        'https://bsky.app/profile/parkplekk.com',
+      ],
     },
     {
       '@type': 'WebSite',
       '@id': `${appUrl}/#website`,
       url: appUrl,
       name: 'plekk - Rent Driveways by the Hour',
-      description: 'Find and rent driveways, parking spaces, and storage by the hour. List your driveway and earn.',
+      description:
+        'Find and rent driveways, parking spaces, and storage by the hour. List your driveway and earn.',
+      inLanguage: 'en-CA',
       publisher: { '@id': `${appUrl}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
-        target: { '@type': 'EntryPoint', urlTemplate: `${appUrl}/find-parking?q={search_term_string}` },
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${appUrl}/find-parking?q={search_term_string}`,
+        },
         'query-input': 'required name=search_term_string',
       },
     },

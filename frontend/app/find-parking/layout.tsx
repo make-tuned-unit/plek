@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
+import { howTo, breadcrumbList, jsonLdScript, APP_URL } from '@/lib/seo'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+const baseUrl = APP_URL
 
 export const metadata: Metadata = {
   title: 'Find Parking Near You | Hourly & Daily Spots',
@@ -15,10 +16,53 @@ export const metadata: Metadata = {
   },
 }
 
+const howToJsonLd = howTo({
+  name: 'How to find and book parking on plekk',
+  description:
+    'Find hourly or daily parking near you on plekk in four steps: search by location, pick a date and time, choose a space, and pay securely.',
+  url: `${baseUrl}/find-parking`,
+  totalTime: 'PT2M',
+  steps: [
+    {
+      name: 'Search by location',
+      text: 'Enter the address or neighbourhood where you need parking. plekk shows driveways and parking spaces near your destination on a map.',
+    },
+    {
+      name: 'Pick your date and time',
+      text: 'Choose a start and end time. Filter for hourly or daily parking, vehicle size, and amenities to narrow your results.',
+    },
+    {
+      name: 'Choose a space',
+      text: 'Compare spaces by price, photos, reviews, and distance. Open a listing to see access instructions and the exact location after booking.',
+    },
+    {
+      name: 'Book and pay securely',
+      text: 'Reserve your parking space and pay securely with Stripe. Your spot is guaranteed for the time window you booked.',
+    },
+  ],
+})
+
+const breadcrumbJsonLd = breadcrumbList([
+  { name: 'Home', url: `${baseUrl}/` },
+  { name: 'Find Parking', url: `${baseUrl}/find-parking` },
+])
+
 export default function FindParkingLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(howToJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd) }}
+      />
+      {children}
+    </>
+  )
 }

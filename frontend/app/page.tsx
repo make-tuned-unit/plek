@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { SearchBar } from '@/components/SearchBar'
 import { FeatureCard } from '@/components/FeatureCard'
+import { faqPage, jsonLdScript } from '@/lib/seo'
 import dynamic from 'next/dynamic'
 import {
   Shield,
@@ -65,6 +66,10 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mist-100 to-sand-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqPage(FAQ_ITEMS)) }}
+      />
       {/* Hero Section - fixed height so video fills; dark bg hides any letterboxing */}
       <section className="relative overflow-hidden min-h-[70vh] max-h-[95vh] h-[85vh] flex flex-col bg-neutral-900">
         <HeroVideo />

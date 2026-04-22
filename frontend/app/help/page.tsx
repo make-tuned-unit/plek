@@ -11,8 +11,9 @@ import {
   Eye,
   AlertTriangle,
 } from 'lucide-react'
+import { breadcrumbList, faqPage, jsonLdScript, APP_URL } from '@/lib/seo'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.parkplekk.com'
+const baseUrl = APP_URL
 
 export const metadata = {
   title: 'Help Center | plekk',
@@ -113,8 +114,24 @@ const safetyItems = [
 ]
 
 export default function HelpPage() {
+  const faqJsonLd = faqPage(
+    faqs.map(({ question, answer }) => ({ question, answer }))
+  )
+  const breadcrumbJsonLd = breadcrumbList([
+    { name: 'Home', url: `${baseUrl}/` },
+    { name: 'Help Center', url: `${baseUrl}/help` },
+  ])
+
   return (
     <div className="bg-mist-100 min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd) }}
+      />
       {/* Hero header */}
       <div className="bg-white border-b border-mist-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
