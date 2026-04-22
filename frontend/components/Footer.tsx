@@ -236,6 +236,17 @@ export function Footer() {
         <p className="max-w-7xl mx-auto container-padding">
           &copy; {new Date().getFullYear()} plekk. Built in Halifax with trust, transparency, and shared streets in mind.
         </p>
+        <p className="max-w-7xl mx-auto container-padding mt-2">
+          Built by{' '}
+          <a
+            href="https://www.atlasatlantic.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-mist-100 hover:text-accent-300 transition-colors duration-200 underline-offset-4 hover:underline"
+          >
+            Atlas Atlantic
+          </a>
+        </p>
       </div>
     </footer>
   )
